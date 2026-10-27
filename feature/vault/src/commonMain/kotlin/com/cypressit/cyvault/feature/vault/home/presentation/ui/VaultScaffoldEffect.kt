@@ -8,7 +8,7 @@ import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHome
 import kotlinx.coroutines.flow.Flow
 
 @Composable
-fun VaultScaffoldEffect(
+internal fun VaultScaffoldEffect(
     effects: Flow<VaultHomeEffect>,
     drawerState: DrawerState,
     snackBarHostState: SnackbarHostState,

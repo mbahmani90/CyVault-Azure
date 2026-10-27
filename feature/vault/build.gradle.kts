@@ -8,7 +8,6 @@ plugins {
     alias(libs.plugins.kotlinx.serialization)
 }
 
-
 kotlin {
     // Linked into the app's iOS framework; only :app builds a framework.
     iosArm64()
@@ -48,10 +47,6 @@ kotlin {
 
             implementation(compose.materialIconsExtended)
             implementation(libs.compose.components.resources)
-
-            // Navigation
-            implementation(libs.androidx.navigation.compose)
-            implementation(libs.kotlinx.serialization.json)
 
             // Koin
             implementation(libs.koin.core)
