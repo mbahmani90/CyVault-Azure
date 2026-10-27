@@ -52,6 +52,7 @@ CyVault
 ├── feature
 │   ├── authentication   Feature: sign-in / sign-up / Google / password reset
 │   └── vault            Feature: vault home, card list, add-card (open banking)
+├── azure-backend    Azure Functions API (.NET 10) + Bicep infrastructure, deployed with azd
 └── amplify-backend  AWS Amplify Gen 2 backend (Cognito + Google IdP), TypeScript
 ```
 
@@ -91,9 +92,9 @@ On Android, Google sign-in goes through Entra External ID, with Google set up as
 
 ![Sign in with Google through Entra External ID](docs/google-sign-in-flow.svg)
 
-### Function App access to Blob Storage (planned)
+### Profile photo API: Function App access to Blob Storage
 
-Profile photos are planned to live in a private Blob Storage container behind an Azure Functions API. The Function App reaches Storage through its **Managed Identity**, so no storage keys or connection strings exist anywhere. The SDK (`DefaultAzureCredential`) gets a token for that identity from Entra ID and sends it with each blob request. Blob Storage validates the token and checks the identity's **IAM role assignment** (`Storage Blob Data Contributor` on the `avatars` container) before allowing the write. Users get no Storage permissions at all: the Function builds every blob path from the `oid` in the user's validated access token, so each account can only reach its own photo.
+Profile photos live in a private Blob Storage container behind the Azure Functions API in `azure-backend/` (`PUT`, `GET` and `DELETE /api/me/avatar`; the app doesn't call it yet). No route takes a user ID. The Function validates the upload by decoding it, turns it upright, downscales it to at most 512 px and re-encodes it as JPEG, which also drops EXIF metadata such as GPS location. The Function App reaches Storage through its **Managed Identity**, so no storage keys or connection strings exist anywhere. The SDK (`DefaultAzureCredential`) gets a token for that identity from Entra ID and sends it with each blob request. Blob Storage validates the token and checks the identity's **IAM role assignment** (`Storage Blob Data Contributor` on the `avatars` container) before allowing the write. Users get no Storage permissions at all: the Function builds every blob path from the `oid` in the user's validated access token, so each account can only reach its own photo.
 
 ![Inside the Function App: user check, per-user blob path, Managed Identity](docs/function-app-overview.svg)
 
@@ -131,7 +132,7 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 | Networking | Ktor 3 (OkHttp / Darwin), kotlinx.serialization |
 | Auth | Android: Microsoft Entra External ID + MSAL 8 (native auth) · iOS: AWS Amplify (Cognito) + Google federated sign-in |
 | Open banking | Yapily REST API |
-| Backend | AWS Amplify Gen 2 (TypeScript), for the iOS auth backend |
+| Backend | Azure Functions (.NET 10 isolated, Flex Consumption), Microsoft.Identity.Web, Blob Storage, SkiaSharp, Bicep + Azure Developer CLI · AWS Amplify Gen 2 (TypeScript), for the iOS auth backend |
 
 ## Getting started
 
@@ -142,6 +143,7 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 - JDK 17+
 - An Azure account (only needed to use your own Entra tenant for Android)
 - Node.js 18+ and an AWS account (only needed to deploy your own iOS auth backend)
+- For the Azure backend: .NET 10 SDK, Azure Functions Core Tools 4, Azure CLI, Azure Developer CLI (`azd`) and Azurite (`npm install -g azurite`)
 
 ### 1. Authentication
 
@@ -199,7 +201,53 @@ Copy the generated `amplify_outputs.json` to `iosApp/iosApp/amplify_outputs.json
 Create a Yapily sandbox application and put your credentials in
 `feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/addcard/data/remote/YapilyConfig.kt`.
 
-### 3. Run
+### 3. Azure backend (profile photo API)
+
+**Register the API in Entra External ID** (once, in the same external tenant as the app):
+
+1. **App registrations → New registration** → `CyVault API`, single tenant. No platform or redirect URI.
+2. **Manifest**: set `requestedAccessTokenVersion` to `2`.
+3. **Expose an API**: accept the default Application ID URI (`api://<API client ID>`) and add the scope
+   `Profile.ReadWrite`.
+4. In the **mobile app's** registration: **API permissions → Add a permission → My APIs → CyVault API →
+   `Profile.ReadWrite`**, then grant admin consent.
+
+**Run locally** (from `azure-backend/src/CyVault.Api`):
+
+```bash
+cp local.settings.sample.json local.settings.json
+```
+
+Put the API's client ID in `AzureAd__ClientId` in `local.settings.json`, which is git-ignored. Start
+Azurite (the local Blob Storage emulator) in one terminal and the Function in another:
+
+```bash
+azurite --silent --location ../../.azurite
+```
+
+```bash
+func start
+```
+
+On Windows PowerShell, use `azurite.cmd` if script execution is disabled. The API listens on
+`http://localhost:7158/api/me/avatar` and answers `401` without a valid access token.
+
+**Deploy to Azure** (from `azure-backend/`):
+
+```bash
+azd auth login
+azd env new dev
+azd env set ENTRA_API_CLIENT_ID <API client ID>
+azd up
+```
+
+`azd up` asks for a subscription and region, creates the resources in `infra/` (Flex Consumption
+Function App, two storage accounts with shared keys disabled, Application Insights, the Function's
+Managed Identity and its role assignments) and deploys the code. It prints `API_BASE_URL` at the end.
+The signed-in developer also gets blob access to the `avatars` container, so the Function can run
+locally against the real storage through `az login`.
+
+### 4. Run
 
 - **Android:** `./gradlew :androidApp:assembleDebug`, or use the run configuration in Android Studio
 - **iOS:** open `iosApp/` in Xcode and run
@@ -210,7 +258,8 @@ CyVault is a portfolio / learning project and **not production-ready**. The know
 
 - **Yapily app secret** is currently read on the client for simplicity. In production, all Yapily calls should go through a backend proxy (for example an AWS Lambda) so the secret never ships in the app.
 - **Card data**: the demo model holds a card number and CVV. A real app must never store the CVV and should keep only a **tokenised** card reference from a PCI DSS-compliant provider.
-- **Card API**: `CardApiService` points to a placeholder endpoint. Planned: an Amplify Data / AppSync backend with owner-based authorization.
+- **Card API**: `CardApiService` points to a placeholder endpoint. Planned: move it to the Azure Functions API, with every card keyed by the caller's `oid`.
+- **Profile photo**: the API exists but isn't deployed yet, and the app doesn't call it. Next: request the `Profile.ReadWrite` scope with MSAL, send the access token from Ktor, and add the profile screen with an image picker.
 - **Local storage**: planned: SQLDelight for offline caching, with platform keystore/keychain encryption for sensitive data.
 - **Auth**: move iOS from Amplify/Cognito to MSAL and Entra External ID, and finish the forgot-password flow (code + new password).
 - More unit and UI tests for use cases and ViewModels.

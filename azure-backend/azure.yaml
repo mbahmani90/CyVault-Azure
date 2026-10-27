@@ -1,0 +1,12 @@
+# Azure Developer CLI project: `azd up` creates the resources in infra/ and deploys the API.
+name: cyvault-backend
+metadata:
+  template: cyvault-backend
+infra:
+  provider: bicep
+  path: infra
+services:
+  api:
+    project: ./src/CyVault.Api
+    language: dotnet
+    host: function

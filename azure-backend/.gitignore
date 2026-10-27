@@ -1,0 +1,10 @@
+# azd environment state (subscription, resource names) for each developer
+.azure/
+
+# Azurite's local data
+__azurite_db_*
+__blobstorage__/
+__queuestorage__/
+
+# Azurite data when started from azure-backend/src/CyVault.Api
+.azurite/
