@@ -3,17 +3,18 @@ package com.cypressit.cyvault
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.cypressit.cyvault.feature.authentication.navigation.AuthRoute
-import com.cypressit.cyvault.feature.authentication.navigation.authScreen
-import com.cypressit.cyvault.feature.vault.navigation.AddCardRoute
-import com.cypressit.cyvault.feature.vault.navigation.VaultListRoute
-import com.cypressit.cyvault.feature.vault.navigation.addCardScreen
-import com.cypressit.cyvault.feature.vault.navigation.vaultListScreen
+import com.cypressit.cyvault.feature.authentication.presentation.ui.AuthScreen
+import com.cypressit.cyvault.feature.vault.AddCardScreen
+import com.cypressit.cyvault.feature.vault.VaultListScreen
+import com.cypressit.cyvault.navigation.AddCardRoute
+import com.cypressit.cyvault.navigation.AuthRoute
+import com.cypressit.cyvault.navigation.VaultListRoute
 
 /**
- * The app's only NavHost. Features report events through callbacks;
- * every navigation decision is made here.
+ * The app's only NavHost. Features expose plain screens that report events through
+ * callbacks; every route and every navigation decision lives here.
  */
 @Composable
 fun App() {
@@ -24,27 +25,33 @@ fun App() {
             navController = navController,
             startDestination = AuthRoute,
         ) {
-            authScreen(
-                onAuthSuccess = {
-                    navController.navigate(VaultListRoute) {
-                        popUpTo(AuthRoute) { inclusive = true }
+            composable<AuthRoute> {
+                AuthScreen(
+                    onAuthSuccess = {
+                        navController.navigate(VaultListRoute) {
+                            popUpTo(AuthRoute) { inclusive = true }
+                        }
                     }
-                }
-            )
+                )
+            }
 
-            vaultListScreen(
-                onAddCardClick = { navController.navigate(AddCardRoute) },
-                onSignedOut = {
-                    navController.navigate(AuthRoute) {
-                        popUpTo(VaultListRoute) { inclusive = true }
-                    }
-                },
-            )
+            composable<VaultListRoute> {
+                VaultListScreen(
+                    onAddCardClick = { navController.navigate(AddCardRoute) },
+                    onSignedOut = {
+                        navController.navigate(AuthRoute) {
+                            popUpTo(VaultListRoute) { inclusive = true }
+                        }
+                    },
+                )
+            }
 
-            addCardScreen(
-                onBack = { navController.popBackStack() },
-                onCardSaved = { navController.popBackStack() },
-            )
+            composable<AddCardRoute> {
+                AddCardScreen(
+                    onBack = { navController.popBackStack() },
+                    onCardSaved = { navController.popBackStack() },
+                )
+            }
         }
     }
 }

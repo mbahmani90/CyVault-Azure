@@ -55,11 +55,12 @@ CyVault
 └── amplify-backend  AWS Amplify Gen 2 backend (Cognito + Google IdP), TypeScript
 ```
 
-Features never depend on each other, and they never navigate by themselves. Each feature
-exposes its routes and one `NavGraphBuilder` entry per screen (`authScreen`, `vaultListScreen`,
-`addCardScreen`) that only reports events through callbacks (`onAuthSuccess`, `onAddCardClick`,
-`onCardSaved`, `onSignedOut`, …). `app` owns the only `NavHost` and decides where every event
-leads, and it loads each feature's public Koin module.
+Features never depend on each other and know nothing about navigation: they don't depend on
+Navigation Compose and have no routes. Each feature exposes plain screen composables
+(`AuthScreen`, `VaultListScreen`, `AddCardScreen`) that only report events through callbacks
+(`onAuthSuccess`, `onAddCardClick`, `onCardSaved`, `onSignedOut`, …). `app` defines every route
+(`navigation/Routes.kt`), owns the only `NavHost` and decides where every event leads, and it
+loads each feature's public Koin module.
 
 Each feature module has its own layers. A single-flow feature (authentication) keeps them at
 the module root; a multi-screen feature (vault) has one package per screen, each with its
@@ -75,7 +76,7 @@ feature/vault/…/feature/vault/
 │   ├── domain/         models, repository interfaces, use cases
 │   ├── presentation/   Compose screens + ViewModel (State / Intent / Effect)
 │   └── di/             the screen's internal Koin module
-├── navigation/     routes + vaultListScreen() / addCardScreen(): events out, no navigation
+├── VaultScreens.kt the public screens: VaultListScreen, AddCardScreen (events out)
 └── di/             vaultFeatureModule: the feature's only public Koin module
 ```
 

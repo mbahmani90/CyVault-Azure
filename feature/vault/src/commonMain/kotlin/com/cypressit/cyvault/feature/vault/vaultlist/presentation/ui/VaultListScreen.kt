@@ -42,7 +42,7 @@ private fun Double.fmt2dp(): String {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VaultListScreen(
+internal fun VaultListScreen(
     onAddCard: () -> Unit,
     viewModel: VaultListViewModel = koinViewModel(),
 ) {

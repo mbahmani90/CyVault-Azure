@@ -57,7 +57,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddCardScreen(
+internal fun AddCardScreen(
     onNavigateBack: () -> Unit,
     onCardSaved: () -> Unit,
     viewModel: AddCardViewModel = koinViewModel(),

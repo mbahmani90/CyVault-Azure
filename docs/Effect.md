@@ -71,7 +71,8 @@ data object CardSaved : AddCardEffect()          // → onCardSaved()
 ```
 
 Consumed by calling a callback passed into the screen. Features never touch a `NavController`:
-the `app` module owns the only `NavHost` and decides where each callback leads (see `App.kt`).
+the `app` module defines every route, owns the only `NavHost` and decides where each callback
+leads (see `App.kt`). Features don't depend on Navigation Compose at all.
 
 ## A fourth, less common case: transient UI-widget control
 

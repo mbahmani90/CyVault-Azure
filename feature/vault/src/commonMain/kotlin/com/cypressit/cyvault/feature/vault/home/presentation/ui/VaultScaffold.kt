@@ -46,7 +46,7 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VaultScaffold(
+internal fun VaultScaffold(
     showMenu: Boolean,
     onBack: () -> Unit,
     onSignedOut: () -> Unit,

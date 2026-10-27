@@ -58,7 +58,7 @@
   <text x="52" y="197" class="t-band">COMPOSITION ROOT</text>
   <rect x="245" y="193" width="390" height="44" rx="8" class="box" stroke="#7C3AED"/>
   <text x="440" y="211" class="t-box">app</text>
-  <text x="440" y="227" class="t-boxsub">App.kt root NavHost · Koin appModules · CyVaultApp iOS framework</text>
+  <text x="440" y="227" class="t-boxsub">all routes + the only NavHost · Koin appModules · CyVaultApp iOS framework</text>
 
   <path d="M315 146 L385 191" class="dep"/>
   <path d="M565 146 L495 191" class="dep"/>
@@ -90,9 +90,9 @@
   <text x="165" y="556" class="t-chipsub">iOS: IosAuthBridge (Swift)</text>
 
   <rect x="67" y="578" width="196" height="48" rx="5" class="wire"/>
-  <text x="165" y="593" class="t-chip">navigation · session</text>
-  <text x="165" y="607" class="t-chipsub">AuthRoute · authScreen()</text>
-  <text x="165" y="619" class="t-chipsub">SessionManagerImpl</text>
+  <text x="165" y="593" class="t-chip">session</text>
+  <text x="165" y="607" class="t-chipsub">SessionManagerImpl</text>
+  <text x="165" y="619" class="t-chipsub">implements core's SessionManager</text>
 
   <rect x="67" y="634" width="196" height="40" rx="5" class="wire"/>
   <text x="165" y="650" class="t-chip">di</text>
@@ -171,8 +171,8 @@
 
   <!-- vault wiring -->
   <rect x="300" y="630" width="257" height="48" rx="5" class="wire"/>
-  <text x="428" y="649" class="t-chip">navigation/</text>
-  <text x="428" y="665" class="t-chipsub">routes · vaultListScreen() · addCardScreen()</text>
+  <text x="428" y="649" class="t-chip">VaultScreens.kt</text>
+  <text x="428" y="665" class="t-chipsub">public VaultListScreen · AddCardScreen</text>
   <rect x="566" y="630" width="257" height="48" rx="5" class="wire"/>
   <text x="694" y="649" class="t-chip">di/</text>
   <text x="694" y="665" class="t-chipsub">vaultFeatureModule (public) includes all 4</text>
@@ -180,7 +180,7 @@
   <!-- app -> features -->
   <path d="M330 239 L190 302" class="dep"/>
   <path d="M520 239 L562 302" class="dep"/>
-  <text x="560" y="268" class="t-small">wires entry points + Koin modules</text>
+  <text x="560" y="268" class="t-small">routes + NavHost call the screens · loads Koin modules</text>
 
 
   <!-- features never import each other -->
@@ -215,7 +215,7 @@
   <text x="56" y="896" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  app  →  authentication, vault, core   (the only composition root: NavHost, Koin modules, iOS framework)</text>
   <text x="56" y="918" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  authentication  →  core     ·     vault  →  core, systemdesign</text>
   <text x="56" y="940" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  authentication ↔ vault: never import each other; app connects them with navigation callbacks</text>
-  <text x="56" y="962" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  vault's screen packages never import each other; only navigation/ puts them together</text>
+  <text x="56" y="962" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  vault's screen packages never import each other; only VaultScreens.kt puts them together</text>
 
   <line x1="56" y1="986" x2="96" y2="986" class="dep"/>
   <text x="104" y="990" class="t-small">depends on</text>
@@ -226,22 +226,22 @@
   <rect x="410" y="978" width="30" height="15" rx="4" class="dat"/>
   <text x="447" y="990" class="t-small">data</text>
   <rect x="490" y="978" width="30" height="15" rx="4" class="wire"/>
-  <text x="527" y="990" class="t-small">navigation · DI</text>
+  <text x="527" y="990" class="t-small">public screens · DI · session</text>
 
   <!-- ===================== RIGHT A: NAVIGATION ===================== -->
   <rect x="900" y="55" width="480" height="330" rx="10" class="panel"/>
   <text x="916" y="80" class="t-panel">Navigation</text>
-  <text x="916" y="100" class="t-small">app's only NavHost (App.kt) · start: AuthRoute · features only report events</text>
+  <text x="916" y="100" class="t-small">routes and the only NavHost live in app (App.kt) · start: AuthRoute</text>
 
   <rect x="920" y="150" width="125" height="56" rx="8" class="box" stroke="#2563EB"/>
   <text x="982" y="173" class="t-box">AuthRoute</text>
-  <text x="982" y="190" class="t-boxsub">authScreen()</text>
+  <text x="982" y="190" class="t-boxsub">→ AuthScreen</text>
   <rect x="1077" y="150" width="125" height="56" rx="8" class="box" stroke="#2563EB"/>
   <text x="1139" y="173" class="t-box">VaultListRoute</text>
-  <text x="1139" y="190" class="t-boxsub">vaultListScreen()</text>
+  <text x="1139" y="190" class="t-boxsub">→ VaultListScreen</text>
   <rect x="1234" y="150" width="125" height="56" rx="8" class="box" stroke="#2563EB"/>
   <text x="1296" y="173" class="t-box">AddCardRoute</text>
-  <text x="1296" y="190" class="t-boxsub">addCardScreen()</text>
+  <text x="1296" y="190" class="t-boxsub">→ AddCardScreen</text>
 
   <path d="M1047 165 L1074 165" class="dep"/>
   <text x="1061" y="140" class="t-small" text-anchor="middle">onAuthSuccess</text>
@@ -252,10 +252,10 @@
   <path d="M1232 192 L1205 192" class="back"/>
   <text x="1218" y="226" class="t-small" text-anchor="middle">onBack · onCardSaved</text>
 
-  <text x="916" y="258" class="t-small">Features never touch a NavController. Each screen entry only gets callbacks:</text>
-  <text x="932" y="278" class="t-small">authScreen(onAuthSuccess)</text>
-  <text x="932" y="294" class="t-small">vaultListScreen(onAddCardClick, onSignedOut)</text>
-  <text x="932" y="310" class="t-small">addCardScreen(onBack, onCardSaved)</text>
+  <text x="916" y="258" class="t-small">Features have no routes and no Navigation Compose; app calls their screens:</text>
+  <text x="932" y="278" class="t-small">AuthScreen(onAuthSuccess)</text>
+  <text x="932" y="294" class="t-small">VaultListScreen(onAddCardClick, onSignedOut)</text>
+  <text x="932" y="310" class="t-small">AddCardScreen(onBack, onCardSaved)</text>
   <text x="916" y="334" class="t-small">Vault screens wrap themselves in VaultScaffold: menu + drawer on the list,</text>
   <text x="916" y="350" class="t-small">back arrow on add card.</text>
   <text x="916" y="372" class="t-small">popUpTo removes login after sign-in, and the vault after sign-out.</text>
