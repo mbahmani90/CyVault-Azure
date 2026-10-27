@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 data object AuthRoute
 
 @Serializable
-data object VaultListRoute
+data object VaultHomeRoute
 
 @Serializable
 data object AddCardRoute

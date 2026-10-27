@@ -1,50 +1,34 @@
 package com.cypressit.cyvault.feature.vault
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
-import com.cypressit.cyvault.feature.vault.home.presentation.ui.VaultScaffold
 import com.cypressit.cyvault.feature.vault.addcard.presentation.ui.AddCardScreen as AddCardContent
-import com.cypressit.cyvault.feature.vault.vaultlist.presentation.ui.VaultListScreen as VaultListContent
+import com.cypressit.cyvault.feature.vault.home.presentation.ui.VaultHomeScreen as VaultHomeContent
 
 /*
- * The vault feature's public screens. Each one wraps a screen package in the vault's shell
- * (drawer, top bar, sign-out) and only reports events; the app module owns routes and
- * navigation, so this feature doesn't depend on Navigation Compose.
+ * The vault feature's public screens. They only report events; the app module owns routes
+ * and navigation, so this feature doesn't depend on Navigation Compose.
  */
 
-/** The vault's root screen: the card list, with the menu and drawer. */
+/** The vault's home: card list, drawer with sign-out, and an add-card button. */
 @Composable
-fun VaultListScreen(
+fun VaultHomeScreen(
     onAddCardClick: () -> Unit,
     onSignedOut: () -> Unit,
 ) {
-    VaultScaffold(
-        showMenu = true,
-        onBack = {},
+    VaultHomeContent(
+        onAddCardClick = onAddCardClick,
         onSignedOut = onSignedOut,
-    ) { modifier ->
-        Box(modifier) {
-            VaultListContent(onAddCard = onAddCardClick)
-        }
-    }
+    )
 }
 
-/** Add a card through open banking, with a back arrow. */
+/** Add a card through open banking; it has its own top bar with a back arrow. */
 @Composable
 fun AddCardScreen(
     onBack: () -> Unit,
     onCardSaved: () -> Unit,
 ) {
-    VaultScaffold(
-        showMenu = false,
-        onBack = onBack,
-        onSignedOut = {},
-    ) { modifier ->
-        Box(modifier) {
-            AddCardContent(
-                onNavigateBack = onBack,
-                onCardSaved = onCardSaved,
-            )
-        }
-    }
+    AddCardContent(
+        onNavigateBack = onBack,
+        onCardSaved = onCardSaved,
+    )
 }

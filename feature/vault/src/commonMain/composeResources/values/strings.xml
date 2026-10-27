@@ -5,5 +5,4 @@
     <string name="vault_home_sign_out">Sign Out</string>
     <string name="vault_home_sign_out_description">Sign Out</string>
     <string name="vault_home_open_menu_description">Open Menu</string>
-    <string name="vault_home_back_description">Back</string>
 </resources>

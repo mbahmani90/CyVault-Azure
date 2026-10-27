@@ -57,7 +57,7 @@ CyVault
 
 Features never depend on each other and know nothing about navigation: they don't depend on
 Navigation Compose and have no routes. Each feature exposes plain screen composables
-(`AuthScreen`, `VaultListScreen`, `AddCardScreen`) that only report events through callbacks
+(`AuthScreen`, `VaultHomeScreen`, `AddCardScreen`) that only report events through callbacks
 (`onAuthSuccess`, `onAddCardClick`, `onCardSaved`, `onSignedOut`, …). `app` defines every route
 (`navigation/Routes.kt`), owns the only `NavHost` and decides where every event leads, and it
 loads each feature's public Koin module.
@@ -69,14 +69,13 @@ own layers and Koin module, plus a small shared package:
 ```
 feature/vault/…/feature/vault/
 ├── card/           shared by the screens: Card model, CardRepository, card API
-├── home/           VaultScaffold: drawer, top bar, sign-out around each vault screen
-├── vaultlist/      card list
+├── home/           card list + total assets, drawer with sign-out
 ├── addcard/        add a card via open banking (Yapily)
 │   ├── data/           remote services + DTOs, mappers, repository implementations
 │   ├── domain/         models, repository interfaces, use cases
 │   ├── presentation/   Compose screens + ViewModel (State / Intent / Effect)
 │   └── di/             the screen's internal Koin module
-├── VaultScreens.kt the public screens: VaultListScreen, AddCardScreen (events out)
+├── VaultScreens.kt the public screens: VaultHomeScreen, AddCardScreen (events out)
 └── di/             vaultFeatureModule: the feature's only public Koin module
 ```
 

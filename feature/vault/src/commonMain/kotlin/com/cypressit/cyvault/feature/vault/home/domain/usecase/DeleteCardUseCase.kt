@@ -1,4 +1,4 @@
-package com.cypressit.cyvault.feature.vault.vaultlist.domain.usecase
+package com.cypressit.cyvault.feature.vault.home.domain.usecase
 
 import com.cypressit.cyvault.feature.vault.card.domain.repository.CardRepository
 

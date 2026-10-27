@@ -1,8 +1,8 @@
-package com.cypressit.cyvault.feature.vault.vaultlist.presentation.viewmodel
+package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 
-data class VaultListState(
+data class VaultHomeState(
     val isLoading: Boolean = false,
     val cards: List<Card> = emptyList(),
     val totalBalance: Double = 0.0,
