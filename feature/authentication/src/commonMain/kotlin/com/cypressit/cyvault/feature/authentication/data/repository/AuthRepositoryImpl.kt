@@ -28,4 +28,7 @@ class AuthRepositoryImpl(
 
     override suspend fun signInWithGoogle(): Result<User> =
         runCatching { apiService.signInWithGoogle() }
+
+    override suspend fun accessToken(scopes: List<String>): String =
+        apiService.accessToken(scopes)
 }

@@ -9,10 +9,12 @@ import com.microsoft.identity.client.IAuthenticationResult
 import com.microsoft.identity.client.exception.MsalDeclinedScopeException
 import com.microsoft.identity.client.exception.MsalException
 import com.microsoft.identity.nativeauth.UserAttributes
+import com.microsoft.identity.nativeauth.parameters.NativeAuthGetAccessTokenParameters
 import com.microsoft.identity.nativeauth.parameters.NativeAuthResetPasswordParameters
 import com.microsoft.identity.nativeauth.parameters.NativeAuthSignInParameters
 import com.microsoft.identity.nativeauth.parameters.NativeAuthSignUpParameters
 import com.microsoft.identity.nativeauth.statemachine.errors.Error
+import com.microsoft.identity.nativeauth.statemachine.results.GetAccessTokenResult
 import com.microsoft.identity.nativeauth.statemachine.results.GetAccountResult
 import com.microsoft.identity.nativeauth.statemachine.results.ResetPasswordStartResult
 import com.microsoft.identity.nativeauth.statemachine.results.SignInResult
@@ -120,6 +122,17 @@ actual class AuthApiService actual constructor() {
         // The browser flow stores the account in the same MSAL cache as native auth, so
         // getCurrentUser() and signOut() keep working through the native auth account.
         return currentAccount()?.toUser() ?: account.toUser()
+    }
+
+    actual suspend fun accessToken(scopes: List<String>): String {
+        val account = currentAccount() ?: throw Exception("Not signed in")
+        val parameters = NativeAuthGetAccessTokenParameters().apply { this.scopes = scopes }
+        // Served from MSAL's cache while valid; refreshed silently with the refresh token after.
+        // Google accounts work too, since the browser flow shares the same cache.
+        return when (val result = account.getAccessToken(parameters)) {
+            is GetAccessTokenResult.Complete -> result.resultValue.accessToken
+            else -> fail(result, "Couldn't get an access token")
+        }
     }
 
     private suspend fun currentAccount(): AccountState? =

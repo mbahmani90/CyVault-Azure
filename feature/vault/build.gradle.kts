@@ -65,6 +65,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.androidx.browser)
+            implementation(libs.androidx.activity.compose)
         }
 
         iosMain.dependencies {
@@ -73,6 +74,8 @@ kotlin {
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.ktor.client.mock)
         }
     }
 }

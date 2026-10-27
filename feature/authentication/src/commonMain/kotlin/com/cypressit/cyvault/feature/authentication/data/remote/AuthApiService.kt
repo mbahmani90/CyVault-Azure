@@ -10,4 +10,5 @@ expect class AuthApiService() {
     suspend fun signOut()
     suspend fun getCurrentUser(): User?
     suspend fun signInWithGoogle(): User
+    suspend fun accessToken(scopes: List<String>): String
 }

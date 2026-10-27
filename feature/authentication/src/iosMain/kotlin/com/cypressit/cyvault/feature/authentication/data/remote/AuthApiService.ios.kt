@@ -72,4 +72,8 @@ actual class AuthApiService actual constructor() {
                 }
             }
         }
+
+    // iOS still signs in with Cognito, whose tokens the Azure backend doesn't accept.
+    actual suspend fun accessToken(scopes: List<String>): String =
+        throw UnsupportedOperationException("Azure API access needs Entra sign-in, which iOS doesn't have yet")
 }
