@@ -1,6 +1,12 @@
 package com.cypressit.cyvault.feature.authentication.data.remote
 
 import com.cypressit.cyvault.feature.authentication.domain.model.User
+import com.microsoft.identity.client.AcquireTokenParameters
+import com.microsoft.identity.client.AuthenticationCallback
+import com.microsoft.identity.client.IAccount
+import com.microsoft.identity.client.IAuthenticationResult
+import com.microsoft.identity.client.exception.MsalDeclinedScopeException
+import com.microsoft.identity.client.exception.MsalException
 import com.microsoft.identity.nativeauth.UserAttributes
 import com.microsoft.identity.nativeauth.parameters.NativeAuthResetPasswordParameters
 import com.microsoft.identity.nativeauth.parameters.NativeAuthSignInParameters
@@ -14,6 +20,9 @@ import com.microsoft.identity.nativeauth.statemachine.results.SignUpResult
 import com.microsoft.identity.nativeauth.statemachine.states.AccountState
 import com.microsoft.identity.nativeauth.statemachine.states.ResetPasswordCodeRequiredState
 import com.microsoft.identity.nativeauth.statemachine.states.SignUpCodeRequiredState
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 actual class AuthApiService actual constructor() {
 
@@ -74,9 +83,37 @@ actual class AuthApiService actual constructor() {
     }
 
     actual suspend fun signInWithGoogle(): User {
-        // Native auth only covers in-app email flows; Google needs MSAL's browser flow
-        // and the Google identity provider set up in the Entra external tenant.
-        throw Exception("Google sign-in is not available yet")
+        // Native auth only covers in-app email flows. Google goes through MSAL's browser flow:
+        // Entra's sign-in page opens in a browser tab and hands the user over to Google
+        // (the Google identity provider set up in the Entra external tenant).
+        val activity = ResumedActivityTracker.activity
+            ?: throw Exception("Google sign-in failed. Please try again.")
+        val client = MsalClientProvider.get()
+        val account = try {
+            suspendCancellableCoroutine<IAuthenticationResult> { continuation ->
+                val parameters = AcquireTokenParameters.Builder()
+                    .startAuthorizationFromActivity(activity)
+                    // MSAL rejects an empty list. No API scopes are needed, so ask only for the
+                    // sign-in scopes the app registration already grants.
+                    .withScopes(listOf("openid", "offline_access"))
+                    // Skips Entra's provider picker and goes straight to Google.
+                    .withDomainHint("google.com")
+                    .withCallback(object : AuthenticationCallback {
+                        override fun onSuccess(result: IAuthenticationResult) = continuation.resume(result)
+                        override fun onError(exception: MsalException) = continuation.resumeWithException(exception)
+                        override fun onCancel() = continuation.resumeWithException(Exception("Google sign-in was cancelled"))
+                    })
+                    .build()
+                client.acquireToken(parameters)
+            }.account
+        } catch (e: MsalDeclinedScopeException) {
+            // Entra granted fewer scopes than requested, but the user is signed in and the
+            // account (with its ID token) is already cached. Only the account is needed here.
+            e.silentParametersForGrantedScopes.account ?: throw e
+        }
+        // The browser flow stores the account in the same MSAL cache as native auth, so
+        // getCurrentUser() and signOut() keep working through the native auth account.
+        return currentAccount()?.toUser() ?: account.toUser()
     }
 
     private suspend fun currentAccount(): AccountState? =
@@ -93,6 +130,16 @@ actual class AuthApiService actual constructor() {
             name = claims["name"] as? String ?: "",
             email = claims["email"] as? String ?: account.username,
             token = getIdToken().orEmpty(),
+        )
+    }
+
+    private fun IAccount.toUser(): User {
+        val claims = claims.orEmpty()
+        return User(
+            id = claims["oid"] as? String ?: id,
+            name = claims["name"] as? String ?: "",
+            email = claims["email"] as? String ?: username,
+            token = idToken.orEmpty(),
         )
     }
 
