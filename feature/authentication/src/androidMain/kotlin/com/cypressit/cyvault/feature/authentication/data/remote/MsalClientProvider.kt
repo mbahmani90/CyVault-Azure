@@ -8,24 +8,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.koin.mp.KoinPlatform
 
 /**
  * Holds the single MSAL native auth client. MSAL's factory blocks while it reads the config,
  * so the client is created lazily on the IO dispatcher instead of in Application.onCreate.
+ * The context comes from Koin (androidContext), so the app shell doesn't have to pass it in.
  */
-object MsalClientProvider {
-    private lateinit var appContext: Context
+internal object MsalClientProvider {
     private var client: INativeAuthPublicClientApplication? = null
     private val mutex = Mutex()
-
-    fun init(context: Context) {
-        appContext = context.applicationContext
-    }
 
     suspend fun get(): INativeAuthPublicClientApplication = mutex.withLock {
         client ?: withContext(Dispatchers.IO) {
             PublicClientApplication.createNativeAuthPublicClientApplication(
-                appContext,
+                KoinPlatform.getKoin().get<Context>(),
                 R.raw.auth_config_native_auth,
             )
         }.also { client = it }

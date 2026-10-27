@@ -1,7 +1,6 @@
 package com.cypressit.cyvault
 
 import android.app.Application
-import com.cypressit.cyvault.feature.authentication.data.remote.MsalClientProvider
 import org.koin.android.ext.koin.androidContext
 import com.cypressit.cyvault.di.appModules
 import org.koin.core.context.GlobalContext.startKoin
@@ -10,7 +9,6 @@ import org.koin.dsl.KoinAppDeclaration
 class CyVaultApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        MsalClientProvider.init(this)
         initKoin {
             androidContext(this@CyVaultApplication)
         }
