@@ -28,25 +28,19 @@
             </intent-filter>
         </activity>
 
-        <!-- Amplify OAuth redirect handler -->
+        <!-- MSAL redirect handler. The path is the signing certificate hash (debug keystore),
+             not URL-encoded; it must match redirect_uri in auth_config_native_auth.json. -->
         <activity
-            android:name="com.amplifyframework.auth.cognito.activities.HostedUIRedirectActivity"
+            android:name="com.microsoft.identity.client.BrowserTabActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="cyvault"
-                    android:host="callback" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="cyvault"
-                    android:host="signout" />
+                    android:scheme="msauth"
+                    android:host="com.cypressit.cyvault"
+                    android:path="/+6PpzKBqQ/0GponbMHq4NRPWiMc=" />
             </intent-filter>
         </activity>
     </application>
