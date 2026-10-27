@@ -64,11 +64,11 @@
   <path d="M565 146 L495 191" class="dep"/>
 
   <!-- Band: feature modules -->
-  <rect x="40" y="275" width="810" height="430" rx="10" fill="#F1F6FF" stroke="#3B82F6"/>
+  <rect x="40" y="275" width="810" height="338" rx="10" fill="#F1F6FF" stroke="#3B82F6"/>
   <text x="52" y="292" class="t-band">FEATURE MODULES</text>
 
   <!-- feature:authentication -->
-  <rect x="55" y="305" width="220" height="385" rx="8" class="box" stroke="#2563EB"/>
+  <rect x="55" y="305" width="220" height="293" rx="8" class="box" stroke="#2563EB"/>
   <text x="165" y="327" class="t-box">authentication</text>
   <text x="165" y="343" class="t-boxsub">one flow · layers at the module root</text>
 
@@ -94,12 +94,8 @@
   <text x="165" y="607" class="t-chipsub">SessionManagerImpl</text>
   <text x="165" y="619" class="t-chipsub">implements core's SessionManager</text>
 
-  <rect x="67" y="634" width="196" height="40" rx="5" class="wire"/>
-  <text x="165" y="650" class="t-chip">di</text>
-  <text x="165" y="664" class="t-chipsub">authModule</text>
-
   <!-- feature:vault -->
-  <rect x="290" y="305" width="545" height="385" rx="8" class="box" stroke="#2563EB"/>
+  <rect x="290" y="305" width="545" height="293" rx="8" class="box" stroke="#2563EB"/>
   <text x="562" y="327" class="t-box">vault</text>
   <text x="562" y="343" class="t-boxsub">feature:vault · one package per screen, each with its own layers and Koin module, plus a shared card/ package</text>
 
@@ -123,8 +119,6 @@
   <text x="384" y="505" class="t-chipsub">DeleteCardUseCase</text>
   <text x="384" y="546" class="t-empty">data from card/ · sign-out</text>
   <text x="384" y="559" class="t-empty">via core's SessionManager</text>
-  <rect x="300" y="594" width="168" height="26" rx="5" class="wire"/>
-  <text x="384" y="611" class="t-chipsub">di: homeModule</text>
 
   <!-- addcard/ -->
   <rect x="477" y="384" width="168" height="70" rx="5" class="ui"/>
@@ -140,8 +134,6 @@
   <text x="561" y="543" class="t-chip">data</text>
   <text x="561" y="558" class="t-chipsub">YapilyService · DTOs</text>
   <text x="561" y="571" class="t-chipsub">BankRepositoryImpl</text>
-  <rect x="477" y="594" width="168" height="26" rx="5" class="wire"/>
-  <text x="561" y="611" class="t-chipsub">di: addCardModule</text>
 
   <!-- card/ (shared) -->
   <text x="739" y="424" class="t-empty">used by home/</text>
@@ -154,16 +146,6 @@
   <text x="739" y="543" class="t-chip">data</text>
   <text x="739" y="558" class="t-chipsub">CardApiService · DTOs</text>
   <text x="739" y="571" class="t-chipsub">CardRepositoryImpl</text>
-  <rect x="655" y="594" width="168" height="26" rx="5" class="wire"/>
-  <text x="739" y="611" class="t-chipsub">di: cardModule</text>
-
-  <!-- vault wiring -->
-  <rect x="300" y="630" width="257" height="48" rx="5" class="wire"/>
-  <text x="428" y="649" class="t-chip">VaultScreens.kt</text>
-  <text x="428" y="665" class="t-chipsub">public VaultHomeScreen · AddCardScreen</text>
-  <rect x="566" y="630" width="257" height="48" rx="5" class="wire"/>
-  <text x="694" y="649" class="t-chip">di/</text>
-  <text x="694" y="665" class="t-chipsub">vaultFeatureModule (public) includes all 3</text>
 
   <!-- app -> features -->
   <path d="M330 239 L190 302" class="dep"/>
@@ -189,9 +171,9 @@
   <text x="667" y="801" class="t-boxsub">CyButton · CyOutlinedTextField · CyTopAppBar</text>
 
   <!-- features -> shared modules -->
-  <path d="M230 692 L260 750" class="dep"/>
-  <path d="M420 692 L380 750" class="dep"/>
-  <path d="M700 692 L690 750" class="dep"/>
+  <path d="M230 600 L260 750" class="dep"/>
+  <path d="M420 600 L380 750" class="dep"/>
+  <path d="M700 600 L690 750" class="dep"/>
 
   <!-- app -> core (side route) -->
   <path d="M637 215 H868 V836 H310 V811" class="dep"/>
