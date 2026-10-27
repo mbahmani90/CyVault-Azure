@@ -1,5 +1,6 @@
 package com.cypressit.cyvault.di
 
+import com.cypressit.cyvault.core.di.dispatcherModule
 import com.cypressit.cyvault.core.di.networkModule
 import com.cypressit.cyvault.core.di.platformModule
 import com.cypressit.cyvault.feature.authentication.di.authModule
@@ -13,6 +14,7 @@ import org.koin.core.module.Module
 val appModules: List<Module>
     get() = listOf(
         platformModule,
+        dispatcherModule,
         networkModule,
         authModule,
         vaultFeatureModule,

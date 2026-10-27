@@ -9,4 +9,7 @@ data class VaultHomeState(
     val error: String? = null,
     val userName: String = "",
     val userEmail: String = "",
+    /** JPEG bytes of the user's profile photo, or null to show the initials avatar. */
+    val profilePhoto: ByteArray? = null,
+    val isUpdatingPhoto: Boolean = false,
 )

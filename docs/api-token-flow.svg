@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 660" width="900" height="660" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title>CyVault — Getting an access token and calling the profile photo API</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .t-title { font-size: 20px; font-weight: 700; fill: #0F172A; }
+      .t-sub { font-size: 12.5px; fill: #64748B; }
+      .t-box { font-size: 14px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-boxsub { font-size: 11px; fill: #475569; text-anchor: middle; }
+      .t-step { font-size: 12.5px; fill: #1E293B; text-anchor: middle; }
+      .t-note { font-size: 11px; fill: #64748B; text-anchor: middle; }
+      .t-url { font-size: 10.5px; fill: #475569; text-anchor: middle; font-family: Consolas, 'SF Mono', Menlo, monospace; }
+      .t-left { text-anchor: start; }
+      .halo { paint-order: stroke; stroke: #F8FAFC; stroke-width: 5px; stroke-linejoin: round; }
+      .life { stroke: #94A3B8; stroke-width: 1.2; stroke-dasharray: 4 4; }
+      .msg { stroke: #475569; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .reply { stroke: #475569; stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; marker-end: url(#arrow); }
+      .server { stroke: #475569; stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; marker-start: url(#arrow); marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="900" height="660" fill="#F8FAFC"/>
+
+  <text x="40" y="38" class="t-title">Calling the profile photo API (Android)</text>
+  <text x="40" y="60" class="t-sub">Solid arrows: requests · Dashed arrows: responses · The user is already signed in, so MSAL holds a refresh token</text>
+
+  <!-- Participants -->
+  <rect x="80" y="90" width="200" height="56" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="180" y="114" class="t-box">CyVault app</text>
+  <text x="180" y="132" class="t-boxsub">Android · MSAL · Ktor</text>
+
+  <rect x="350" y="90" width="200" height="56" rx="8" fill="#DCFCE7" stroke="#0F766E" stroke-width="1.5"/>
+  <text x="450" y="114" class="t-box">Entra External ID</text>
+  <text x="450" y="132" class="t-boxsub">cyvault.ciamlogin.com</text>
+
+  <rect x="620" y="90" width="200" height="56" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="720" y="114" class="t-box">Function App</text>
+  <text x="720" y="132" class="t-boxsub">func-cyvault-….azurewebsites.net</text>
+
+  <!-- Lifelines -->
+  <line x1="180" y1="146" x2="180" y2="620" class="life"/>
+  <line x1="450" y1="146" x2="450" y2="620" class="life"/>
+  <line x1="720" y1="146" x2="720" y2="470" class="life"/>
+  <line x1="720" y1="530" x2="720" y2="620" class="life"/>
+
+  <!-- 1 -->
+  <text x="315" y="190" class="t-step">1. Token for the API scope</text>
+  <line x1="182" y1="202" x2="446" y2="202" class="msg"/>
+  <text x="315" y="220" class="t-url">POST …/oauth2/v2.0/token</text>
+  <text x="315" y="235" class="t-url">scope=api://61a46c01-…/Profile.ReadWrite</text>
+
+  <!-- 2 -->
+  <text x="315" y="270" class="t-step">2. Access token (JWT)</text>
+  <line x1="448" y1="282" x2="184" y2="282" class="reply"/>
+  <text x="315" y="300" class="t-note">aud = CyVault API · scp = Profile.ReadWrite</text>
+  <text x="315" y="314" class="t-note">oid = the signed-in user</text>
+  <text x="315" y="328" class="t-note">MSAL caches it; step 1 repeats near expiry</text>
+
+  <!-- 3 -->
+  <text x="450" y="352" class="t-step halo">3. Call the API with the token</text>
+  <line x1="182" y1="364" x2="716" y2="364" class="msg"/>
+  <text x="450" y="382" class="t-url halo">PUT /api/me/avatar · Authorization: Bearer &lt;token&gt;</text>
+
+  <!-- 4 -->
+  <text x="585" y="420" class="t-step">4. Entra's signing keys (cached)</text>
+  <line x1="454" y1="432" x2="716" y2="432" class="server"/>
+  <text x="585" y="450" class="t-url">GET …/discovery/v2.0/keys</text>
+
+  <!-- 5 -->
+  <rect x="620" y="470" width="200" height="60" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="720" y="495" class="t-step">5. Validate the token</text>
+  <text x="720" y="514" class="t-note">signature, issuer, aud, scp → oid</text>
+
+  <!-- 6 -->
+  <text x="450" y="572" class="t-step halo">6. 204 No Content</text>
+  <line x1="718" y1="584" x2="184" y2="584" class="reply"/>
+  <text x="450" y="602" class="t-note halo">photo saved at avatars/{oid}/avatar.jpg</text>
+
+  <text x="40" y="645" class="t-note t-left">Monospace: the request behind each step · … = https://cyvault.ciamlogin.com/e5cb5788-11bc-499b-82f2-095c6f201b40</text>
+</svg>

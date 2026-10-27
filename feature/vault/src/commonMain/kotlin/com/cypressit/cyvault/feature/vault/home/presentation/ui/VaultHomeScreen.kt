@@ -1,6 +1,8 @@
 package com.cypressit.cyvault.feature.vault.home.presentation.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,10 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -42,6 +46,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,11 +59,13 @@ import com.cypressit.cyvault.systemdesign.components.StatusBarIconsFor
 import com.cypressit.cyvault.systemdesign.theme.CyTheme
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.cyvault_logo
+import cyvault.vault.generated.resources.vault_home_change_photo_description
 import cyvault.vault.generated.resources.vault_home_logo_description
 import cyvault.vault.generated.resources.vault_home_open_menu_description
 import cyvault.vault.generated.resources.vault_home_sign_out
 import cyvault.vault.generated.resources.vault_home_sign_out_description
 import cyvault.vault.generated.resources.vault_home_title
+import org.jetbrains.compose.resources.decodeToImageBitmap
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -88,6 +96,11 @@ internal fun VaultHomeScreen(
         onSignedOut = onSignedOut,
     )
 
+    // Platform actions are created here, next to the ViewModel, and passed down as lambdas.
+    val pickProfilePhoto = rememberProfilePhotoPicker { photo ->
+        viewModel.onIntent(VaultHomeIntent.ChangeProfilePhoto(photo))
+    }
+
     // The top bar is drawn behind the status bar, so its icons must contrast with the bar.
     StatusBarIconsFor(barColor = CyTheme.brandColors.topBar)
 
@@ -99,6 +112,9 @@ internal fun VaultHomeScreen(
                 DrawerHeader(
                     name = state.userName,
                     email = state.userEmail,
+                    photo = state.profilePhoto,
+                    isUpdatingPhoto = state.isUpdatingPhoto,
+                    onChangePhotoClick = pickProfilePhoto,
                     modifier = Modifier.padding(horizontal = 24.dp),
                 )
                 Spacer(Modifier.height(16.dp))
@@ -169,18 +185,61 @@ internal fun VaultHomeScreen(
     }
 }
 
-/** The signed-in user at the top of the drawer: initials avatar, name and email. */
+/**
+ * The signed-in user at the top of the drawer: avatar, name and email. Tapping the avatar
+ * calls [onChangePhotoClick] to change the profile photo.
+ */
 @Composable
 private fun DrawerHeader(
     name: String,
     email: String,
+    photo: ByteArray?,
+    isUpdatingPhoto: Boolean,
+    onChangePhotoClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val photoBitmap = remember(photo) { photo?.let { runCatching { it.decodeToImageBitmap() }.getOrNull() } }
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        CyAvatar(name = name, fallback = email)
+        Box {
+            // Only the circle is clipped and clickable, so the badge can overlap its edge.
+            CyAvatar(
+                name = name,
+                fallback = email,
+                photo = photoBitmap,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable(
+                        enabled = !isUpdatingPhoto,
+                        onClickLabel = stringResource(Res.string.vault_home_change_photo_description),
+                        onClick = onChangePhotoClick,
+                    ),
+            )
+            if (isUpdatingPhoto) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color.Black.copy(alpha = 0.35f), CircleShape)
+                        .padding(14.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.PhotoCamera,
+                    contentDescription = stringResource(Res.string.vault_home_change_photo_description),
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(20.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                        .padding(3.dp),
+                )
+            }
+        }
         Spacer(Modifier.height(8.dp))
         if (name.isNotBlank()) {
             Text(
