@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 480" width="1000" height="480" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title>CyVault — inside the Function App: user check, per-user blob path, Managed Identity</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .t-title { font-size: 20px; font-weight: 700; fill: #0F172A; }
+      .t-sub { font-size: 12.5px; fill: #64748B; }
+      .t-group { font-size: 13px; font-weight: 700; fill: #7C3AED; }
+      .t-box { font-size: 14px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-boxsub { font-size: 11px; fill: #475569; text-anchor: middle; }
+      .t-code { font-size: 11.5px; fill: #1E293B; text-anchor: middle; font-family: Consolas, 'SF Mono', Menlo, monospace; }
+      .t-step { font-size: 12px; fill: #1E293B; text-anchor: middle; }
+      .t-note { font-size: 11px; fill: #64748B; text-anchor: middle; }
+      .t-left { text-anchor: start; }
+      .halo { paint-order: stroke; stroke: #F8FAFC; stroke-width: 5px; stroke-linejoin: round; }
+      .msg { stroke: #475569; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1000" height="480" fill="#F8FAFC"/>
+
+  <text x="40" y="38" class="t-title">Inside the Function App</text>
+  <text x="40" y="60" class="t-sub">Incoming: the user's token decides who is calling · Outgoing: the Function's own identity reaches Storage · Your code ties them together with oid</text>
+
+  <!-- Function App group -->
+  <rect x="260" y="90" width="480" height="360" rx="12" fill="#FAF5FF" stroke="#7C3AED" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="280" y="114" class="t-group">Function App</text>
+
+  <!-- App -->
+  <rect x="40" y="140" width="150" height="64" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="115" y="167" class="t-box">CyVault app</text>
+  <text x="115" y="185" class="t-boxsub">Android · iOS</text>
+
+  <!-- Microsoft.Identity.Web -->
+  <rect x="320" y="140" width="360" height="64" rx="8" fill="#DCFCE7" stroke="#0F766E" stroke-width="1.5"/>
+  <text x="500" y="167" class="t-box">Microsoft.Identity.Web</text>
+  <text x="500" y="185" class="t-boxsub">validates the user's token, extracts oid</text>
+
+  <!-- C# code -->
+  <rect x="320" y="250" width="360" height="64" rx="8" fill="#FFFFFF" stroke="#475569" stroke-width="1.5"/>
+  <text x="500" y="277" class="t-box">Your C# code</text>
+  <text x="500" y="296" class="t-code">blob = avatars/{oid}/avatar.jpg</text>
+
+  <!-- Managed Identity -->
+  <rect x="320" y="360" width="360" height="64" rx="8" fill="#E2E8F0" stroke="#475569" stroke-width="1.5"/>
+  <text x="500" y="387" class="t-box">Managed Identity</text>
+  <text x="500" y="405" class="t-boxsub">the Function's own identity</text>
+
+  <!-- Blob Storage -->
+  <rect x="800" y="360" width="160" height="64" rx="8" fill="#FFEDD5" stroke="#C2410C" stroke-width="1.5"/>
+  <text x="880" y="387" class="t-box">Blob Storage</text>
+  <text x="880" y="405" class="t-boxsub">private: avatars</text>
+  <text x="880" y="444" class="t-note">checks the IAM role</text>
+  <text x="880" y="459" class="t-note">assignment</text>
+
+  <!-- Arrows -->
+  <text x="255" y="160" class="t-step halo">user token</text>
+  <line x1="192" y1="172" x2="316" y2="172" class="msg"/>
+
+  <line x1="500" y1="206" x2="500" y2="246" class="msg"/>
+  <text x="512" y="231" class="t-step t-left">oid</text>
+
+  <line x1="500" y1="316" x2="500" y2="356" class="msg"/>
+  <text x="512" y="341" class="t-step t-left">blob request</text>
+
+  <text x="740" y="380" class="t-step halo">Function's token</text>
+  <line x1="682" y1="392" x2="796" y2="392" class="msg"/>
+</svg>
