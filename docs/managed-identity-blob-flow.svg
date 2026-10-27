@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="1000" height="640" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title>CyVault — Function App writes to Blob Storage with its Managed Identity</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .t-title { font-size: 20px; font-weight: 700; fill: #0F172A; }
+      .t-sub { font-size: 12.5px; fill: #64748B; }
+      .t-box { font-size: 14px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-boxsub { font-size: 11px; fill: #475569; text-anchor: middle; }
+      .t-step { font-size: 12.5px; fill: #1E293B; text-anchor: middle; }
+      .t-code { font-size: 12px; fill: #1E293B; text-anchor: middle; font-family: Consolas, 'SF Mono', Menlo, monospace; }
+      .t-note { font-size: 11px; fill: #64748B; text-anchor: middle; }
+      .halo { paint-order: stroke; stroke: #F8FAFC; stroke-width: 5px; stroke-linejoin: round; }
+      .life { stroke: #94A3B8; stroke-width: 1.2; stroke-dasharray: 4 4; }
+      .msg { stroke: #475569; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .reply { stroke: #475569; stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1000" height="640" fill="#F8FAFC"/>
+
+  <text x="40" y="38" class="t-title">Function App → Blob Storage with a Managed Identity</text>
+  <text x="40" y="60" class="t-sub">Solid arrows: requests · Dashed arrows: responses · No keys or connection strings: Azure issues and rotates the Function's credentials</text>
+
+  <!-- Participants -->
+  <rect x="40" y="90" width="200" height="56" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="140" y="114" class="t-box">Function code</text>
+  <text x="140" y="132" class="t-boxsub">C# · DefaultAzureCredential</text>
+
+  <rect x="280" y="90" width="200" height="56" rx="8" fill="#E2E8F0" stroke="#475569" stroke-width="1.5"/>
+  <text x="380" y="114" class="t-box">Managed Identity</text>
+  <text x="380" y="132" class="t-boxsub">endpoint inside the Function App</text>
+
+  <rect x="520" y="90" width="200" height="56" rx="8" fill="#DCFCE7" stroke="#0F766E" stroke-width="1.5"/>
+  <text x="620" y="114" class="t-box">Entra ID</text>
+  <text x="620" y="132" class="t-boxsub">issues the Function's token</text>
+
+  <rect x="760" y="90" width="200" height="56" rx="8" fill="#FFEDD5" stroke="#C2410C" stroke-width="1.5"/>
+  <text x="860" y="114" class="t-box">Blob Storage</text>
+  <text x="860" y="132" class="t-boxsub">private container: avatars</text>
+
+  <!-- Lifelines -->
+  <line x1="140" y1="146" x2="140" y2="610" class="life"/>
+  <line x1="380" y1="146" x2="380" y2="610" class="life"/>
+  <line x1="620" y1="146" x2="620" y2="610" class="life"/>
+  <line x1="860" y1="146" x2="860" y2="460" class="life"/>
+  <line x1="860" y1="530" x2="860" y2="610" class="life"/>
+
+  <!-- 1 -->
+  <text x="260" y="188" class="t-step">1. Need a token</text>
+  <line x1="142" y1="200" x2="376" y2="200" class="msg"/>
+
+  <!-- 2 -->
+  <text x="500" y="238" class="t-step">2. Request token</text>
+  <line x1="382" y1="250" x2="616" y2="250" class="msg"/>
+  <text x="500" y="270" class="t-note">audience: https://storage.azure.com</text>
+
+  <!-- 3 -->
+  <text x="500" y="306" class="t-step">3. Token</text>
+  <line x1="618" y1="318" x2="384" y2="318" class="reply"/>
+
+  <text x="260" y="356" class="t-step">Token</text>
+  <line x1="378" y1="368" x2="144" y2="368" class="reply"/>
+  <text x="260" y="388" class="t-note">the SDK caches it until it nears expiry</text>
+
+  <!-- 4 -->
+  <text x="500" y="416" class="t-code halo">4. PUT avatars/{oid}/avatar.jpg</text>
+  <line x1="142" y1="428" x2="856" y2="428" class="msg"/>
+  <text x="500" y="446" class="t-note halo">Authorization: Bearer &lt;token&gt; · {oid} comes from the user's validated access token</text>
+
+  <!-- 5 + 6 -->
+  <rect x="760" y="460" width="200" height="70" rx="8" fill="#FFEDD5" stroke="#C2410C" stroke-width="1.5"/>
+  <text x="860" y="489" class="t-step">5. Validate token</text>
+  <text x="860" y="511" class="t-step">6. Check IAM role assignment</text>
+
+  <!-- 7 -->
+  <text x="500" y="572" class="t-step halo">7. 201 Created  ·  or 403 Forbidden if no role covers the container</text>
+  <line x1="858" y1="584" x2="144" y2="584" class="reply"/>
+</svg>
