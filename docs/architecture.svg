@@ -48,7 +48,7 @@
   <text x="52" y="102" class="t-band">PLATFORM SHELLS</text>
   <rect x="230" y="100" width="170" height="44" rx="8" class="box" stroke="#64748B"/>
   <text x="315" y="118" class="t-box">androidApp</text>
-  <text x="315" y="134" class="t-boxsub">Application · MainActivity · MSAL init</text>
+  <text x="315" y="134" class="t-boxsub">Application · MainActivity · Koin start</text>
   <rect x="480" y="100" width="170" height="44" rx="8" class="box" stroke="#64748B"/>
   <text x="565" y="118" class="t-box">iosApp</text>
   <text x="565" y="134" class="t-boxsub">SwiftUI host · AmplifyAuthBridge</text>
@@ -182,9 +182,6 @@
   <path d="M520 239 L562 302" class="dep"/>
   <text x="560" y="268" class="t-small">wires entry points + Koin modules</text>
 
-  <!-- androidApp -> authentication (MSAL init, ActivityProvider) -->
-  <path d="M232 128 H48 V318 H52" class="dep"/>
-  <text x="38" y="230" class="t-small" transform="rotate(-90 38 230)" text-anchor="middle">MSAL init</text>
 
   <!-- features never import each other -->
   <path d="M277 330 L287 330" stroke="#DC2626" stroke-width="1.8" fill="none"/>

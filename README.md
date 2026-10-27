@@ -25,10 +25,12 @@ The app is built with **Kotlin Multiplatform** and **Compose Multiplatform**. UI
 
 ## Features
 
-- **Authentication** (AWS Cognito via Amplify)
+- **Authentication**
+  - **Android:** Microsoft Entra External ID with MSAL native authentication: the app's own Compose screens, no browser page
+  - **iOS:** AWS Cognito via Amplify (not migrated to Entra yet)
   - Email/password sign-up with email verification code
-  - Sign-in, forgot password, sign-out
-  - **Sign in with Google** (OAuth, deep-link callback `cyvault://callback`)
+  - Sign-in, sign-out, forgot password (sends the reset code; entering the code and a new password isn't built yet)
+  - **Sign in with Google:** iOS only for now (Amplify hosted UI, deep-link callback `cyvault://callback`); on Android it needs Google set up as an identity provider in Entra
 - **Add card via open banking** (multi-step flow)
   1. Pick a country and search for your bank (Yapily institutions API)
   2. Authorise access in the bank's page (Chrome Custom Tabs on Android, `SFSafariViewController` on iOS)
@@ -94,7 +96,7 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 
 | Concern | Shared API | Android | iOS |
 |---|---|---|---|
-| Authentication | `AuthApiService` (`expect`/`actual`) | Amplify Android | Amplify Swift, through the `IosAuthBridge` callback interface implemented in Swift |
+| Authentication | `AuthApiService` (`expect`/`actual`) | MSAL native auth (Entra External ID) | Amplify Swift (Cognito), through the `IosAuthBridge` callback interface implemented in Swift |
 | Open bank authorisation page | `BankAppLauncher` (`expect`/`actual`) | Chrome Custom Tabs | `SFSafariViewController` |
 | DI | `platformModule` | Ktor OkHttp engine | Ktor Darwin engine |
 
@@ -108,9 +110,9 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 | Async | Kotlin Coroutines & Flow |
 | DI | Koin 4 |
 | Networking | Ktor 3 (OkHttp / Darwin), kotlinx.serialization |
-| Auth | AWS Amplify (Cognito) + Google federated sign-in |
+| Auth | Android: Microsoft Entra External ID + MSAL 8 (native auth) · iOS: AWS Amplify (Cognito) + Google federated sign-in |
 | Open banking | Yapily REST API |
-| Backend | AWS Amplify Gen 2 (TypeScript) |
+| Backend | AWS Amplify Gen 2 (TypeScript), for the iOS auth backend |
 
 ## Getting started
 
@@ -119,9 +121,29 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 - Android Studio (latest) with the Kotlin Multiplatform plugin
 - Xcode (for iOS)
 - JDK 17+
-- Node.js 18+ and an AWS account (only needed to deploy your own backend)
+- An Azure account (only needed to use your own Entra tenant for Android)
+- Node.js 18+ and an AWS account (only needed to deploy your own iOS auth backend)
 
-### 1. Backend (optional: deploy your own)
+### 1. Authentication
+
+**Android: Microsoft Entra External ID (optional: use your own tenant)**
+
+1. In the [Entra admin center](https://entra.microsoft.com), create an **external** tenant.
+2. In that tenant, register an app (single tenant) and add the **Android** platform with the package
+   name `com.cypressit.cyvault` and your signing key's hash:
+
+   ```bash
+   keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore -storepass android | openssl sha1 -binary | openssl base64
+   ```
+
+3. Under **Authentication → Settings**, turn on **Allow public client flows** and **Enable native authentication**.
+4. Create a user flow with **Email with password** and the **Display Name** attribute, and add the app to it.
+5. Under **API permissions**, add `openid` and `offline_access`, then grant admin consent.
+6. Put your client ID, tenant subdomain and redirect URI in
+   `feature/authentication/src/androidMain/res/raw/auth_config_native_auth.json`, and your signature
+   hash in the MSAL `BrowserTabActivity` entry of `androidApp/src/main/AndroidManifest.xml`.
+
+**iOS: AWS Amplify (optional: deploy your own backend)**
 
 ```bash
 cd amplify-backend
@@ -131,10 +153,7 @@ npx ampx sandbox secret set GOOGLE_CLIENT_SECRET
 npx ampx sandbox
 ```
 
-Copy the generated `amplify_outputs.json` to:
-
-- `androidApp/src/main/res/raw/amplify_outputs.json`
-- `iosApp/iosApp/amplify_outputs.json`
+Copy the generated `amplify_outputs.json` to `iosApp/iosApp/amplify_outputs.json`.
 
 ### 2. Open banking
 
@@ -153,7 +172,8 @@ CyVault is a portfolio / learning project and **not production-ready**. The know
 - **Yapily app secret** is currently read on the client for simplicity. In production, all Yapily calls should go through a backend proxy (for example an AWS Lambda) so the secret never ships in the app.
 - **Card data**: the demo model holds a card number and CVV. A real app must never store the CVV and should keep only a **tokenised** card reference from a PCI DSS-compliant provider.
 - **Card API**: `CardApiService` points to a placeholder endpoint. Planned: an Amplify Data / AppSync backend with owner-based authorization.
-- **Local storage**: SQLDelight is set up for offline caching (not yet implemented), with platform keystore/keychain encryption for sensitive data.
+- **Local storage**: planned: SQLDelight for offline caching, with platform keystore/keychain encryption for sensitive data.
+- **Auth**: move iOS from Amplify/Cognito to MSAL and Entra External ID, add Google as an Entra identity provider for Android, and finish the forgot-password flow (code + new password).
 - More unit and UI tests for use cases and ViewModels.
 
 ## Author
