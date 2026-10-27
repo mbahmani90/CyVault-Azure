@@ -91,6 +91,12 @@ On Android, Google sign-in goes through Entra External ID, with Google set up as
 
 ![Sign in with Google through Entra External ID](docs/google-sign-in-flow.svg)
 
+### Function App access to Blob Storage (planned)
+
+Profile photos are planned to live in a private Blob Storage container behind an Azure Functions API. The Function App reaches Storage through its **Managed Identity**, so no storage keys or connection strings exist anywhere. The SDK (`DefaultAzureCredential`) gets a token for that identity from Entra ID and sends it with each blob request. Blob Storage validates the token and checks the identity's **IAM role assignment** (`Storage Blob Data Contributor` on the `avatars` container) before allowing the write. Users get no Storage permissions at all: the Function builds every blob path from the `oid` in the user's validated access token, so each account can only reach its own photo.
+
+![Function App writes to Blob Storage with its Managed Identity](docs/managed-identity-blob-flow.svg)
+
 ### MVI
 
 Every screen has three types:
