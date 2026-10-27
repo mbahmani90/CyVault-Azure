@@ -7,10 +7,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.cypressit.cyvault.feature.authentication.presentation.ui.AuthScreen
 import com.cypressit.cyvault.feature.vault.AddCardScreen
-import com.cypressit.cyvault.feature.vault.VaultListScreen
+import com.cypressit.cyvault.feature.vault.VaultHomeScreen
 import com.cypressit.cyvault.navigation.AddCardRoute
 import com.cypressit.cyvault.navigation.AuthRoute
-import com.cypressit.cyvault.navigation.VaultListRoute
+import com.cypressit.cyvault.navigation.VaultHomeRoute
 
 /**
  * The app's only NavHost. Features expose plain screens that report events through
@@ -28,19 +28,19 @@ fun App() {
             composable<AuthRoute> {
                 AuthScreen(
                     onAuthSuccess = {
-                        navController.navigate(VaultListRoute) {
+                        navController.navigate(VaultHomeRoute) {
                             popUpTo(AuthRoute) { inclusive = true }
                         }
                     }
                 )
             }
 
-            composable<VaultListRoute> {
-                VaultListScreen(
+            composable<VaultHomeRoute> {
+                VaultHomeScreen(
                     onAddCardClick = { navController.navigate(AddCardRoute) },
                     onSignedOut = {
                         navController.navigate(AuthRoute) {
-                            popUpTo(VaultListRoute) { inclusive = true }
+                            popUpTo(VaultHomeRoute) { inclusive = true }
                         }
                     },
                 )

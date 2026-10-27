@@ -8,21 +8,20 @@ import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHome
 import kotlinx.coroutines.flow.Flow
 
 @Composable
-internal fun VaultScaffoldEffect(
+internal fun VaultHomeScreenEffect(
     effects: Flow<VaultHomeEffect>,
     drawerState: DrawerState,
     snackBarHostState: SnackbarHostState,
     onSignedOut: () -> Unit,
-    onBack: () -> Unit,
 ) {
     LaunchedEffect(Unit) {
         effects.collect { effect ->
             when (effect) {
                 VaultHomeEffect.NavigateToLogin -> onSignedOut()
                 is VaultHomeEffect.ShowError -> snackBarHostState.showSnackbar(effect.message)
+                VaultHomeEffect.CardDeleted -> snackBarHostState.showSnackbar("Card deleted")
                 VaultHomeEffect.OpenDrawer -> drawerState.open()
                 VaultHomeEffect.CloseDrawer -> drawerState.close()
-                VaultHomeEffect.NavigateBack -> onBack()
             }
         }
     }

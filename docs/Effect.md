@@ -37,7 +37,7 @@ LaunchedEffect(Unit) {
 
 ## The three common cases
 
-Across `AuthEffect`, `VaultListEffect`, `VaultHomeEffect`, and `AddCardEffect`, effects fall into three recurring categories:
+Across `AuthEffect`, `VaultHomeEffect`, and `AddCardEffect`, effects fall into three recurring categories:
 
 ### 1. Show a snackbar / toast
 
@@ -45,7 +45,7 @@ Used for transient feedback: errors, confirmations, status messages.
 
 ```kotlin
 data class ShowError(val message: String) : AddCardEffect()
-data object CardDeleted : VaultListEffect()
+data object CardDeleted : VaultHomeEffect()
 ```
 
 Consumed via `snackbarHostState.showSnackbar(...)`.
@@ -66,7 +66,6 @@ Used for one-off navigation triggered by a ViewModel decision (login success, sa
 
 ```kotlin
 data object NavigateToLogin : VaultHomeEffect() // after sign-out → onSignedOut()
-data object NavigateBack : VaultHomeEffect()    // → onBack()
 data object CardSaved : AddCardEffect()          // → onCardSaved()
 ```
 
@@ -98,6 +97,5 @@ Treat this as a variant of "control a piece of transient UI state that isn't wor
 ## Reference implementations
 
 - [`AddCardEffect.kt`](../feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/addcard/presentation/viewmodel/AddCardEffect.kt)
-- [`VaultListEffect.kt`](../feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/vaultlist/presentation/viewmodel/VaultListEffect.kt)
-- [`VaultHomeEffect.kt`](../feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/home/presentation/viewmodel/VaultHomeEffect.kt) / [`VaultScaffoldEffect.kt`](../feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/home/presentation/ui/VaultScaffoldEffect.kt)
+- [`VaultHomeEffect.kt`](../feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/home/presentation/viewmodel/VaultHomeEffect.kt) / [`VaultHomeScreenEffect.kt`](../feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/home/presentation/ui/VaultHomeScreenEffect.kt)
 - [`AuthEffect.kt`](../feature/authentication/src/commonMain/kotlin/com/cypressit/cyvault/feature/authentication/presentation/viewmodel/AuthEffect.kt)

@@ -104,78 +104,66 @@
   <text x="562" y="343" class="t-boxsub">feature:vault · one package per screen, each with its own layers and Koin module, plus a shared card/ package</text>
 
   <!-- package headers -->
-  <rect x="300" y="354" width="124" height="24" rx="5" class="pkg"/>
-  <text x="362" y="370" class="t-pkg">home/</text>
-  <rect x="433" y="354" width="124" height="24" rx="5" class="pkg"/>
-  <text x="495" y="370" class="t-pkg">vaultlist/</text>
-  <rect x="566" y="354" width="124" height="24" rx="5" class="pkg"/>
-  <text x="628" y="370" class="t-pkg">addcard/</text>
-  <rect x="699" y="354" width="124" height="24" rx="5" fill="#FEF9C3" stroke="#CA8A04" stroke-width="1.2"/>
-  <text x="761" y="370" class="t-pkg">card/ (shared)</text>
+  <rect x="300" y="354" width="168" height="24" rx="5" class="pkg"/>
+  <text x="384" y="370" class="t-pkg">home/</text>
+  <rect x="477" y="354" width="168" height="24" rx="5" class="pkg"/>
+  <text x="561" y="370" class="t-pkg">addcard/</text>
+  <rect x="655" y="354" width="168" height="24" rx="5" fill="#FEF9C3" stroke="#CA8A04" stroke-width="1.2"/>
+  <text x="739" y="370" class="t-pkg">card/ (shared)</text>
 
   <!-- home/ -->
-  <rect x="300" y="384" width="124" height="70" rx="5" class="ui"/>
-  <text x="362" y="399" class="t-chip">presentation</text>
-  <text x="362" y="414" class="t-chipsub">VaultScaffold</text>
-  <text x="362" y="427" class="t-chipsub">drawer · top bar · sign-out</text>
-  <text x="362" y="440" class="t-chipsub">VaultHomeViewModel</text>
-  <text x="362" y="490" class="t-empty">uses core's</text>
-  <text x="362" y="503" class="t-empty">SessionManager</text>
-  <rect x="300" y="594" width="124" height="26" rx="5" class="wire"/>
-  <text x="362" y="611" class="t-chipsub">di: homeModule</text>
-
-  <!-- vaultlist/ -->
-  <rect x="433" y="384" width="124" height="70" rx="5" class="ui"/>
-  <text x="495" y="399" class="t-chip">presentation</text>
-  <text x="495" y="414" class="t-chipsub">VaultListScreen</text>
-  <text x="495" y="427" class="t-chipsub">card list · delete</text>
-  <text x="495" y="440" class="t-chipsub">VaultListViewModel</text>
-  <rect x="433" y="462" width="124" height="58" rx="5" class="dom"/>
-  <text x="495" y="477" class="t-chip">domain</text>
-  <text x="495" y="492" class="t-chipsub">GetCardsUseCase</text>
-  <text x="495" y="505" class="t-chipsub">DeleteCardUseCase</text>
-  <text x="495" y="552" class="t-empty">data from card/</text>
-  <rect x="433" y="594" width="124" height="26" rx="5" class="wire"/>
-  <text x="495" y="611" class="t-chipsub">di: vaultListModule</text>
+  <rect x="300" y="384" width="168" height="70" rx="5" class="ui"/>
+  <text x="384" y="399" class="t-chip">presentation</text>
+  <text x="384" y="414" class="t-chipsub">VaultHomeScreen</text>
+  <text x="384" y="427" class="t-chipsub">card list · drawer · sign-out</text>
+  <text x="384" y="440" class="t-chipsub">VaultHomeViewModel</text>
+  <rect x="300" y="462" width="168" height="58" rx="5" class="dom"/>
+  <text x="384" y="477" class="t-chip">domain</text>
+  <text x="384" y="492" class="t-chipsub">GetCardsUseCase</text>
+  <text x="384" y="505" class="t-chipsub">DeleteCardUseCase</text>
+  <text x="384" y="546" class="t-empty">data from card/ · sign-out</text>
+  <text x="384" y="559" class="t-empty">via core's SessionManager</text>
+  <rect x="300" y="594" width="168" height="26" rx="5" class="wire"/>
+  <text x="384" y="611" class="t-chipsub">di: homeModule</text>
 
   <!-- addcard/ -->
-  <rect x="566" y="384" width="124" height="70" rx="5" class="ui"/>
-  <text x="628" y="399" class="t-chip">presentation</text>
-  <text x="628" y="414" class="t-chipsub">AddCardScreen</text>
-  <text x="628" y="427" class="t-chipsub">AddCardViewModel</text>
-  <text x="628" y="440" class="t-chipsub">BankAppLauncher</text>
-  <rect x="566" y="462" width="124" height="58" rx="5" class="dom"/>
-  <text x="628" y="477" class="t-chip">domain</text>
-  <text x="628" y="492" class="t-chipsub">BankRepository</text>
-  <text x="628" y="505" class="t-chipsub">Institution · BankAccount</text>
-  <rect x="566" y="528" width="124" height="58" rx="5" class="dat"/>
-  <text x="628" y="543" class="t-chip">data</text>
-  <text x="628" y="558" class="t-chipsub">YapilyService · DTOs</text>
-  <text x="628" y="571" class="t-chipsub">BankRepositoryImpl</text>
-  <rect x="566" y="594" width="124" height="26" rx="5" class="wire"/>
-  <text x="628" y="611" class="t-chipsub">di: addCardModule</text>
+  <rect x="477" y="384" width="168" height="70" rx="5" class="ui"/>
+  <text x="561" y="399" class="t-chip">presentation</text>
+  <text x="561" y="414" class="t-chipsub">AddCardScreen (own top bar)</text>
+  <text x="561" y="427" class="t-chipsub">AddCardViewModel</text>
+  <text x="561" y="440" class="t-chipsub">BankAppLauncher</text>
+  <rect x="477" y="462" width="168" height="58" rx="5" class="dom"/>
+  <text x="561" y="477" class="t-chip">domain</text>
+  <text x="561" y="492" class="t-chipsub">BankRepository</text>
+  <text x="561" y="505" class="t-chipsub">Institution · BankAccount</text>
+  <rect x="477" y="528" width="168" height="58" rx="5" class="dat"/>
+  <text x="561" y="543" class="t-chip">data</text>
+  <text x="561" y="558" class="t-chipsub">YapilyService · DTOs</text>
+  <text x="561" y="571" class="t-chipsub">BankRepositoryImpl</text>
+  <rect x="477" y="594" width="168" height="26" rx="5" class="wire"/>
+  <text x="561" y="611" class="t-chipsub">di: addCardModule</text>
 
   <!-- card/ (shared) -->
-  <text x="761" y="424" class="t-empty">used by vaultlist/</text>
-  <text x="761" y="437" class="t-empty">and addcard/</text>
-  <rect x="699" y="462" width="124" height="58" rx="5" class="dom"/>
-  <text x="761" y="477" class="t-chip">domain</text>
-  <text x="761" y="492" class="t-chipsub">Card · CardType</text>
-  <text x="761" y="505" class="t-chipsub">CardRepository</text>
-  <rect x="699" y="528" width="124" height="58" rx="5" class="dat"/>
-  <text x="761" y="543" class="t-chip">data</text>
-  <text x="761" y="558" class="t-chipsub">CardApiService · DTOs</text>
-  <text x="761" y="571" class="t-chipsub">CardRepositoryImpl</text>
-  <rect x="699" y="594" width="124" height="26" rx="5" class="wire"/>
-  <text x="761" y="611" class="t-chipsub">di: cardModule</text>
+  <text x="739" y="424" class="t-empty">used by home/</text>
+  <text x="739" y="437" class="t-empty">and addcard/</text>
+  <rect x="655" y="462" width="168" height="58" rx="5" class="dom"/>
+  <text x="739" y="477" class="t-chip">domain</text>
+  <text x="739" y="492" class="t-chipsub">Card · CardType</text>
+  <text x="739" y="505" class="t-chipsub">CardRepository</text>
+  <rect x="655" y="528" width="168" height="58" rx="5" class="dat"/>
+  <text x="739" y="543" class="t-chip">data</text>
+  <text x="739" y="558" class="t-chipsub">CardApiService · DTOs</text>
+  <text x="739" y="571" class="t-chipsub">CardRepositoryImpl</text>
+  <rect x="655" y="594" width="168" height="26" rx="5" class="wire"/>
+  <text x="739" y="611" class="t-chipsub">di: cardModule</text>
 
   <!-- vault wiring -->
   <rect x="300" y="630" width="257" height="48" rx="5" class="wire"/>
   <text x="428" y="649" class="t-chip">VaultScreens.kt</text>
-  <text x="428" y="665" class="t-chipsub">public VaultListScreen · AddCardScreen</text>
+  <text x="428" y="665" class="t-chipsub">public VaultHomeScreen · AddCardScreen</text>
   <rect x="566" y="630" width="257" height="48" rx="5" class="wire"/>
   <text x="694" y="649" class="t-chip">di/</text>
-  <text x="694" y="665" class="t-chipsub">vaultFeatureModule (public) includes all 4</text>
+  <text x="694" y="665" class="t-chipsub">vaultFeatureModule (public) includes all 3</text>
 
   <!-- app -> features -->
   <path d="M330 239 L190 302" class="dep"/>
@@ -237,8 +225,8 @@
   <text x="982" y="173" class="t-box">AuthRoute</text>
   <text x="982" y="190" class="t-boxsub">→ AuthScreen</text>
   <rect x="1077" y="150" width="125" height="56" rx="8" class="box" stroke="#2563EB"/>
-  <text x="1139" y="173" class="t-box">VaultListRoute</text>
-  <text x="1139" y="190" class="t-boxsub">→ VaultListScreen</text>
+  <text x="1139" y="173" class="t-box">VaultHomeRoute</text>
+  <text x="1139" y="190" class="t-boxsub">→ VaultHomeScreen</text>
   <rect x="1234" y="150" width="125" height="56" rx="8" class="box" stroke="#2563EB"/>
   <text x="1296" y="173" class="t-box">AddCardRoute</text>
   <text x="1296" y="190" class="t-boxsub">→ AddCardScreen</text>
@@ -254,10 +242,10 @@
 
   <text x="916" y="258" class="t-small">Features have no routes and no Navigation Compose; app calls their screens:</text>
   <text x="932" y="278" class="t-small">AuthScreen(onAuthSuccess)</text>
-  <text x="932" y="294" class="t-small">VaultListScreen(onAddCardClick, onSignedOut)</text>
+  <text x="932" y="294" class="t-small">VaultHomeScreen(onAddCardClick, onSignedOut)</text>
   <text x="932" y="310" class="t-small">AddCardScreen(onBack, onCardSaved)</text>
-  <text x="916" y="334" class="t-small">Vault screens wrap themselves in VaultScaffold: menu + drawer on the list,</text>
-  <text x="916" y="350" class="t-small">back arrow on add card.</text>
+  <text x="916" y="334" class="t-small">Vault home has the menu and the drawer with sign-out; add card has</text>
+  <text x="916" y="350" class="t-small">its own top bar with a back arrow.</text>
   <text x="916" y="372" class="t-small">popUpTo removes login after sign-in, and the vault after sign-out.</text>
 
   <!-- ===================== RIGHT B: SIGN-OUT CONTRACT ===================== -->
