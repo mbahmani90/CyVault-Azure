@@ -6,9 +6,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.cypressit.cyvault.feature.authentication.navigation.AuthRoute
 import com.cypressit.cyvault.feature.authentication.navigation.authScreen
-import com.cypressit.cyvault.feature.vault.navigation.VaultHomeRoute
-import com.cypressit.cyvault.feature.vault.navigation.vaultScreen
+import com.cypressit.cyvault.feature.vault.navigation.AddCardRoute
+import com.cypressit.cyvault.feature.vault.navigation.VaultListRoute
+import com.cypressit.cyvault.feature.vault.navigation.addCardScreen
+import com.cypressit.cyvault.feature.vault.navigation.vaultListScreen
 
+/**
+ * The app's only NavHost. Features report events through callbacks;
+ * every navigation decision is made here.
+ */
 @Composable
 fun App() {
     MaterialTheme {
@@ -20,18 +26,24 @@ fun App() {
         ) {
             authScreen(
                 onAuthSuccess = {
-                    navController.navigate(VaultHomeRoute) {
+                    navController.navigate(VaultListRoute) {
                         popUpTo(AuthRoute) { inclusive = true }
                     }
                 }
             )
 
-            vaultScreen(
-                onNavigateToLogin = {
+            vaultListScreen(
+                onAddCardClick = { navController.navigate(AddCardRoute) },
+                onSignedOut = {
                     navController.navigate(AuthRoute) {
-                        popUpTo(VaultHomeRoute) { inclusive = true }
+                        popUpTo(VaultListRoute) { inclusive = true }
                     }
-                }
+                },
+            )
+
+            addCardScreen(
+                onBack = { navController.popBackStack() },
+                onCardSaved = { navController.popBackStack() },
             )
         }
     }

@@ -37,29 +37,36 @@ import cyvault.vault.generated.resources.vault_home_title
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
+/**
+ * The vault's shell (drawer, top bar, sign-out) around one vault screen. Each vault destination
+ * in app's NavHost wraps its screen in it; navigation events go out as callbacks.
+ *
+ * @param showMenu true on the root vault screen (menu icon + drawer), false elsewhere (back arrow).
+ * @param onSignedOut only reachable when [showMenu] is true, since sign-out lives in the drawer.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VaultHomeScreen(
-    isOnListScreen: Boolean,
-    onNavigateToLogin: () -> Unit,
-    onNavigateBack: () -> Unit,
+fun VaultScaffold(
+    showMenu: Boolean,
+    onBack: () -> Unit,
+    onSignedOut: () -> Unit,
     viewModel: VaultHomeViewModel = koinViewModel(),
     content: @Composable (Modifier) -> Unit,
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val snackBarHostState = remember { SnackbarHostState() }
 
-    VaultHomeScreenEffect(
+    VaultScaffoldEffect(
         effects = viewModel.effect,
         drawerState = drawerState,
         snackBarHostState = snackBarHostState,
-        onNavigateToLogin = onNavigateToLogin,
-        onNavigateBack = onNavigateBack,
+        onSignedOut = onSignedOut,
+        onBack = onBack,
     )
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = isOnListScreen,
+        gesturesEnabled = showMenu,
         drawerContent = {
             ModalDrawerSheet {
                 Spacer(Modifier.height(24.dp))
@@ -93,13 +100,13 @@ fun VaultHomeScreen(
                     title = { Text(stringResource(Res.string.vault_home_title)) },
                     navigationIcon = {
                         IconButton(onClick = {
-                            if (isOnListScreen) viewModel.onIntent(VaultHomeIntent.OpenDrawer)
+                            if (showMenu) viewModel.onIntent(VaultHomeIntent.OpenDrawer)
                             else viewModel.onIntent(VaultHomeIntent.NavigateBack)
                         }) {
                             Icon(
-                                imageVector = if (isOnListScreen) Icons.Default.Menu
+                                imageVector = if (showMenu) Icons.Default.Menu
                                     else Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = if (isOnListScreen) stringResource(Res.string.vault_home_open_menu_description)
+                                contentDescription = if (showMenu) stringResource(Res.string.vault_home_open_menu_description)
                                     else stringResource(Res.string.vault_home_back_description),
                             )
                         }

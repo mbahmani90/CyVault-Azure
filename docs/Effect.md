@@ -22,7 +22,7 @@ LaunchedEffect(Unit) {
     effects.collect { effect ->
         when (effect) {
             is XxxEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
-            XxxEffect.NavigateBack -> navController.popBackStack()
+            XxxEffect.NavigateBack -> onBack() // callback from app, which owns navigation
             ...
         }
     }
@@ -65,13 +65,13 @@ Consumed via a platform launcher abstraction, e.g. `bankAppLauncher.openBankUrl(
 Used for one-off navigation triggered by a ViewModel decision (login success, save completion, back navigation).
 
 ```kotlin
-data object NavigateToLogin : VaultHomeEffect()
-data object NavigateToAddCard : VaultHomeEffect()
-data object NavigateBack : VaultHomeEffect()
-data object CardSaved : AddCardEffect() // triggers onCardSaved() callback → navigation
+data object NavigateToLogin : VaultHomeEffect() // after sign-out → onSignedOut()
+data object NavigateBack : VaultHomeEffect()    // → onBack()
+data object CardSaved : AddCardEffect()          // → onCardSaved()
 ```
 
-Consumed via `navController.navigate(...)`, `navController.popBackStack()`, or a navigation callback passed into the screen.
+Consumed by calling a callback passed into the screen. Features never touch a `NavController`:
+the `app` module owns the only `NavHost` and decides where each callback leads (see `App.kt`).
 
 ## A fourth, less common case: transient UI-widget control
 
@@ -96,7 +96,7 @@ Treat this as a variant of "control a piece of transient UI state that isn't wor
 
 ## Reference implementations
 
-- [`AddCardEffect.kt`](../vault/src/commonMain/kotlin/com/cypressit/vault/addCard/presentation/viewmodel/AddCardEffect.kt)
-- [`VaultListEffect.kt`](../vault/src/commonMain/kotlin/com/cypressit/vault/vaultList/presentation/viewmodel/VaultListEffect.kt)
-- [`VaultHomeEffect.kt`](../vault/src/commonMain/kotlin/com/cypressit/vault/presentation/viewmodel/VaultHomeEffect.kt) / [`VaultHomeScreenEffect.kt`](../vault/src/commonMain/kotlin/com/cypressit/vault/presentation/ui/VaultHomeScreenEffect.kt)
-- [`AuthEffect.kt`](../authentication/src/commonMain/kotlin/com/cypressit/authentication/presentation/viewmodel/AuthEffect.kt)
+- [`AddCardEffect.kt`](../feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/addcard/presentation/viewmodel/AddCardEffect.kt)
+- [`VaultListEffect.kt`](../feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/vaultlist/presentation/viewmodel/VaultListEffect.kt)
+- [`VaultHomeEffect.kt`](../feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/home/presentation/viewmodel/VaultHomeEffect.kt) / [`VaultScaffoldEffect.kt`](../feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/home/presentation/ui/VaultScaffoldEffect.kt)
+- [`AuthEffect.kt`](../feature/authentication/src/commonMain/kotlin/com/cypressit/cyvault/feature/authentication/presentation/viewmodel/AuthEffect.kt)

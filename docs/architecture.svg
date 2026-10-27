@@ -116,8 +116,8 @@
   <!-- home/ -->
   <rect x="300" y="384" width="124" height="70" rx="5" class="ui"/>
   <text x="362" y="399" class="t-chip">presentation</text>
-  <text x="362" y="414" class="t-chipsub">VaultHomeScreen</text>
-  <text x="362" y="427" class="t-chipsub">drawer · top bar</text>
+  <text x="362" y="414" class="t-chipsub">VaultScaffold</text>
+  <text x="362" y="427" class="t-chipsub">drawer · top bar · sign-out</text>
   <text x="362" y="440" class="t-chipsub">VaultHomeViewModel</text>
   <text x="362" y="490" class="t-empty">uses core's</text>
   <text x="362" y="503" class="t-empty">SessionManager</text>
@@ -172,7 +172,7 @@
   <!-- vault wiring -->
   <rect x="300" y="630" width="257" height="48" rx="5" class="wire"/>
   <text x="428" y="649" class="t-chip">navigation/</text>
-  <text x="428" y="665" class="t-chipsub">VaultHomeRoute · vaultScreen() · inner NavHost</text>
+  <text x="428" y="665" class="t-chipsub">routes · vaultListScreen() · addCardScreen()</text>
   <rect x="566" y="630" width="257" height="48" rx="5" class="wire"/>
   <text x="694" y="649" class="t-chip">di/</text>
   <text x="694" y="665" class="t-chipsub">vaultFeatureModule (public) includes all 4</text>
@@ -231,39 +231,34 @@
   <!-- ===================== RIGHT A: NAVIGATION ===================== -->
   <rect x="900" y="55" width="480" height="330" rx="10" class="panel"/>
   <text x="916" y="80" class="t-panel">Navigation</text>
-  <text x="916" y="100" class="t-small">Root NavHost in app (start: AuthRoute)</text>
+  <text x="916" y="100" class="t-small">app's only NavHost (App.kt) · start: AuthRoute · features only report events</text>
 
-  <rect x="930" y="122" width="180" height="50" rx="8" class="box" stroke="#2563EB"/>
-  <text x="1020" y="142" class="t-box">AuthRoute</text>
-  <text x="1020" y="159" class="t-boxsub">authScreen() → AuthScreen</text>
-  <rect x="1170" y="122" width="190" height="50" rx="8" class="box" stroke="#2563EB"/>
-  <text x="1265" y="142" class="t-box">VaultHomeRoute</text>
-  <text x="1265" y="159" class="t-boxsub">vaultScreen() → VaultHomeScreen</text>
+  <rect x="920" y="150" width="125" height="56" rx="8" class="box" stroke="#2563EB"/>
+  <text x="982" y="173" class="t-box">AuthRoute</text>
+  <text x="982" y="190" class="t-boxsub">authScreen()</text>
+  <rect x="1077" y="150" width="125" height="56" rx="8" class="box" stroke="#2563EB"/>
+  <text x="1139" y="173" class="t-box">VaultListRoute</text>
+  <text x="1139" y="190" class="t-boxsub">vaultListScreen()</text>
+  <rect x="1234" y="150" width="125" height="56" rx="8" class="box" stroke="#2563EB"/>
+  <text x="1296" y="173" class="t-box">AddCardRoute</text>
+  <text x="1296" y="190" class="t-boxsub">addCardScreen()</text>
 
-  <path d="M1112 138 L1167 138" class="dep"/>
-  <text x="1140" y="116" class="t-small" text-anchor="middle">onAuthSuccess</text>
-  <path d="M1168 158 L1113 158" class="back"/>
-  <text x="1140" y="188" class="t-small" text-anchor="middle">sign out</text>
+  <path d="M1047 165 L1074 165" class="dep"/>
+  <text x="1061" y="140" class="t-small" text-anchor="middle">onAuthSuccess</text>
+  <path d="M1204 165 L1231 165" class="dep"/>
+  <text x="1218" y="140" class="t-small" text-anchor="middle">onAddCardClick</text>
+  <path d="M1075 192 L1048 192" class="back"/>
+  <text x="1061" y="226" class="t-small" text-anchor="middle">onSignedOut</text>
+  <path d="M1232 192 L1205 192" class="back"/>
+  <text x="1218" y="226" class="t-small" text-anchor="middle">onBack · onCardSaved</text>
 
-  <rect x="930" y="205" width="430" height="122" rx="8" fill="#FFFFFF" stroke="#94A3B8" stroke-width="1.2" stroke-dasharray="5 4"/>
-  <text x="944" y="223" class="t-small">vault's own NavHost (navigation/VaultNavigation.kt)</text>
-  <path d="M1265 174 L1265 203" class="dep"/>
-  <text x="1273" y="194" class="t-small">hosts</text>
-
-  <rect x="950" y="245" width="170" height="50" rx="8" class="box" stroke="#2563EB"/>
-  <text x="1035" y="265" class="t-box">VaultRoute.List</text>
-  <text x="1035" y="282" class="t-boxsub">VaultListScreen</text>
-  <rect x="1170" y="245" width="170" height="50" rx="8" class="box" stroke="#2563EB"/>
-  <text x="1255" y="265" class="t-box">VaultRoute.AddCard</text>
-  <text x="1255" y="282" class="t-boxsub">AddCardScreen</text>
-
-  <path d="M1122 261 L1167 261" class="dep"/>
-  <text x="1145" y="241" class="t-small" text-anchor="middle">add card</text>
-  <path d="M1168 281 L1123 281" class="back"/>
-  <text x="1145" y="314" class="t-small" text-anchor="middle">back · card saved</text>
-
-  <text x="916" y="350" class="t-small">popUpTo removes the previous root screen, so Back can't return to</text>
-  <text x="916" y="366" class="t-small">login after signing in, or to the vault after signing out.</text>
+  <text x="916" y="258" class="t-small">Features never touch a NavController. Each screen entry only gets callbacks:</text>
+  <text x="932" y="278" class="t-small">authScreen(onAuthSuccess)</text>
+  <text x="932" y="294" class="t-small">vaultListScreen(onAddCardClick, onSignedOut)</text>
+  <text x="932" y="310" class="t-small">addCardScreen(onBack, onCardSaved)</text>
+  <text x="916" y="334" class="t-small">Vault screens wrap themselves in VaultScaffold: menu + drawer on the list,</text>
+  <text x="916" y="350" class="t-small">back arrow on add card.</text>
+  <text x="916" y="372" class="t-small">popUpTo removes login after sign-in, and the vault after sign-out.</text>
 
   <!-- ===================== RIGHT B: SIGN-OUT CONTRACT ===================== -->
   <rect x="900" y="400" width="480" height="240" rx="10" class="panel"/>

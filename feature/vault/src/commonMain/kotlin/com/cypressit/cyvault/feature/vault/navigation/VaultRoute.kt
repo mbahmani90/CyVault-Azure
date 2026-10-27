@@ -2,16 +2,10 @@ package com.cypressit.cyvault.feature.vault.navigation
 
 import kotlinx.serialization.Serializable
 
-/** The vault feature's route in the app's NavHost. */
+/** The vault's root screen: the card list. */
 @Serializable
-data object VaultHomeRoute
+data object VaultListRoute
 
-/** Screens inside the vault's own NavHost. */
-internal sealed class VaultRoute {
-
-    @Serializable
-    data object List : VaultRoute()
-
-    @Serializable
-    data object AddCard : VaultRoute()
-}
+/** Add a card through open banking. */
+@Serializable
+data object AddCardRoute
