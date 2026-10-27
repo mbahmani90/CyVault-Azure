@@ -107,7 +107,7 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 |---|---|---|---|
 | Authentication | `AuthApiService` (`expect`/`actual`) | MSAL native auth (Entra External ID) | Amplify Swift (Cognito), through the `IosAuthBridge` callback interface implemented in Swift |
 | Open bank authorisation page | `BankAppLauncher` (`expect`/`actual`) | Chrome Custom Tabs | `SFSafariViewController` |
-| DI | `platformModule` | Ktor OkHttp engine | Ktor Darwin engine |
+| DI | `platformModule` | Ktor OkHttp engine, `ActivityProvider` (the on-screen activity, for MSAL's browser sign-in) | Ktor Darwin engine |
 
 ## Tech stack
 
