@@ -1,15 +1,19 @@
 package com.cypressit.cyvault.feature.authentication.presentation.ui
 
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -32,16 +36,18 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import cyvault.authentication.generated.resources.Res
+import cyvault.authentication.generated.resources.cyvault_logo
 import cyvault.authentication.generated.resources.login_email_label
 import cyvault.authentication.generated.resources.login_forgot_password
+import cyvault.authentication.generated.resources.login_logo_description
 import cyvault.authentication.generated.resources.login_password_hide
 import cyvault.authentication.generated.resources.login_password_label
 import cyvault.authentication.generated.resources.login_password_show
 import cyvault.authentication.generated.resources.login_register_link
 import cyvault.authentication.generated.resources.login_sign_in_button
-import cyvault.authentication.generated.resources.login_title
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthIntent
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthState
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -50,23 +56,50 @@ fun LoginScreen(
     onIntent: (AuthIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Logo pinned to the top; the card centred on the whole screen.
+    Box(
+        modifier = modifier
+            .statusBarsPadding()
+            .padding(horizontal = 24.dp)
+            .imePadding(),
+    ) {
+        Image(
+            painter = painterResource(Res.drawable.cyvault_logo),
+            contentDescription = stringResource(Res.string.login_logo_description),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 24.dp)
+                .size(64.dp),
+        )
+
+        Card(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth(),
+        ) {
+            LoginForm(
+                state = state,
+                onIntent = onIntent,
+                modifier = Modifier.padding(24.dp),
+            )
+        }
+    }
+}
+
+/** The sign-in fields and actions, shown inside the login card. */
+@Composable
+private fun LoginForm(
+    state: AuthState,
+    onIntent: (AuthIntent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val focusManager = LocalFocusManager.current
     var passwordVisible by remember { mutableStateOf(false) }
 
     Column(
-        modifier = modifier
-            .padding(horizontal = 24.dp)
-            .imePadding(),
-        verticalArrangement = Arrangement.Center,
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = stringResource(Res.string.login_title),
-            style = MaterialTheme.typography.headlineMedium,
-        )
-
-        Spacer(Modifier.height(32.dp))
-
         OutlinedTextField(
             value = state.email,
             onValueChange = { onIntent(AuthIntent.EmailChanged(it)) },

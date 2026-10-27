@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark window in dark mode, so there is no white flash at app start. -->
+    <style name="Theme.CyVault" parent="@android:style/Theme.Material.NoActionBar" />
+</resources>
