@@ -26,6 +26,7 @@ class VaultHomeViewModel(
     val effect = _effect.receiveAsFlow()
 
     init {
+        loadUser()
         loadCards()
     }
 
@@ -35,6 +36,13 @@ class VaultHomeViewModel(
             is VaultHomeIntent.DeleteCard -> deleteExistingCard(intent.id)
             VaultHomeIntent.SignOut -> signOut()
             VaultHomeIntent.OpenDrawer -> viewModelScope.launch { _effect.send(VaultHomeEffect.OpenDrawer) }
+        }
+    }
+
+    private fun loadUser() {
+        viewModelScope.launch {
+            val user = sessionManager.currentUser() ?: return@launch
+            _state.update { it.copy(userName = user.name, userEmail = user.email) }
         }
     }
 
