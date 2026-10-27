@@ -10,4 +10,5 @@ interface AuthRepository {
     suspend fun signOut(): Result<Unit>
     suspend fun getCurrentUser(): User?
     suspend fun signInWithGoogle(): Result<User>
+    suspend fun accessToken(scopes: List<String>): String
 }

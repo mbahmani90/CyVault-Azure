@@ -36,7 +36,8 @@ The app is built with **Kotlin Multiplatform** and **Compose Multiplatform**. UI
   2. Authorise access in the bank's page (Chrome Custom Tabs on Android, `SFSafariViewController` on iOS)
   3. Return through a deep link, then choose one of the linked accounts
   4. Enter card details and save
-- **Vault**: list and delete saved cards; the drawer shows the signed-in user (initials avatar, name, email) and sign-out
+- **Vault**: list and delete saved cards; the drawer shows the signed-in user (avatar, name, email) and sign-out
+- **Profile photo** (Android): tap the drawer avatar to pick a photo with the system Photo Picker. It's uploaded to the Azure backend with the user's Entra access token, cached in app-private storage, and removed from the device on sign-out
 
 ## Architecture
 
@@ -70,7 +71,8 @@ own layers and Koin module, plus a small shared package:
 ```
 feature/vault/…/feature/vault/
 ├── card/           shared by the screens: Card model, CardRepository, card API
-├── home/           card list + total assets, drawer with sign-out
+├── home/           card list + total assets, drawer with sign-out and the profile photo
+                    (Azure photo API client, on-device cache, photo picker)
 ├── addcard/        add a card via open banking (Yapily)
 │   ├── data/           remote services + DTOs, mappers, repository implementations
 │   ├── domain/         models, repository interfaces, use cases
@@ -94,7 +96,13 @@ On Android, Google sign-in goes through Entra External ID, with Google set up as
 
 ### Profile photo API: Function App access to Blob Storage
 
-Profile photos live in a private Blob Storage container behind the Azure Functions API in `azure-backend/` (`PUT`, `GET` and `DELETE /api/me/avatar`; the app doesn't call it yet). No route takes a user ID. The Function validates the upload by decoding it, turns it upright, downscales it to at most 512 px and re-encodes it as JPEG, which also drops EXIF metadata such as GPS location. The Function App reaches Storage through its **Managed Identity**, so no storage keys or connection strings exist anywhere. The SDK (`DefaultAzureCredential`) gets a token for that identity from Entra ID and sends it with each blob request. Blob Storage validates the token and checks the identity's **IAM role assignment** (`Storage Blob Data Contributor` on the `avatars` container) before allowing the write. Users get no Storage permissions at all: the Function builds every blob path from the `oid` in the user's validated access token, so each account can only reach its own photo.
+Profile photos live in a private Blob Storage container behind the Azure Functions API in `azure-backend/` (`PUT`, `GET` and `DELETE /api/me/avatar`). On Android, the app asks MSAL for an access token with the API's `Profile.ReadWrite` scope and sends it as `Authorization: Bearer`, only on these requests. No route takes a user ID. The Function validates the upload by decoding it, turns it upright, downscales it to at most 512 px and re-encodes it as JPEG, which also drops EXIF metadata such as GPS location. The Function App reaches Storage through its **Managed Identity**, so no storage keys or connection strings exist anywhere. The SDK (`DefaultAzureCredential`) gets a token for that identity from Entra ID and sends it with each blob request. Blob Storage validates the token and checks the identity's **IAM role assignment** (`Storage Blob Data Contributor` on the `avatars` container) before allowing the write. Users get no Storage permissions at all: the Function builds every blob path from the `oid` in the user's validated access token, so each account can only reach its own photo.
+
+The app gets the access token from Entra's token endpoint, which MSAL discovers from the tenant's metadata, and the Function checks it against Entra's published signing keys:
+
+![Getting an access token and calling the profile photo API](docs/api-token-flow.svg)
+
+Inside the Function App, the validated token's `oid` decides the blob, and the Function's own identity reaches Storage:
 
 ![Inside the Function App: user check, per-user blob path, Managed Identity](docs/function-app-overview.svg)
 
@@ -118,6 +126,7 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 |---|---|---|---|
 | Authentication | `AuthApiService` (`expect`/`actual`) | MSAL native auth (Entra External ID) | Amplify Swift (Cognito), through the `IosAuthBridge` callback interface implemented in Swift |
 | Open bank authorisation page | `BankAppLauncher` (`expect`/`actual`) | Chrome Custom Tabs | `SFSafariViewController` |
+| Profile photo | `rememberProfilePhotoPicker` (`expect`/`actual`); `PickedPhotoReader` and `AvatarFileStore` interfaces bound in `homePlatformModule` | Photo Picker; `AndroidPickedPhotoReader` turns the photo upright from EXIF and scales it to 1024 px; `AndroidAvatarFileStore` caches it in `filesDir` | Not implemented yet (iOS can't reach the Azure API without Entra sign-in) |
 | DI | `platformModule` | Ktor OkHttp engine, `ActivityProvider` (the on-screen activity, for MSAL's browser sign-in) | Ktor Darwin engine |
 
 ## Tech stack
@@ -259,7 +268,7 @@ CyVault is a portfolio / learning project and **not production-ready**. The know
 - **Yapily app secret** is currently read on the client for simplicity. In production, all Yapily calls should go through a backend proxy (for example an AWS Lambda) so the secret never ships in the app.
 - **Card data**: the demo model holds a card number and CVV. A real app must never store the CVV and should keep only a **tokenised** card reference from a PCI DSS-compliant provider.
 - **Card API**: `CardApiService` points to a placeholder endpoint. Planned: move it to the Azure Functions API, with every card keyed by the caller's `oid`.
-- **Profile photo**: the API exists but isn't deployed yet, and the app doesn't call it. Next: request the `Profile.ReadWrite` scope with MSAL, send the access token from Ktor, and add the profile screen with an image picker.
+- **Profile photo on iOS**: needs the move to Entra first; then a `PHPicker` picker and an Application Support cache.
 - **Local storage**: planned: SQLDelight for offline caching, with platform keystore/keychain encryption for sensitive data.
 - **Auth**: move iOS from Amplify/Cognito to MSAL and Entra External ID, and finish the forgot-password flow (code + new password).
 - More unit and UI tests for use cases and ViewModels.

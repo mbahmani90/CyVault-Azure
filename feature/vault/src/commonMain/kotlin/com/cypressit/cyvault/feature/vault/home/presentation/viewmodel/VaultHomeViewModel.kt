@@ -3,8 +3,12 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cypressit.cyvault.core.session.SessionManager
+import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +21,9 @@ class VaultHomeViewModel(
     private val getCards: GetCardsUseCase,
     private val deleteCard: DeleteCardUseCase,
     private val sessionManager: SessionManager,
+    private val getProfilePhoto: GetProfilePhotoUseCase,
+    private val changeProfilePhoto: ChangeProfilePhotoUseCase,
+    private val clearProfilePhotoCache: ClearProfilePhotoCacheUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(VaultHomeState())
@@ -24,6 +31,9 @@ class VaultHomeViewModel(
 
     private val _effect = Channel<VaultHomeEffect>(Channel.BUFFERED)
     val effect = _effect.receiveAsFlow()
+
+    // The signed-in user's Entra object ID: names their cached photo on the device.
+    private var userId: String? = null
 
     init {
         loadUser()
@@ -36,13 +46,37 @@ class VaultHomeViewModel(
             is VaultHomeIntent.DeleteCard -> deleteExistingCard(intent.id)
             VaultHomeIntent.SignOut -> signOut()
             VaultHomeIntent.OpenDrawer -> viewModelScope.launch { _effect.send(VaultHomeEffect.OpenDrawer) }
+            is VaultHomeIntent.ChangeProfilePhoto -> updateProfilePhoto(intent.photo)
         }
     }
 
     private fun loadUser() {
         viewModelScope.launch {
             val user = sessionManager.currentUser() ?: return@launch
+            userId = user.id
             _state.update { it.copy(userName = user.name, userEmail = user.email) }
+            // The cached photo shows at once; the server's copy follows when it arrives.
+            getProfilePhoto(user.id).collect { photo ->
+                // An upload started meanwhile wins over this older copy.
+                _state.update { if (it.isUpdatingPhoto) it else it.copy(profilePhoto = photo) }
+            }
+        }
+    }
+
+    private fun updateProfilePhoto(photo: PickedPhoto) {
+        val id = userId ?: return
+        viewModelScope.launch {
+            // The current photo stays, under a progress indicator, until the upload succeeds.
+            _state.update { it.copy(isUpdatingPhoto = true) }
+            changeProfilePhoto(id, photo)
+                .onSuccess { stored ->
+                    _state.update { it.copy(profilePhoto = stored, isUpdatingPhoto = false) }
+                    _effect.send(VaultHomeEffect.ProfilePhotoUpdated)
+                }
+                .onFailure {
+                    _state.update { it.copy(isUpdatingPhoto = false) }
+                    _effect.send(VaultHomeEffect.ProfilePhotoUpdateFailed)
+                }
         }
     }
 
@@ -86,6 +120,8 @@ class VaultHomeViewModel(
             _effect.send(VaultHomeEffect.CloseDrawer)
             sessionManager.signOut()
                 .onSuccess {
+                    // The photo is personal: don't leave it on the device after sign-out.
+                    clearProfilePhotoCache()
                     _effect.send(VaultHomeEffect.NavigateToLogin)
                 }
                 .onFailure { error ->

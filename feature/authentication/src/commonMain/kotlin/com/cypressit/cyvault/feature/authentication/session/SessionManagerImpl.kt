@@ -8,7 +8,9 @@ class SessionManagerImpl(
     private val repository: AuthRepository,
 ) : SessionManager {
     override suspend fun currentUser(): SessionUser? =
-        repository.getCurrentUser()?.let { SessionUser(name = it.name, email = it.email) }
+        repository.getCurrentUser()?.let { SessionUser(id = it.id, name = it.name, email = it.email) }
+
+    override suspend fun accessToken(scopes: List<String>): String = repository.accessToken(scopes)
 
     override suspend fun signOut(): Result<Unit> = repository.signOut()
 }
