@@ -64,11 +64,11 @@
   <path d="M565 146 L495 191" class="dep"/>
 
   <!-- Band: feature modules -->
-  <rect x="40" y="275" width="810" height="338" rx="10" fill="#F1F6FF" stroke="#3B82F6"/>
+  <rect x="40" y="275" width="810" height="375" rx="10" fill="#F1F6FF" stroke="#3B82F6"/>
   <text x="52" y="292" class="t-band">FEATURE MODULES</text>
 
   <!-- feature:authentication -->
-  <rect x="55" y="305" width="220" height="293" rx="8" class="box" stroke="#2563EB"/>
+  <rect x="55" y="305" width="220" height="333" rx="8" class="box" stroke="#2563EB"/>
   <text x="165" y="327" class="t-box">authentication</text>
   <text x="165" y="343" class="t-boxsub">one flow · layers at the module root</text>
 
@@ -95,7 +95,7 @@
   <text x="165" y="619" class="t-chipsub">implements core's SessionManager</text>
 
   <!-- feature:vault -->
-  <rect x="290" y="305" width="545" height="293" rx="8" class="box" stroke="#2563EB"/>
+  <rect x="290" y="305" width="545" height="333" rx="8" class="box" stroke="#2563EB"/>
   <text x="562" y="327" class="t-box">vault</text>
   <text x="562" y="343" class="t-boxsub">feature:vault · one package per screen, each with its own layers and Koin module, plus a shared card/ package</text>
 
@@ -159,33 +159,33 @@
   <text x="282" y="322" font-size="10" font-weight="700" fill="#DC2626" text-anchor="middle">✕</text>
 
   <!-- Band: shared modules -->
-  <rect x="40" y="725" width="810" height="100" rx="10" fill="#EEEEF0" stroke="#94A3B8"/>
-  <text x="52" y="742" class="t-band">SHARED MODULES</text>
-  <rect x="150" y="752" width="320" height="56" rx="8" class="box" stroke="#64748B"/>
-  <text x="310" y="773" class="t-box">core</text>
-  <text x="310" y="789" class="t-boxsub">Ktor HttpClient · OkHttp / Darwin engines (Koin)</text>
-  <text x="310" y="801" class="t-boxsub">SessionManager interface · no Compose, no routes</text>
-  <rect x="500" y="752" width="335" height="56" rx="8" class="box" stroke="#64748B"/>
-  <text x="667" y="773" class="t-box">systemdesign</text>
-  <text x="667" y="789" class="t-boxsub">CyTheme · colors · typography · shapes</text>
-  <text x="667" y="801" class="t-boxsub">CyButton · CyOutlinedTextField · CyTopAppBar</text>
+  <rect x="40" y="675" width="810" height="100" rx="10" fill="#EEEEF0" stroke="#94A3B8"/>
+  <text x="52" y="692" class="t-band">SHARED MODULES</text>
+  <rect x="150" y="702" width="320" height="56" rx="8" class="box" stroke="#64748B"/>
+  <text x="310" y="723" class="t-box">core</text>
+  <text x="310" y="739" class="t-boxsub">Ktor HttpClient · OkHttp / Darwin engines (Koin)</text>
+  <text x="310" y="751" class="t-boxsub">SessionManager interface · no Compose, no routes</text>
+  <rect x="500" y="702" width="335" height="56" rx="8" class="box" stroke="#64748B"/>
+  <text x="667" y="723" class="t-box">systemdesign</text>
+  <text x="667" y="739" class="t-boxsub">CyTheme · colors · typography · shapes</text>
+  <text x="667" y="751" class="t-boxsub">CyButton · CyOutlinedTextField · CyTopAppBar</text>
 
   <!-- features -> shared modules -->
-  <path d="M230 600 L260 750" class="dep"/>
-  <path d="M420 600 L380 750" class="dep"/>
-  <path d="M700 600 L690 750" class="dep"/>
+  <path d="M230 640 L260 700" class="dep"/>
+  <path d="M420 640 L380 700" class="dep"/>
+  <path d="M700 640 L690 700" class="dep"/>
 
   <!-- app -> core (side route) -->
-  <path d="M637 215 H868 V836 H310 V811" class="dep"/>
+  <path d="M637 215 H868 V786 H310 V761" class="dep"/>
   <text x="882" y="500" class="t-small" transform="rotate(90 882 500)" text-anchor="middle">app loads core's platform + network Koin modules</text>
 
   <!-- Rules + legend -->
-  <rect x="40" y="845" width="810" height="160" rx="10" class="panel"/>
-  <text x="56" y="871" class="t-panel">Dependency rules · a module only sees what its build.gradle.kts declares</text>
-  <text x="56" y="896" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  app  →  authentication, vault, core   (the only composition root: NavHost, Koin modules, iOS framework)</text>
-  <text x="56" y="918" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  authentication  →  core     ·     vault  →  core, systemdesign</text>
-  <text x="56" y="940" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  authentication ↔ vault: never import each other; app connects them with navigation callbacks</text>
-  <text x="56" y="962" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  vault's screen packages never import each other; only VaultScreens.kt puts them together</text>
+  <rect x="40" y="795" width="810" height="210" rx="10" class="panel"/>
+  <text x="56" y="823" class="t-panel">Dependency rules · a module only sees what its build.gradle.kts declares</text>
+  <text x="56" y="855" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  app  →  authentication, vault, core   (the only composition root: NavHost, Koin modules, iOS framework)</text>
+  <text x="56" y="883" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  authentication  →  core     ·     vault  →  core, systemdesign</text>
+  <text x="56" y="911" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  authentication ↔ vault: never import each other; app connects them with navigation callbacks</text>
+  <text x="56" y="939" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  vault's screen packages never import each other; only VaultScreens.kt puts them together</text>
 
   <line x1="56" y1="986" x2="96" y2="986" class="dep"/>
   <text x="104" y="990" class="t-small">depends on</text>
@@ -196,7 +196,7 @@
   <rect x="410" y="978" width="30" height="15" rx="4" class="dat"/>
   <text x="447" y="990" class="t-small">data</text>
   <rect x="490" y="978" width="30" height="15" rx="4" class="wire"/>
-  <text x="527" y="990" class="t-small">public screens · DI · session</text>
+  <text x="527" y="990" class="t-small">session</text>
 
   <!-- ===================== RIGHT A: NAVIGATION ===================== -->
   <rect x="900" y="55" width="480" height="330" rx="10" class="panel"/>
