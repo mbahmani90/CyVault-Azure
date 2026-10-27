@@ -95,6 +95,10 @@ On Android, Google sign-in goes through Entra External ID, with Google set up as
 
 Profile photos are planned to live in a private Blob Storage container behind an Azure Functions API. The Function App reaches Storage through its **Managed Identity**, so no storage keys or connection strings exist anywhere. The SDK (`DefaultAzureCredential`) gets a token for that identity from Entra ID and sends it with each blob request. Blob Storage validates the token and checks the identity's **IAM role assignment** (`Storage Blob Data Contributor` on the `avatars` container) before allowing the write. Users get no Storage permissions at all: the Function builds every blob path from the `oid` in the user's validated access token, so each account can only reach its own photo.
 
+![Inside the Function App: user check, per-user blob path, Managed Identity](docs/function-app-overview.svg)
+
+The sequence below shows the outgoing step, from the Function to Blob Storage, in detail.
+
 ![Function App writes to Blob Storage with its Managed Identity](docs/managed-identity-blob-flow.svg)
 
 ### MVI
