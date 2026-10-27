@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Login Screen -->
-    <string name="login_title">Welcome to Cyvault</string>
     <string name="login_email_label">Email</string>
     <string name="login_password_label">Password</string>
     <string name="login_password_show">Show</string>
     <string name="login_password_hide">Hide</string>
     <string name="login_sign_in_button">Sign In</string>
     <string name="login_forgot_password">Forgot Password?</string>
-    <string name="login_register_link">Don\'t have an account? Register</string>
+    <string name="login_register_link">Don't have an account? Register</string>
     <string name="login_password_show_description">Show password</string>
     <string name="login_password_hide_description">Hide password</string>
+    <string name="login_logo_description">CyVault logo</string>
 </resources>

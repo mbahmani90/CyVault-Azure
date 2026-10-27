@@ -1,6 +1,5 @@
 package com.cypressit.cyvault
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -11,6 +10,7 @@ import com.cypressit.cyvault.feature.vault.VaultHomeScreen
 import com.cypressit.cyvault.navigation.AddCardRoute
 import com.cypressit.cyvault.navigation.AuthRoute
 import com.cypressit.cyvault.navigation.VaultHomeRoute
+import com.cypressit.cyvault.systemdesign.theme.CyTheme
 
 /**
  * The app's only NavHost. Features expose plain screens that report events through
@@ -18,7 +18,7 @@ import com.cypressit.cyvault.navigation.VaultHomeRoute
  */
 @Composable
 fun App() {
-    MaterialTheme {
+    CyTheme {
         val navController = rememberNavController()
 
         NavHost(

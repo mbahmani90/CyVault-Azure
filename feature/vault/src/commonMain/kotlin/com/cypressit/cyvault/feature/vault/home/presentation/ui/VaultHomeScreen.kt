@@ -1,5 +1,6 @@
 package com.cypressit.cyvault.feature.vault.home.presentation.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -32,6 +34,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -39,16 +42,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeIntent
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeState
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeViewModel
 import com.cypressit.cyvault.systemdesign.components.CyAvatar
+import com.cypressit.cyvault.systemdesign.components.StatusBarIconsFor
+import com.cypressit.cyvault.systemdesign.theme.CyTheme
 import cyvault.vault.generated.resources.Res
+import cyvault.vault.generated.resources.cyvault_logo
+import cyvault.vault.generated.resources.vault_home_logo_description
 import cyvault.vault.generated.resources.vault_home_open_menu_description
 import cyvault.vault.generated.resources.vault_home_sign_out
 import cyvault.vault.generated.resources.vault_home_sign_out_description
 import cyvault.vault.generated.resources.vault_home_title
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -77,6 +87,9 @@ internal fun VaultHomeScreen(
         snackBarHostState = snackBarHostState,
         onSignedOut = onSignedOut,
     )
+
+    // The top bar is drawn behind the status bar, so its icons must contrast with the bar.
+    StatusBarIconsFor(barColor = CyTheme.brandColors.topBar)
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -110,7 +123,20 @@ internal fun VaultHomeScreen(
             snackbarHost = { SnackbarHost(snackBarHostState) },
             topBar = {
                 TopAppBar(
-                    title = { Text(stringResource(Res.string.vault_home_title)) },
+                    title = {
+                        Text(
+                            text = stringResource(Res.string.vault_home_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            fontStyle = FontStyle.Italic,
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = CyTheme.brandColors.topBar,
+                        titleContentColor = CyTheme.brandColors.onTopBar,
+                        navigationIconContentColor = CyTheme.brandColors.onTopBar,
+                        actionIconContentColor = CyTheme.brandColors.onTopBar,
+                    ),
                     navigationIcon = {
                         IconButton(onClick = { viewModel.onIntent(VaultHomeIntent.OpenDrawer) }) {
                             Icon(
@@ -118,7 +144,15 @@ internal fun VaultHomeScreen(
                                 contentDescription = stringResource(Res.string.vault_home_open_menu_description),
                             )
                         }
-                    }
+                    },
+                    actions = {
+                        Image(
+                            painter = painterResource(Res.drawable.cyvault_logo),
+                            contentDescription = stringResource(Res.string.vault_home_logo_description),
+                            modifier = Modifier
+                                .size(42.dp),
+                        )
+                    },
                 )
             },
             floatingActionButton = {

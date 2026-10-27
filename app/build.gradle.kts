@@ -37,6 +37,9 @@ kotlin {
             // Core infrastructure
             implementation(projects.core)
 
+            // Design system: CyTheme wraps the whole app
+            implementation(projects.systemdesign)
+
             // Feature modules — add every new feature here
             api(projects.feature.authentication)
             implementation(projects.feature.vault)
