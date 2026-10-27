@@ -15,7 +15,7 @@ dependencies {
     coreLibraryDesugaring(libs.android.desugar.jdk.libs)
 
     implementation(projects.app)
-    implementation(projects.authentication)
+    implementation(projects.feature.authentication)
 
     implementation(libs.koin.android)
     implementation(libs.androidx.activity.compose)

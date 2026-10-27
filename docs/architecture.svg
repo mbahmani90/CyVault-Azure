@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1025" width="1400" height="1025" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
-  <title>CyVault — Proposed Modular Architecture</title>
+  <title>CyVault — Modular Architecture</title>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
@@ -17,11 +17,19 @@
       .t-band { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; fill: #475569; }
       .t-box { font-size: 13px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
       .t-boxsub { font-size: 10px; fill: #475569; text-anchor: middle; }
+      .t-pkg { font-size: 11.5px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-chip { font-size: 10.5px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-chipsub { font-size: 9.5px; fill: #334155; text-anchor: middle; }
+      .t-empty { font-size: 9.5px; font-style: italic; fill: #94A3B8; text-anchor: middle; }
       .t-small { font-size: 11px; fill: #475569; }
       .t-rule { font-size: 12.5px; fill: #1E293B; }
       .box { fill: #FFFFFF; stroke-width: 1.5; }
+      .ui { fill: #E0EDFF; stroke: #2563EB; stroke-width: 1.2; }
+      .dom { fill: #E3F6E8; stroke: #16A34A; stroke-width: 1.2; }
+      .dat { fill: #FFF1DC; stroke: #D97706; stroke-width: 1.2; }
+      .wire { fill: #F1F5F9; stroke: #64748B; stroke-width: 1.2; }
+      .pkg { fill: #F8FAFC; stroke: #94A3B8; stroke-width: 1.2; }
       .dep { stroke: #475569; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
-      .dep2 { stroke: #475569; stroke-width: 1.6; fill: none; marker-end: url(#arrow); marker-start: url(#arrow); }
       .back { stroke: #D97706; stroke-width: 1.6; fill: none; marker-end: url(#arrowOrange); }
       .panel { fill: #FFFFFF; stroke: #CBD5E1; stroke-width: 1.2; }
     </style>
@@ -30,266 +38,299 @@
   <rect width="1400" height="1025" fill="#F8FAFC"/>
 
   <!-- Title -->
-  <text x="40" y="34" class="t-title">CyVault — Proposed Modular Architecture</text>
-  <text x="40" y="56" class="t-sub">Kotlin Multiplatform password manager · Android + iOS · Compose Multiplatform · Koin · Ktor · SQLDelight</text>
+  <text x="40" y="34" class="t-title">CyVault — Modular Architecture</text>
+  <text x="40" y="56" class="t-sub">Kotlin Multiplatform · Android + iOS · Compose Multiplatform · Koin · Ktor · Navigation Compose · Microsoft Entra External ID (MSAL)</text>
 
   <!-- ===================== LEFT: MODULE GRAPH ===================== -->
 
-  <!-- Band: app shells -->
+  <!-- Band: platform shells -->
   <rect x="40" y="85" width="810" height="70" rx="10" fill="#EEF2F7" stroke="#94A3B8"/>
   <text x="52" y="102" class="t-band">PLATFORM SHELLS</text>
   <rect x="230" y="100" width="170" height="44" rx="8" class="box" stroke="#64748B"/>
   <text x="315" y="118" class="t-box">androidApp</text>
-  <text x="315" y="134" class="t-boxsub">Activity · FLAG_SECURE · Autofill</text>
+  <text x="315" y="134" class="t-boxsub">Application · MainActivity · MSAL init</text>
   <rect x="480" y="100" width="170" height="44" rx="8" class="box" stroke="#64748B"/>
   <text x="565" y="118" class="t-box">iosApp</text>
-  <text x="565" y="134" class="t-boxsub">Swift · AmplifyAuthBridge</text>
+  <text x="565" y="134" class="t-boxsub">SwiftUI host · AmplifyAuthBridge</text>
 
   <!-- Band: app -->
   <rect x="40" y="180" width="810" height="70" rx="10" fill="#EDE9FE" stroke="#8B5CF6"/>
   <text x="52" y="197" class="t-band">COMPOSITION ROOT</text>
-  <rect x="300" y="193" width="280" height="44" rx="8" class="box" stroke="#7C3AED"/>
+  <rect x="245" y="193" width="390" height="44" rx="8" class="box" stroke="#7C3AED"/>
   <text x="440" y="211" class="t-box">app</text>
-  <text x="440" y="227" class="t-boxsub">Koin startup · root NavHost driven by SessionState</text>
+  <text x="440" y="227" class="t-boxsub">App.kt root NavHost · Koin appModules · CyVaultApp iOS framework</text>
 
   <path d="M315 146 L385 191" class="dep"/>
   <path d="M565 146 L495 191" class="dep"/>
 
-  <!-- Band: features -->
-  <rect x="40" y="275" width="810" height="95" rx="10" fill="#E0EDFF" stroke="#3B82F6"/>
-  <text x="52" y="292" class="t-band">FEATURE:*  —  UI + VIEWMODELS (MVI)</text>
-  <rect x="60" y="300" width="140" height="50" rx="8" class="box" stroke="#2563EB"/>
-  <text x="130" y="321" class="t-box">auth</text>
-  <text x="130" y="338" class="t-boxsub">login · register · Google</text>
-  <rect x="215" y="300" width="140" height="50" rx="8" class="box" stroke="#2563EB"/>
-  <text x="285" y="321" class="t-box">unlock</text>
-  <text x="285" y="338" class="t-boxsub">master pw · biometrics</text>
-  <rect x="370" y="300" width="140" height="50" rx="8" class="box" stroke="#2563EB"/>
-  <text x="440" y="321" class="t-box">vault</text>
-  <text x="440" y="338" class="t-boxsub">list · detail · edit</text>
-  <rect x="525" y="300" width="140" height="50" rx="8" class="box" stroke="#2563EB"/>
-  <text x="595" y="321" class="t-box">generator</text>
-  <text x="595" y="338" class="t-boxsub">password generator</text>
-  <rect x="680" y="300" width="140" height="50" rx="8" class="box" stroke="#2563EB"/>
-  <text x="750" y="321" class="t-box">settings</text>
-  <text x="750" y="338" class="t-boxsub">auto-lock · sign out</text>
+  <!-- Band: feature modules -->
+  <rect x="40" y="275" width="810" height="430" rx="10" fill="#F1F6FF" stroke="#3B82F6"/>
+  <text x="52" y="292" class="t-band">FEATURE MODULES</text>
 
-  <path d="M440 239 L440 297" class="dep"/>
-  <text x="448" y="268" class="t-small">wires nav graphs</text>
+  <!-- feature:authentication -->
+  <rect x="55" y="305" width="220" height="385" rx="8" class="box" stroke="#2563EB"/>
+  <text x="165" y="327" class="t-box">authentication</text>
+  <text x="165" y="343" class="t-boxsub">one flow · layers at the module root</text>
 
-  <!-- Band: domain -->
-  <rect x="40" y="395" width="810" height="90" rx="10" fill="#E3F6E8" stroke="#22C55E"/>
-  <text x="52" y="412" class="t-band">DOMAIN  —  PURE KOTLIN</text>
-  <rect x="250" y="410" width="380" height="60" rx="8" class="box" stroke="#16A34A"/>
-  <text x="440" y="430" class="t-box">domain</text>
-  <text x="440" y="447" class="t-boxsub">models · repository interfaces · use cases</text>
-  <text x="440" y="461" class="t-boxsub">SessionState · SessionManager · KeyManager (interfaces)</text>
+  <rect x="67" y="356" width="196" height="70" rx="5" class="ui"/>
+  <text x="165" y="371" class="t-chip">presentation</text>
+  <text x="165" y="386" class="t-chipsub">AuthScreen · LoginScreen</text>
+  <text x="165" y="399" class="t-chipsub">RegisterScreen · VerificationScreen</text>
+  <text x="165" y="412" class="t-chipsub">ForgotPasswordScreen · AuthViewModel</text>
 
-  <path d="M130 352 L290 407" class="dep"/>
-  <path d="M440 352 L440 407" class="dep"/>
-  <path d="M595 352 L585 407" class="dep"/>
+  <rect x="67" y="434" width="196" height="58" rx="5" class="dom"/>
+  <text x="165" y="449" class="t-chip">domain</text>
+  <text x="165" y="464" class="t-chipsub">User · AuthRepository</text>
+  <text x="165" y="477" class="t-chipsub">Login · Register · ConfirmSignUp · …</text>
 
-  <!-- Forbidden: feature -> data -->
-  <path d="M760 352 L760 531" stroke="#DC2626" stroke-width="1.8" stroke-dasharray="6 5" fill="none" marker-end="url(#arrowRed)"/>
-  <circle cx="760" cy="442" r="11" fill="#FFFFFF" stroke="#DC2626" stroke-width="1.6"/>
-  <text x="760" y="447" font-size="14" font-weight="700" fill="#DC2626" text-anchor="middle">✕</text>
-  <text x="742" y="446" font-size="11" font-weight="700" fill="#DC2626" text-anchor="end">forbidden</text>
+  <rect x="67" y="500" width="196" height="70" rx="5" class="dat"/>
+  <text x="165" y="515" class="t-chip">data</text>
+  <text x="165" y="530" class="t-chipsub">AuthRepositoryImpl · AuthApiService</text>
+  <text x="165" y="543" class="t-chipsub">Android: MSAL native auth</text>
+  <text x="165" y="556" class="t-chipsub">iOS: IosAuthBridge (Swift)</text>
 
-  <!-- Band: data -->
-  <rect x="40" y="510" width="810" height="95" rx="10" fill="#FFF1DC" stroke="#F59E0B"/>
-  <text x="52" y="527" class="t-band">DATA:*  —  IMPLEMENTS DOMAIN INTERFACES</text>
-  <rect x="70" y="535" width="170" height="50" rx="8" class="box" stroke="#D97706"/>
-  <text x="155" y="556" class="t-box">auth</text>
-  <text x="155" y="573" class="t-boxsub">Amplify / IosAuthBridge</text>
-  <rect x="260" y="535" width="170" height="50" rx="8" class="box" stroke="#D97706"/>
-  <text x="345" y="556" class="t-box">session</text>
-  <text x="345" y="573" class="t-boxsub">lock state · auto-lock timer</text>
-  <rect x="450" y="535" width="170" height="50" rx="8" class="box" stroke="#D97706"/>
-  <text x="535" y="556" class="t-box">vault</text>
-  <text x="535" y="573" class="t-boxsub">offline-first + sync</text>
-  <rect x="640" y="535" width="170" height="50" rx="8" class="box" stroke="#D97706"/>
-  <text x="725" y="556" class="t-box">keys</text>
-  <text x="725" y="573" class="t-boxsub">derive · wrap · unwrap vault key</text>
+  <rect x="67" y="578" width="196" height="48" rx="5" class="wire"/>
+  <text x="165" y="593" class="t-chip">navigation · session</text>
+  <text x="165" y="607" class="t-chipsub">AuthRoute · authScreen()</text>
+  <text x="165" y="619" class="t-chipsub">SessionManagerImpl</text>
 
-  <path d="M345 533 L380 473" class="dep"/>
-  <path d="M535 533 L500 473" class="dep"/>
-  <text x="448" y="503" class="t-small">implements</text>
+  <rect x="67" y="634" width="196" height="40" rx="5" class="wire"/>
+  <text x="165" y="650" class="t-chip">di</text>
+  <text x="165" y="664" class="t-chipsub">authModule</text>
 
-  <!-- app -> data (side route) -->
-  <path d="M582 215 H868 V560 H813" class="dep"/>
-  <text x="882" y="400" class="t-small" transform="rotate(90 882 400)" text-anchor="middle">app registers data impls in Koin</text>
+  <!-- feature:vault -->
+  <rect x="290" y="305" width="545" height="385" rx="8" class="box" stroke="#2563EB"/>
+  <text x="562" y="327" class="t-box">vault</text>
+  <text x="562" y="343" class="t-boxsub">feature:vault · one package per screen, each with its own layers and Koin module, plus a shared card/ package</text>
 
-  <!-- Band: core -->
-  <rect x="40" y="630" width="810" height="95" rx="10" fill="#EEEEF0" stroke="#94A3B8"/>
-  <text x="52" y="647" class="t-band">CORE:*  —  TECHNICAL, NO BUSINESS LOGIC</text>
-  <rect x="55" y="655" width="108" height="50" rx="8" class="box" stroke="#64748B"/>
-  <text x="109" y="676" class="t-box">designsystem</text>
-  <text x="109" y="693" class="t-boxsub">theme · SecureScreen</text>
-  <rect x="167" y="655" width="108" height="50" rx="8" class="box" stroke="#64748B"/>
-  <text x="221" y="676" class="t-box">common</text>
-  <text x="221" y="693" class="t-boxsub">Clock · AppError</text>
-  <rect x="279" y="655" width="108" height="50" rx="8" class="box" stroke="#64748B"/>
-  <text x="333" y="676" class="t-box">crypto</text>
-  <text x="333" y="693" class="t-boxsub">Argon2id · AES-GCM</text>
-  <rect x="391" y="655" width="108" height="50" rx="8" class="box" stroke="#64748B"/>
-  <text x="445" y="676" class="t-box">securestorage</text>
-  <text x="445" y="693" class="t-boxsub">Keystore · Keychain</text>
-  <rect x="503" y="655" width="108" height="50" rx="8" class="box" stroke="#64748B"/>
-  <text x="557" y="676" class="t-box">database</text>
-  <text x="557" y="693" class="t-boxsub">SQLDelight · encrypted</text>
-  <rect x="615" y="655" width="108" height="50" rx="8" class="box" stroke="#64748B"/>
-  <text x="669" y="676" class="t-box">network</text>
-  <text x="669" y="693" class="t-boxsub">Ktor · TLS pinning</text>
-  <rect x="727" y="655" width="108" height="50" rx="8" class="box" stroke="#64748B" stroke-dasharray="5 4"/>
-  <text x="781" y="676" class="t-box">testing</text>
-  <text x="781" y="693" class="t-boxsub">fakes · test rules</text>
+  <!-- package headers -->
+  <rect x="300" y="354" width="124" height="24" rx="5" class="pkg"/>
+  <text x="362" y="370" class="t-pkg">home/</text>
+  <rect x="433" y="354" width="124" height="24" rx="5" class="pkg"/>
+  <text x="495" y="370" class="t-pkg">vaultlist/</text>
+  <rect x="566" y="354" width="124" height="24" rx="5" class="pkg"/>
+  <text x="628" y="370" class="t-pkg">addcard/</text>
+  <rect x="699" y="354" width="124" height="24" rx="5" fill="#FEF9C3" stroke="#CA8A04" stroke-width="1.2"/>
+  <text x="761" y="370" class="t-pkg">card/ (shared)</text>
 
-  <path d="M345 587 L335 652" class="dep"/>
-  <path d="M535 587 L555 652" class="dep"/>
-  <path d="M725 587 L670 652" class="dep"/>
-  <text x="575" y="625" class="t-small">uses</text>
+  <!-- home/ -->
+  <rect x="300" y="384" width="124" height="70" rx="5" class="ui"/>
+  <text x="362" y="399" class="t-chip">presentation</text>
+  <text x="362" y="414" class="t-chipsub">VaultHomeScreen</text>
+  <text x="362" y="427" class="t-chipsub">drawer · top bar</text>
+  <text x="362" y="440" class="t-chipsub">VaultHomeViewModel</text>
+  <text x="362" y="490" class="t-empty">uses core's</text>
+  <text x="362" y="503" class="t-empty">SessionManager</text>
+  <rect x="300" y="594" width="124" height="26" rx="5" class="wire"/>
+  <text x="362" y="611" class="t-chipsub">di: homeModule</text>
 
-  <!-- features -> designsystem/common (left route) -->
-  <path d="M58 325 H28 V680 H52" class="dep"/>
-  <text x="18" y="500" class="t-small" transform="rotate(-90 18 500)" text-anchor="middle">features use designsystem + common only</text>
+  <!-- vaultlist/ -->
+  <rect x="433" y="384" width="124" height="70" rx="5" class="ui"/>
+  <text x="495" y="399" class="t-chip">presentation</text>
+  <text x="495" y="414" class="t-chipsub">VaultListScreen</text>
+  <text x="495" y="427" class="t-chipsub">card list · delete</text>
+  <text x="495" y="440" class="t-chipsub">VaultListViewModel</text>
+  <rect x="433" y="462" width="124" height="58" rx="5" class="dom"/>
+  <text x="495" y="477" class="t-chip">domain</text>
+  <text x="495" y="492" class="t-chipsub">GetCardsUseCase</text>
+  <text x="495" y="505" class="t-chipsub">DeleteCardUseCase</text>
+  <text x="495" y="552" class="t-empty">data from card/</text>
+  <rect x="433" y="594" width="124" height="26" rx="5" class="wire"/>
+  <text x="495" y="611" class="t-chipsub">di: vaultListModule</text>
+
+  <!-- addcard/ -->
+  <rect x="566" y="384" width="124" height="70" rx="5" class="ui"/>
+  <text x="628" y="399" class="t-chip">presentation</text>
+  <text x="628" y="414" class="t-chipsub">AddCardScreen</text>
+  <text x="628" y="427" class="t-chipsub">AddCardViewModel</text>
+  <text x="628" y="440" class="t-chipsub">BankAppLauncher</text>
+  <rect x="566" y="462" width="124" height="58" rx="5" class="dom"/>
+  <text x="628" y="477" class="t-chip">domain</text>
+  <text x="628" y="492" class="t-chipsub">BankRepository</text>
+  <text x="628" y="505" class="t-chipsub">Institution · BankAccount</text>
+  <rect x="566" y="528" width="124" height="58" rx="5" class="dat"/>
+  <text x="628" y="543" class="t-chip">data</text>
+  <text x="628" y="558" class="t-chipsub">YapilyService · DTOs</text>
+  <text x="628" y="571" class="t-chipsub">BankRepositoryImpl</text>
+  <rect x="566" y="594" width="124" height="26" rx="5" class="wire"/>
+  <text x="628" y="611" class="t-chipsub">di: addCardModule</text>
+
+  <!-- card/ (shared) -->
+  <text x="761" y="424" class="t-empty">used by vaultlist/</text>
+  <text x="761" y="437" class="t-empty">and addcard/</text>
+  <rect x="699" y="462" width="124" height="58" rx="5" class="dom"/>
+  <text x="761" y="477" class="t-chip">domain</text>
+  <text x="761" y="492" class="t-chipsub">Card · CardType</text>
+  <text x="761" y="505" class="t-chipsub">CardRepository</text>
+  <rect x="699" y="528" width="124" height="58" rx="5" class="dat"/>
+  <text x="761" y="543" class="t-chip">data</text>
+  <text x="761" y="558" class="t-chipsub">CardApiService · DTOs</text>
+  <text x="761" y="571" class="t-chipsub">CardRepositoryImpl</text>
+  <rect x="699" y="594" width="124" height="26" rx="5" class="wire"/>
+  <text x="761" y="611" class="t-chipsub">di: cardModule</text>
+
+  <!-- vault wiring -->
+  <rect x="300" y="630" width="257" height="48" rx="5" class="wire"/>
+  <text x="428" y="649" class="t-chip">navigation/</text>
+  <text x="428" y="665" class="t-chipsub">VaultHomeRoute · vaultScreen() · inner NavHost</text>
+  <rect x="566" y="630" width="257" height="48" rx="5" class="wire"/>
+  <text x="694" y="649" class="t-chip">di/</text>
+  <text x="694" y="665" class="t-chipsub">vaultFeatureModule (public) includes all 4</text>
+
+  <!-- app -> features -->
+  <path d="M330 239 L190 302" class="dep"/>
+  <path d="M520 239 L562 302" class="dep"/>
+  <text x="560" y="268" class="t-small">wires entry points + Koin modules</text>
+
+  <!-- androidApp -> authentication (MSAL init, ActivityProvider) -->
+  <path d="M232 128 H48 V318 H52" class="dep"/>
+  <text x="38" y="230" class="t-small" transform="rotate(-90 38 230)" text-anchor="middle">MSAL init</text>
+
+  <!-- features never import each other -->
+  <path d="M277 330 L287 330" stroke="#DC2626" stroke-width="1.8" fill="none"/>
+  <circle cx="282" cy="318" r="8" fill="#FFFFFF" stroke="#DC2626" stroke-width="1.4"/>
+  <text x="282" y="322" font-size="10" font-weight="700" fill="#DC2626" text-anchor="middle">✕</text>
+
+  <!-- Band: shared modules -->
+  <rect x="40" y="725" width="810" height="100" rx="10" fill="#EEEEF0" stroke="#94A3B8"/>
+  <text x="52" y="742" class="t-band">SHARED MODULES</text>
+  <rect x="150" y="752" width="320" height="56" rx="8" class="box" stroke="#64748B"/>
+  <text x="310" y="773" class="t-box">core</text>
+  <text x="310" y="789" class="t-boxsub">Ktor HttpClient · OkHttp / Darwin engines (Koin)</text>
+  <text x="310" y="801" class="t-boxsub">SessionManager interface · no Compose, no routes</text>
+  <rect x="500" y="752" width="335" height="56" rx="8" class="box" stroke="#64748B"/>
+  <text x="667" y="773" class="t-box">systemdesign</text>
+  <text x="667" y="789" class="t-boxsub">CyTheme · colors · typography · shapes</text>
+  <text x="667" y="801" class="t-boxsub">CyButton · CyOutlinedTextField · CyTopAppBar</text>
+
+  <!-- features -> shared modules -->
+  <path d="M230 692 L260 750" class="dep"/>
+  <path d="M420 692 L380 750" class="dep"/>
+  <path d="M700 692 L690 750" class="dep"/>
+
+  <!-- app -> core (side route) -->
+  <path d="M637 215 H868 V836 H310 V811" class="dep"/>
+  <text x="882" y="500" class="t-small" transform="rotate(90 882 500)" text-anchor="middle">app loads core's platform + network Koin modules</text>
 
   <!-- Rules + legend -->
-  <rect x="40" y="750" width="810" height="255" rx="10" class="panel"/>
-  <text x="56" y="778" class="t-panel">Dependency rules · enforced in CI (module-graph assertion)</text>
-  <text x="56" y="806" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  feature:*  →  domain, core:designsystem, core:common</text>
-  <text x="56" y="830" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  data:*  →  domain + technical core:* (crypto, securestorage, database, network)</text>
-  <text x="56" y="854" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  app  →  everything (the only composition root: Koin modules + navigation graphs)</text>
-  <text x="56" y="878" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  feature → data   ·   feature → feature   ·   core → domain / data / feature</text>
+  <rect x="40" y="845" width="810" height="160" rx="10" class="panel"/>
+  <text x="56" y="871" class="t-panel">Dependency rules · a module only sees what its build.gradle.kts declares</text>
+  <text x="56" y="896" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  app  →  authentication, vault, core   (the only composition root: NavHost, Koin modules, iOS framework)</text>
+  <text x="56" y="918" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  authentication  →  core     ·     vault  →  core, systemdesign</text>
+  <text x="56" y="940" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  authentication ↔ vault: never import each other; app connects them with navigation callbacks</text>
+  <text x="56" y="962" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  vault's screen packages never import each other; only navigation/ puts them together</text>
 
-  <line x1="56" y1="912" x2="96" y2="912" class="dep"/>
-  <text x="104" y="916" class="t-small">depends on</text>
-  <line x1="196" y1="912" x2="236" y2="912" stroke="#DC2626" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#arrowRed)"/>
-  <text x="244" y="916" class="t-small">forbidden</text>
-  <line x1="326" y1="912" x2="366" y2="912" class="back"/>
-  <text x="374" y="916" class="t-small">session transition</text>
-  <rect x="488" y="902" width="34" height="20" rx="4" fill="#FFFFFF" stroke="#64748B" stroke-dasharray="5 4"/>
-  <text x="530" y="916" class="t-small">test-only module</text>
-
-  <text x="56" y="952" class="t-rule"><tspan font-weight="700">Principles:</tspan>  zero-knowledge (server and local DB hold ciphertext only)  ·  session state drives navigation</text>
-  <text x="56" y="974" class="t-rule">·  data + crypto work without UI, so Android Autofill / iOS Credential Provider can reuse them</text>
-  <text x="56" y="996" class="t-small">Convention plugins in build-logic/ give every module type the same Gradle setup.</text>
+  <line x1="56" y1="986" x2="96" y2="986" class="dep"/>
+  <text x="104" y="990" class="t-small">depends on</text>
+  <rect x="190" y="978" width="30" height="15" rx="4" class="ui"/>
+  <text x="227" y="990" class="t-small">presentation</text>
+  <rect x="315" y="978" width="30" height="15" rx="4" class="dom"/>
+  <text x="352" y="990" class="t-small">domain</text>
+  <rect x="410" y="978" width="30" height="15" rx="4" class="dat"/>
+  <text x="447" y="990" class="t-small">data</text>
+  <rect x="490" y="978" width="30" height="15" rx="4" class="wire"/>
+  <text x="527" y="990" class="t-small">navigation · DI</text>
 
   <!-- ===================== RIGHT A: NAVIGATION ===================== -->
-  <rect x="900" y="55" width="480" height="305" rx="10" class="panel"/>
-  <text x="916" y="80" class="t-panel">Session-driven navigation</text>
+  <rect x="900" y="55" width="480" height="330" rx="10" class="panel"/>
+  <text x="916" y="80" class="t-panel">Navigation</text>
+  <text x="916" y="100" class="t-small">Root NavHost in app (start: AuthRoute)</text>
 
-  <rect x="920" y="95" width="440" height="34" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
-  <text x="1140" y="117" class="t-box">SessionManager.state : StateFlow&lt;SessionState&gt;</text>
-  <path d="M1010 131 L1010 148" class="dep"/>
+  <rect x="930" y="122" width="180" height="50" rx="8" class="box" stroke="#2563EB"/>
+  <text x="1020" y="142" class="t-box">AuthRoute</text>
+  <text x="1020" y="159" class="t-boxsub">authScreen() → AuthScreen</text>
+  <rect x="1170" y="122" width="190" height="50" rx="8" class="box" stroke="#2563EB"/>
+  <text x="1265" y="142" class="t-box">VaultHomeRoute</text>
+  <text x="1265" y="159" class="t-boxsub">vaultScreen() → VaultHomeScreen</text>
 
-  <rect x="935" y="150" width="150" height="40" rx="20" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
-  <text x="1010" y="175" class="t-box">SignedOut</text>
-  <rect x="935" y="215" width="150" height="40" rx="20" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
-  <text x="1010" y="240" class="t-box">Locked</text>
-  <rect x="935" y="280" width="150" height="40" rx="20" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5"/>
-  <text x="1010" y="305" class="t-box">Unlocked</text>
+  <path d="M1112 138 L1167 138" class="dep"/>
+  <text x="1140" y="116" class="t-small" text-anchor="middle">onAuthSuccess</text>
+  <path d="M1168 158 L1113 158" class="back"/>
+  <text x="1140" y="188" class="t-small" text-anchor="middle">sign out</text>
 
-  <path d="M1010 192 L1010 212" class="dep"/>
-  <text x="1020" y="207" class="t-small">sign in</text>
-  <path d="M1010 257 L1010 277" class="dep"/>
-  <text x="1020" y="272" class="t-small">unlock</text>
+  <rect x="930" y="205" width="430" height="122" rx="8" fill="#FFFFFF" stroke="#94A3B8" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="944" y="223" class="t-small">vault's own NavHost (navigation/VaultNavigation.kt)</text>
+  <path d="M1265 174 L1265 203" class="dep"/>
+  <text x="1273" y="194" class="t-small">hosts</text>
 
-  <path d="M935 296 H921 V235 H932" class="back"/>
-  <path d="M935 308 H908 V170 H932" class="back"/>
+  <rect x="950" y="245" width="170" height="50" rx="8" class="box" stroke="#2563EB"/>
+  <text x="1035" y="265" class="t-box">VaultRoute.List</text>
+  <text x="1035" y="282" class="t-boxsub">VaultListScreen</text>
+  <rect x="1170" y="245" width="170" height="50" rx="8" class="box" stroke="#2563EB"/>
+  <text x="1255" y="265" class="t-box">VaultRoute.AddCard</text>
+  <text x="1255" y="282" class="t-boxsub">AddCardScreen</text>
 
-  <rect x="1180" y="150" width="185" height="40" rx="8" class="box" stroke="#2563EB"/>
-  <text x="1272" y="167" class="t-box">authGraph</text>
-  <text x="1272" y="182" class="t-boxsub">login · register · verify</text>
-  <rect x="1180" y="215" width="185" height="40" rx="8" class="box" stroke="#2563EB"/>
-  <text x="1272" y="232" class="t-box">unlockGraph</text>
-  <text x="1272" y="247" class="t-boxsub">master password · biometrics</text>
-  <rect x="1180" y="280" width="185" height="40" rx="8" class="box" stroke="#2563EB"/>
-  <text x="1272" y="297" class="t-box">vaultGraph</text>
-  <text x="1272" y="312" class="t-boxsub">+ settings · generator</text>
+  <path d="M1122 261 L1167 261" class="dep"/>
+  <text x="1145" y="241" class="t-small" text-anchor="middle">add card</text>
+  <path d="M1168 281 L1123 281" class="back"/>
+  <text x="1145" y="314" class="t-small" text-anchor="middle">back · card saved</text>
 
-  <path d="M1087 170 L1177 170" class="dep"/>
-  <path d="M1087 235 L1177 235" class="dep"/>
-  <path d="M1087 300 L1177 300" class="dep"/>
-  <text x="1132" y="164" class="t-small" text-anchor="middle">root graph</text>
+  <text x="916" y="350" class="t-small">popUpTo removes the previous root screen, so Back can't return to</text>
+  <text x="916" y="366" class="t-small">login after signing in, or to the vault after signing out.</text>
 
-  <text x="916" y="345" class="t-small"><tspan fill="#D97706" font-weight="700">↺</tspan> auto-lock / background → Locked</text>
-  <text x="1130" y="345" class="t-small"><tspan fill="#D97706" font-weight="700">↺</tspan> sign out / token expiry → SignedOut</text>
+  <!-- ===================== RIGHT B: SIGN-OUT CONTRACT ===================== -->
+  <rect x="900" y="400" width="480" height="240" rx="10" class="panel"/>
+  <text x="916" y="425" class="t-panel">Sign-out across features</text>
+  <text x="916" y="445" class="t-small">vault signs the user out without importing authentication.</text>
 
-  <!-- ===================== RIGHT B: KEY HIERARCHY ===================== -->
-  <rect x="900" y="375" width="480" height="345" rx="10" class="panel"/>
-  <text x="916" y="400" class="t-panel">Key hierarchy (zero-knowledge)</text>
+  <rect x="920" y="462" width="200" height="46" rx="8" class="box" stroke="#2563EB"/>
+  <text x="1020" y="481" class="t-box">VaultHomeViewModel</text>
+  <text x="1020" y="497" class="t-boxsub">feature:vault · home/</text>
+  <rect x="1165" y="462" width="200" height="46" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="1265" y="481" class="t-box">SessionManager</text>
+  <text x="1265" y="497" class="t-boxsub">core · interface: signOut()</text>
+  <rect x="1165" y="535" width="200" height="46" rx="8" class="box" stroke="#2563EB"/>
+  <text x="1265" y="554" class="t-box">SessionManagerImpl</text>
+  <text x="1265" y="570" class="t-boxsub">feature:authentication · authModule</text>
+  <rect x="920" y="535" width="200" height="46" rx="8" class="box" stroke="#D97706"/>
+  <text x="1020" y="554" class="t-box">AuthRepository</text>
+  <text x="1020" y="570" class="t-boxsub">signOut() → AuthApiService</text>
 
-  <rect x="930" y="415" width="200" height="32" rx="8" fill="#F1F5F9" stroke="#475569" stroke-width="1.5"/>
-  <text x="1030" y="436" class="t-box">Master password</text>
-  <rect x="930" y="467" width="200" height="32" rx="16" fill="#FFFFFF" stroke="#475569" stroke-width="1.5" stroke-dasharray="5 4"/>
-  <text x="1030" y="488" font-size="12" fill="#0F172A" text-anchor="middle">Argon2id · salt · memory-hard</text>
-  <rect x="930" y="519" width="200" height="32" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
-  <text x="1030" y="540" class="t-box">Master key (RAM only)</text>
-  <rect x="930" y="571" width="200" height="32" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
-  <text x="1030" y="592" class="t-box">Vault key · random 256-bit</text>
-  <rect x="930" y="623" width="200" height="32" rx="16" fill="#FFFFFF" stroke="#475569" stroke-width="1.5" stroke-dasharray="5 4"/>
-  <text x="1030" y="644" font-size="12" fill="#0F172A" text-anchor="middle">AES-256-GCM · nonce per item</text>
-  <rect x="930" y="675" width="200" height="32" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5"/>
-  <text x="1030" y="696" class="t-box">Encrypted VaultItems</text>
+  <path d="M1122 485 L1162 485" class="dep"/>
+  <text x="1142" y="478" class="t-small" text-anchor="middle">calls</text>
+  <path d="M1265 533 L1265 511" class="dep"/>
+  <text x="1273" y="526" class="t-small">implements</text>
+  <path d="M1163 558 L1123 558" class="dep"/>
+  <text x="1143" y="551" class="t-small" text-anchor="middle">uses</text>
 
-  <path d="M1030 449 L1030 465" class="dep"/>
-  <path d="M1030 501 L1030 517" class="dep"/>
-  <path d="M1030 553 L1030 569" class="dep"/>
-  <text x="1040" y="565" class="t-small">unwraps</text>
-  <path d="M1030 605 L1030 621" class="dep"/>
-  <path d="M1030 657 L1030 673" class="dep"/>
+  <text x="916" y="608" class="t-small">Koin injects SessionManagerImpl into VaultHomeViewModel; on success the</text>
+  <text x="916" y="624" class="t-small">NavigateToLogin effect calls app's callback, which goes back to AuthRoute.</text>
 
-  <rect x="1165" y="512" width="200" height="44" rx="8" class="box" stroke="#7C3AED"/>
-  <text x="1265" y="530" class="t-box">HKDF → auth hash</text>
-  <text x="1265" y="546" class="t-boxsub">sent to Cognito — never the master pw</text>
-  <path d="M1132 535 L1162 535" class="dep"/>
+  <!-- ===================== RIGHT C: EXTERNAL SERVICES ===================== -->
+  <rect x="900" y="655" width="480" height="350" rx="10" class="panel"/>
+  <text x="916" y="680" class="t-panel">External services</text>
 
-  <rect x="1165" y="590" width="200" height="44" rx="8" class="box" stroke="#7C3AED"/>
-  <text x="1265" y="608" class="t-box">Keystore / Keychain key</text>
-  <text x="1265" y="624" class="t-boxsub">biometric-gated · also wraps vault key</text>
-  <path d="M1163 605 L1133 592" class="dep"/>
+  <rect x="920" y="700" width="180" height="50" rx="8" class="box" stroke="#D97706"/>
+  <text x="1010" y="720" class="t-box">authentication · data</text>
+  <text x="1010" y="737" class="t-boxsub">Android</text>
+  <rect x="1160" y="700" width="200" height="50" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
+  <text x="1260" y="720" class="t-box">Entra External ID</text>
+  <text x="1260" y="737" class="t-boxsub">MSAL native auth · cyvault.ciamlogin.com</text>
+  <path d="M1102 725 L1157 725" class="dep"/>
 
-  <rect x="1165" y="662" width="200" height="48" rx="8" fill="#F1F5F9" stroke="#475569" stroke-width="1.5"/>
-  <text x="1265" y="680" class="t-box">Stored: server + local DB</text>
-  <text x="1265" y="697" class="t-boxsub">salt · KDF params · wrapped key · ciphertext</text>
-  <path d="M1132 691 L1162 688" class="dep"/>
+  <rect x="920" y="770" width="180" height="50" rx="8" class="box" stroke="#D97706" stroke-dasharray="5 4"/>
+  <text x="1010" y="790" class="t-box">authentication · data</text>
+  <text x="1010" y="807" class="t-boxsub">iOS (IosAuthBridge)</text>
+  <rect x="1160" y="770" width="200" height="50" rx="8" fill="#FFF7ED" stroke="#D97706" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="1260" y="790" class="t-box">AWS Cognito (Amplify)</text>
+  <text x="1260" y="807" class="t-boxsub">iOS not migrated to Entra yet</text>
+  <path d="M1102 795 L1157 795" class="dep"/>
 
-  <!-- ===================== RIGHT C: DATA FLOW ===================== -->
-  <rect x="900" y="735" width="480" height="270" rx="10" class="panel"/>
-  <text x="916" y="760" class="t-panel">Offline-first data flow (data:vault)</text>
+  <rect x="920" y="840" width="180" height="50" rx="8" class="box" stroke="#D97706"/>
+  <text x="1010" y="860" class="t-box">vault · addcard/data</text>
+  <text x="1010" y="877" class="t-boxsub">YapilyService</text>
+  <rect x="1160" y="840" width="200" height="50" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
+  <text x="1260" y="860" class="t-box">Yapily API</text>
+  <text x="1260" y="877" class="t-boxsub">open banking · api.yapily.com</text>
+  <path d="M1102 865 L1157 865" class="dep"/>
 
-  <rect x="920" y="778" width="120" height="40" rx="8" class="box" stroke="#2563EB"/>
-  <text x="980" y="803" class="t-box">UI</text>
-  <rect x="1080" y="778" width="120" height="40" rx="8" class="box" stroke="#2563EB"/>
-  <text x="1140" y="803" class="t-box">ViewModel</text>
-  <rect x="1240" y="778" width="120" height="40" rx="8" class="box" stroke="#16A34A"/>
-  <text x="1300" y="803" class="t-box">Use case</text>
+  <rect x="920" y="910" width="180" height="50" rx="8" class="box" stroke="#D97706"/>
+  <text x="1010" y="930" class="t-box">vault · card/data</text>
+  <text x="1010" y="947" class="t-boxsub">CardApiService</text>
+  <rect x="1160" y="910" width="200" height="50" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
+  <text x="1260" y="930" class="t-box">CyVault card API</text>
+  <text x="1260" y="947" class="t-boxsub">api.cyvault.com/v1/cards</text>
+  <path d="M1102 935 L1157 935" class="dep"/>
 
-  <path d="M1078 798 L1043 798" class="dep"/>
-  <text x="1060" y="792" class="t-small" text-anchor="middle">State</text>
-  <path d="M1238 798 L1203 798" class="dep"/>
-  <text x="1220" y="792" class="t-small" text-anchor="middle">Flow</text>
-
-  <rect x="1240" y="858" width="120" height="40" rx="8" class="box" stroke="#D97706"/>
-  <text x="1300" y="883" class="t-box">Repository</text>
-  <path d="M1300 856 L1300 821" class="dep"/>
-
-  <rect x="920" y="858" width="150" height="40" rx="8" class="box" stroke="#D97706"/>
-  <text x="995" y="883" class="t-box">SyncEngine</text>
-  <path d="M1238 878 L1073 878" class="dep"/>
-  <text x="1155" y="871" class="t-small" text-anchor="middle">pendingSync</text>
-
-  <rect x="1180" y="940" width="180" height="48" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.5"/>
-  <text x="1270" y="959" class="t-box">SQLDelight + SQLCipher</text>
-  <text x="1270" y="976" class="t-boxsub">source of truth · encrypted</text>
-  <path d="M1300 937 L1300 901" class="dep2"/>
-
-  <rect x="920" y="940" width="150" height="48" rx="8" class="box" stroke="#64748B"/>
-  <text x="995" y="959" class="t-box">Ktor VaultApi</text>
-  <text x="995" y="976" class="t-boxsub">ciphertext only</text>
-  <path d="M995 901 L995 937" class="dep2"/>
-  <text x="1003" y="924" class="t-small">push / pull</text>
-
-  <path d="M1073 893 L1177 948" class="dep2"/>
-  <text x="1108" y="944" class="t-small" text-anchor="end">merge</text>
+  <text x="916" y="988" class="t-small">Yapily and the card API use core's shared Ktor HttpClient; dashed = still on AWS.</text>
 </svg>

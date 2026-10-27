@@ -3,11 +3,11 @@ package com.cypressit.cyvault
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.cypressit.authentication.presentation.ui.AuthScreen
-import com.cypressit.cyvault.navigation.Route
-import com.cypressit.vault.presentation.ui.VaultHomeScreen
+import com.cypressit.cyvault.feature.authentication.navigation.AuthRoute
+import com.cypressit.cyvault.feature.authentication.navigation.authScreen
+import com.cypressit.cyvault.feature.vault.navigation.VaultHomeRoute
+import com.cypressit.cyvault.feature.vault.navigation.vaultScreen
 
 @Composable
 fun App() {
@@ -16,27 +16,23 @@ fun App() {
 
         NavHost(
             navController = navController,
-            startDestination = Route.Login,
+            startDestination = AuthRoute,
         ) {
-            composable<Route.Login> {
-                AuthScreen(
-                    onAuthSuccess = {
-                        navController.navigate(Route.Vault) {
-                            popUpTo(Route.Login) { inclusive = true }
-                        }
+            authScreen(
+                onAuthSuccess = {
+                    navController.navigate(VaultHomeRoute) {
+                        popUpTo(AuthRoute) { inclusive = true }
                     }
-                )
-            }
+                }
+            )
 
-            composable<Route.Vault> {
-                VaultHomeScreen(
-                    onNavigateToLogin = {
-                        navController.navigate(Route.Login) {
-                            popUpTo(Route.Vault) { inclusive = true }
-                        }
+            vaultScreen(
+                onNavigateToLogin = {
+                    navController.navigate(AuthRoute) {
+                        popUpTo(VaultHomeRoute) { inclusive = true }
                     }
-                )
-            }
+                }
+            )
         }
     }
 }
