@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title>CyVault — Sign in with Google through Entra External ID</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .t-title { font-size: 20px; font-weight: 700; fill: #0F172A; }
+      .t-sub { font-size: 12.5px; fill: #64748B; }
+      .t-box { font-size: 14px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-boxsub { font-size: 11px; fill: #475569; text-anchor: middle; }
+      .t-step { font-size: 12.5px; fill: #1E293B; text-anchor: middle; }
+      .t-note { font-size: 11px; fill: #64748B; text-anchor: middle; }
+      .life { stroke: #94A3B8; stroke-width: 1.2; stroke-dasharray: 4 4; }
+      .msg { stroke: #475569; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .server { stroke: #475569; stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; marker-start: url(#arrow); marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="900" height="600" fill="#F8FAFC"/>
+
+  <text x="40" y="38" class="t-title">Sign in with Google (Android, through Entra External ID)</text>
+  <text x="40" y="60" class="t-sub">Solid arrows: browser redirects · Dashed arrow: server-to-server call · The app only ever receives Entra's token</text>
+
+  <!-- Participants -->
+  <rect x="80" y="90" width="200" height="56" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="180" y="114" class="t-box">CyVault app</text>
+  <text x="180" y="132" class="t-boxsub">Android · MSAL</text>
+
+  <rect x="350" y="90" width="200" height="56" rx="8" fill="#DCFCE7" stroke="#0F766E" stroke-width="1.5"/>
+  <text x="450" y="114" class="t-box">Entra External ID</text>
+  <text x="450" y="132" class="t-boxsub">cyvault.ciamlogin.com</text>
+
+  <rect x="620" y="90" width="200" height="56" rx="8" fill="#FFEDD5" stroke="#C2410C" stroke-width="1.5"/>
+  <text x="720" y="114" class="t-box">Google</text>
+  <text x="720" y="132" class="t-boxsub">accounts.google.com</text>
+
+  <!-- Lifelines -->
+  <line x1="180" y1="146" x2="180" y2="570" class="life"/>
+  <line x1="450" y1="146" x2="450" y2="570" class="life"/>
+  <line x1="720" y1="146" x2="720" y2="300" class="life"/>
+  <line x1="720" y1="344" x2="720" y2="570" class="life"/>
+
+  <!-- 1 -->
+  <text x="315" y="190" class="t-step">1. Open sign-in in browser</text>
+  <line x1="182" y1="202" x2="446" y2="202" class="msg"/>
+
+  <!-- 2 -->
+  <text x="585" y="248" class="t-step">2. Redirect to Google</text>
+  <line x1="452" y1="260" x2="716" y2="260" class="msg"/>
+
+  <!-- 3 -->
+  <rect x="620" y="300" width="200" height="44" rx="8" fill="#FFEDD5" stroke="#C2410C" stroke-width="1.5"/>
+  <text x="720" y="327" class="t-step">3. User signs in, consents</text>
+
+  <!-- 4 -->
+  <text x="585" y="386" class="t-step">4. Redirect back with code</text>
+  <line x1="718" y1="398" x2="454" y2="398" class="msg"/>
+
+  <!-- 5 -->
+  <text x="585" y="446" class="t-step">5. Code + client ID / secret</text>
+  <line x1="454" y1="458" x2="716" y2="458" class="server"/>
+  <text x="585" y="478" class="t-note">returns the user's email and name</text>
+
+  <!-- 6 -->
+  <text x="315" y="528" class="t-step">6. Entra token to app</text>
+  <line x1="448" y1="540" x2="184" y2="540" class="msg"/>
+</svg>

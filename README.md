@@ -30,7 +30,7 @@ The app is built with **Kotlin Multiplatform** and **Compose Multiplatform**. UI
   - **iOS:** AWS Cognito via Amplify (not migrated to Entra yet)
   - Email/password sign-up with email verification code
   - Sign-in, sign-out, forgot password (sends the reset code; entering the code and a new password isn't built yet)
-  - **Sign in with Google:** iOS only for now (Amplify hosted UI, deep-link callback `cyvault://callback`); on Android it needs Google set up as an identity provider in Entra
+  - **Sign in with Google:** on Android through Entra External ID with Google as an identity provider (MSAL browser flow in a browser tab); on iOS through the Amplify hosted UI (deep-link callback `cyvault://callback`)
 - **Add card via open banking** (multi-step flow)
   1. Pick a country and search for your bank (Yapily institutions API)
   2. Authorise access in the bank's page (Chrome Custom Tabs on Android, `SFSafariViewController` on iOS)
@@ -84,6 +84,12 @@ feature/vault/…/feature/vault/
 The diagram below shows the modules as they are today: the two feature modules (authentication, and vault with its screen packages), the shared modules, the dependency rules, navigation, how vault signs out through core's `SessionManager`, and the external services.
 
 ![CyVault modular architecture](docs/architecture.svg)
+
+### Google sign-in flow
+
+On Android, Google sign-in goes through Entra External ID, with Google set up as an identity provider in the tenant. Native auth only covers the in-app email screens, so for Google the app uses MSAL's browser flow (`acquireToken` with the `google.com` domain hint): it opens Entra's sign-in page in a browser tab, Entra hands the user over to Google, and Google sends a one-time code back to Entra's redirect URI. Entra exchanges that code for the user's identity with the Google client secret, then issues its own token to the app. The app never talks to Google directly, and only Entra holds the client secret.
+
+![Sign in with Google through Entra External ID](docs/google-sign-in-flow.svg)
 
 ### MVI
 
@@ -145,6 +151,26 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 6. Put your client ID, tenant subdomain and redirect URI in
    `feature/authentication/src/androidMain/res/raw/auth_config_native_auth.json`, and your signature
    hash in the MSAL `BrowserTabActivity` entry of `androidApp/src/main/AndroidManifest.xml`.
+7. Optional, for **Sign in with Google**:
+   - In the [Google Cloud Console](https://console.cloud.google.com), create a project, set up the
+     OAuth consent screen (Google Auth Platform) as **External**, and add your Gmail address as a
+     test user while the app is in Testing mode.
+   - Create an OAuth client of type **Web application** with these redirect URIs, where `<tenant-ID>`
+     is your tenant's ID and `<tenant>` its subdomain:
+
+     ```
+     https://login.microsoftonline.com
+     https://login.microsoftonline.com/te/<tenant-ID>/oauth2/authresp
+     https://login.microsoftonline.com/te/<tenant>.onmicrosoft.com/oauth2/authresp
+     https://<tenant-ID>.ciamlogin.com/<tenant-ID>/federation/oidc/accounts.google.com
+     https://<tenant-ID>.ciamlogin.com/<tenant>.onmicrosoft.com/federation/oidc/accounts.google.com
+     https://<tenant>.ciamlogin.com/<tenant-ID>/federation/oauth2
+     https://<tenant>.ciamlogin.com/<tenant>.onmicrosoft.com/federation/oauth2
+     ```
+
+   - In Entra, go to **External Identities → All identity providers → Google** and enter the
+     Google client ID and secret, then tick **Google** under the user flow's **Identity providers**.
+     The secret stays in Entra; the app never needs it.
 
 **iOS: AWS Amplify (optional: deploy your own backend)**
 
@@ -176,7 +202,7 @@ CyVault is a portfolio / learning project and **not production-ready**. The know
 - **Card data**: the demo model holds a card number and CVV. A real app must never store the CVV and should keep only a **tokenised** card reference from a PCI DSS-compliant provider.
 - **Card API**: `CardApiService` points to a placeholder endpoint. Planned: an Amplify Data / AppSync backend with owner-based authorization.
 - **Local storage**: planned: SQLDelight for offline caching, with platform keystore/keychain encryption for sensitive data.
-- **Auth**: move iOS from Amplify/Cognito to MSAL and Entra External ID, add Google as an Entra identity provider for Android, and finish the forgot-password flow (code + new password).
+- **Auth**: move iOS from Amplify/Cognito to MSAL and Entra External ID, and finish the forgot-password flow (code + new password).
 - More unit and UI tests for use cases and ViewModels.
 
 ## Author
