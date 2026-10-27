@@ -1,5 +1,6 @@
 package com.cypressit.cyvault.feature.authentication.data.remote
 
+import com.cypressit.cyvault.core.platform.ActivityProvider
 import com.cypressit.cyvault.feature.authentication.domain.model.User
 import com.microsoft.identity.client.AcquireTokenParameters
 import com.microsoft.identity.client.AuthenticationCallback
@@ -23,8 +24,13 @@ import com.microsoft.identity.nativeauth.statemachine.states.SignUpCodeRequiredS
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import org.koin.mp.KoinPlatform
 
 actual class AuthApiService actual constructor() {
+
+    // The constructor is shared with iOS, so Android-only dependencies come from Koin,
+    // like the Context in MsalClientProvider.
+    private val activityProvider: ActivityProvider by lazy { KoinPlatform.getKoin().get() }
 
     // Native auth is a state machine: the state returned by one step is needed for the next,
     // e.g. register() returns the state that confirmSignUp() submits the code to.
@@ -86,7 +92,7 @@ actual class AuthApiService actual constructor() {
         // Native auth only covers in-app email flows. Google goes through MSAL's browser flow:
         // Entra's sign-in page opens in a browser tab and hands the user over to Google
         // (the Google identity provider set up in the Entra external tenant).
-        val activity = ResumedActivityTracker.activity
+        val activity = activityProvider.currentActivity
             ?: throw Exception("Google sign-in failed. Please try again.")
         val client = MsalClientProvider.get()
         val account = try {
