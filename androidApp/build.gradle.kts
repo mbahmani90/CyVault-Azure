@@ -17,10 +17,6 @@ dependencies {
     implementation(projects.app)
     implementation(projects.authentication)
 
-    // Amplify (needed for initialization in Application class)
-    implementation(libs.amplify.core)
-    implementation(libs.amplify.auth.cognito)
-
     implementation(libs.koin.android)
     implementation(libs.androidx.activity.compose)
 

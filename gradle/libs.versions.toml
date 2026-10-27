@@ -1,6 +1,6 @@
 [versions]
 agp = "9.2.1"
-amplify = "2.27.0"
+msal = "8.6.0"
 android-desugar-jdk = "2.1.5"
 android-compileSdk = "37"
 android-minSdk = "24"
@@ -47,9 +47,8 @@ compose-components-resources = { module = "org.jetbrains.compose.components:comp
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "composeMultiplatform" }
 
-# Amplify
-amplify-core = { module = "com.amplifyframework:core-kotlin", version.ref = "amplify" }
-amplify-auth-cognito = { module = "com.amplifyframework:aws-auth-cognito", version.ref = "amplify" }
+# Microsoft Authentication Library (Entra External ID native auth)
+msal = { module = "com.microsoft.identity.client:msal", version.ref = "msal" }
 
 # Desugaring
 android-desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "android-desugar-jdk" }

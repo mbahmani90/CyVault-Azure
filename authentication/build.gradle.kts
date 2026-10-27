@@ -68,9 +68,8 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.ktor.client.okhttp)
 
-            // Amplify
-            implementation(libs.amplify.core)
-            implementation(libs.amplify.auth.cognito)
+            // MSAL
+            implementation(libs.msal)
         }
 
         iosMain.dependencies {
