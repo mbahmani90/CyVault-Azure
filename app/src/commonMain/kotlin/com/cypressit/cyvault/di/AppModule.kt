@@ -1,7 +1,9 @@
 package com.cypressit.cyvault.di
 
-import com.cypressit.authentication.di.authModule
-import com.cypressit.vault.di.vaultModule
+import com.cypressit.cyvault.core.di.networkModule
+import com.cypressit.cyvault.core.di.platformModule
+import com.cypressit.cyvault.feature.authentication.di.authModule
+import com.cypressit.cyvault.feature.vault.di.vaultFeatureModule
 import org.koin.core.module.Module
 
 /**
@@ -13,5 +15,5 @@ val appModules: List<Module>
         platformModule,
         networkModule,
         authModule,
-        vaultModule,
+        vaultFeatureModule,
     )

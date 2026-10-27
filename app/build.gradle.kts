@@ -17,7 +17,8 @@ kotlin {
             // Named CyVaultApp to avoid conflicting with Swift's built-in App protocol
             baseName = "CyVaultApp"
             isStatic = true
-            export(projects.core)
+            // Swift implements IosAuthBridge from :feature:authentication
+            export(projects.feature.authentication)
         }
     }
 
@@ -34,11 +35,11 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             // Core infrastructure
-            api(projects.core)
+            implementation(projects.core)
 
             // Feature modules — add every new feature here
-            implementation(projects.authentication)
-            implementation(projects.vault)
+            api(projects.feature.authentication)
+            implementation(projects.feature.vault)
 
             // Compose — used directly in App.kt and MainViewController.kt
             implementation(libs.compose.runtime)

@@ -44,29 +44,41 @@ The project uses **Clean Architecture** with **MVI**, split into feature modules
 CyVault
 ├── androidApp       Android entry point (Application, MainActivity)
 ├── iosApp           iOS entry point (SwiftUI host + Amplify Swift auth bridge)
-├── app              Shared app shell: root Compose App, navigation graph, Koin setup
-├── core             Shared infrastructure: Ktor client, platform DI, routes, SessionManager
-├── design           Design system: theme, colors, typography, shapes, reusable components
-├── authentication   Feature: sign-in / sign-up / Google / password reset
-├── vault            Feature: vault home, card list, add-card (open banking)
+├── app              Composition root: root Compose App, NavHost, Koin setup, the only iOS framework
+├── core             Shared non-UI code: Ktor client, platform DI, SessionManager
+├── systemdesign     Design system: theme, colors, typography, shapes, reusable components
+├── feature
+│   ├── authentication   Feature: sign-in / sign-up / Google / password reset
+│   └── vault            Feature: vault home, card list, add-card (open banking)
 └── amplify-backend  AWS Amplify Gen 2 backend (Cognito + Google IdP), TypeScript
 ```
 
-Each feature module follows the same layering:
+Features never depend on each other; `app` wires them through each feature's
+navigation entry point (`authScreen`, `vaultScreen`) and its public Koin module.
+
+Each feature module has its own layers. A single-flow feature (authentication) keeps them at
+the module root; a multi-screen feature (vault) has one package per screen, each with its
+own layers and Koin module, plus a small shared package:
 
 ```
-feature/
-├── data/           DTOs, remote services (Ktor), mappers, repository implementations
-├── domain/         Models, repository interfaces, use cases
-├── presentation/   Compose screens + ViewModel (State / Intent / Effect)
-└── di/             Koin module
+feature/vault/…/feature/vault/
+├── card/           shared by the screens: Card model, CardRepository, card API
+├── home/           vault shell: drawer, top bar, sign-out
+├── vaultlist/      card list
+├── addcard/        add a card via open banking (Yapily)
+│   ├── data/           remote services + DTOs, mappers, repository implementations
+│   ├── domain/         models, repository interfaces, use cases
+│   ├── presentation/   Compose screens + ViewModel (State / Intent / Effect)
+│   └── di/             the screen's internal Koin module
+├── navigation/     routes + vaultScreen(): the feature's single entry point
+└── di/             vaultFeatureModule: the feature's only public Koin module
 ```
 
-### Target architecture
+### Architecture diagram
 
-The diagram below shows the proposed modular architecture the project is moving toward: module dependency rules, session-driven navigation, the zero-knowledge key hierarchy, and the offline-first data flow.
+The diagram below shows the modules as they are today: the two feature modules (authentication, and vault with its screen packages), the shared modules, the dependency rules, navigation, how vault signs out through core's `SessionManager`, and the external services.
 
-![CyVault proposed modular architecture](docs/architecture.svg)
+![CyVault modular architecture](docs/architecture.svg)
 
 ### MVI
 
@@ -127,7 +139,7 @@ Copy the generated `amplify_outputs.json` to:
 ### 2. Open banking
 
 Create a Yapily sandbox application and put your credentials in
-`vault/src/commonMain/kotlin/com/cypressit/vault/addCard/data/remote/YapilyConfig.kt`.
+`feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/addcard/data/remote/YapilyConfig.kt`.
 
 ### 3. Run
 

@@ -1,7 +1,7 @@
 package com.cypressit.cyvault
 
 import android.app.Application
-import com.cypressit.authentication.data.remote.MsalClientProvider
+import com.cypressit.cyvault.feature.authentication.data.remote.MsalClientProvider
 import org.koin.android.ext.koin.androidContext
 import com.cypressit.cyvault.di.appModules
 import org.koin.core.context.GlobalContext.startKoin
