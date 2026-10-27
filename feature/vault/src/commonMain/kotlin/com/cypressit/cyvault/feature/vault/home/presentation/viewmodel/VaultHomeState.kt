@@ -7,4 +7,6 @@ data class VaultHomeState(
     val cards: List<Card> = emptyList(),
     val totalBalance: Double = 0.0,
     val error: String? = null,
+    val userName: String = "",
+    val userEmail: String = "",
 )

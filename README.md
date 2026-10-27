@@ -36,7 +36,7 @@ The app is built with **Kotlin Multiplatform** and **Compose Multiplatform**. UI
   2. Authorise access in the bank's page (Chrome Custom Tabs on Android, `SFSafariViewController` on iOS)
   3. Return through a deep link, then choose one of the linked accounts
   4. Enter card details and save
-- **Vault**: list and delete saved cards
+- **Vault**: list and delete saved cards; the drawer shows the signed-in user (initials avatar, name, email) and sign-out
 
 ## Architecture
 

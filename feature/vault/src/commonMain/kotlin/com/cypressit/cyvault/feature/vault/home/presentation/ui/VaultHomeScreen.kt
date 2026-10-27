@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeIntent
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeState
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeViewModel
+import com.cypressit.cyvault.systemdesign.components.CyAvatar
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.vault_home_open_menu_description
 import cyvault.vault.generated.resources.vault_home_sign_out
@@ -82,12 +83,12 @@ internal fun VaultHomeScreen(
         drawerContent = {
             ModalDrawerSheet {
                 Spacer(Modifier.height(24.dp))
-                Text(
-                    text = stringResource(Res.string.vault_home_title),
-                    style = MaterialTheme.typography.headlineSmall,
+                DrawerHeader(
+                    name = state.userName,
+                    email = state.userEmail,
                     modifier = Modifier.padding(horizontal = 24.dp),
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
                 NavigationDrawerItem(
@@ -129,6 +130,35 @@ internal fun VaultHomeScreen(
             CardList(
                 state = state,
                 modifier = Modifier.padding(paddingValues),
+            )
+        }
+    }
+}
+
+/** The signed-in user at the top of the drawer: initials avatar, name and email. */
+@Composable
+private fun DrawerHeader(
+    name: String,
+    email: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        CyAvatar(name = name, fallback = email)
+        Spacer(Modifier.height(8.dp))
+        if (name.isNotBlank()) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+        if (email.isNotBlank()) {
+            Text(
+                text = email,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

@@ -28,4 +28,16 @@ object CyColors {
     val OnBackgroundDark = Color(0xFFE6E1E5)
     val SurfaceDark = Color(0xFF1C1B1F)
     val OnSurfaceDark = Color(0xFFE6E1E5)
+
+    // Avatar backgrounds (white initials on top), the same in light and dark
+    val AvatarPalette = listOf(
+        Color(0xFF1A73E8), // blue
+        Color(0xFF188038), // green
+        Color(0xFFC5221F), // red
+        Color(0xFFE37400), // orange
+        Color(0xFF9334E6), // purple
+        Color(0xFF007B83), // teal
+        Color(0xFFB80672), // pink
+        Color(0xFF5F6368), // grey
+    )
 }
