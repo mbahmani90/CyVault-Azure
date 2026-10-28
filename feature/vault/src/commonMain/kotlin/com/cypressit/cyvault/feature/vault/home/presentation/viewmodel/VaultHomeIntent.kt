@@ -21,6 +21,8 @@ sealed class VaultHomeIntent {
         val description: String,
         val value: Double,
         val currency: String,
+        /** ISO 8601: when the purchase or income happened. */
+        val date: String,
     ) : VaultHomeIntent()
 
     /** Opens the add-item dialog on an existing balance. */

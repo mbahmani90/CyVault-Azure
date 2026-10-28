@@ -121,12 +121,13 @@ class VaultHomeViewModelBalanceTest {
         advanceUntilIdle()
 
         viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
-        viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "Daily spending", 1250.5, "EUR"))
+        viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "Daily spending", 1250.5, "EUR", "2026-10-28T09:00:00Z"))
         advanceUntilIdle()
 
         val saved = balances.saved.single()
         assertTrue(saved.id.isNotBlank())
         assertEquals("Daily spending", saved.description)
+        assertEquals("2026-10-28T09:00:00Z", saved.date)
         val state = viewModel.state.value
         assertEquals(listOf("Main account", "Savings"), state.balances.map { it.name })
         assertFalse(state.isAddItemDialogVisible)
@@ -141,7 +142,7 @@ class VaultHomeViewModelBalanceTest {
         advanceUntilIdle()
 
         viewModel.onIntent(VaultHomeIntent.EditBalance(main))
-        viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "", 99.0, "EUR"))
+        viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "", 99.0, "EUR", "2026-10-20T00:00:00Z"))
         advanceUntilIdle()
 
         assertEquals("main", balances.saved.single().id)
@@ -156,7 +157,7 @@ class VaultHomeViewModelBalanceTest {
         balances.failure = Exception("offline")
 
         viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
-        viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "", 1.0, "EUR"))
+        viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "", 1.0, "EUR", "2026-10-28T09:00:00Z"))
         advanceUntilIdle()
 
         assertTrue(viewModel.state.value.isAddItemDialogVisible)

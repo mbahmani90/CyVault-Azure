@@ -154,8 +154,8 @@ internal fun VaultHomeScreen(
             item = state.editingBalance,
             isSaving = state.isSavingBalance,
             onDismiss = { viewModel.onIntent(VaultHomeIntent.DismissAddItemDialog) },
-            onSave = { title, description, value, currency ->
-                viewModel.onIntent(VaultHomeIntent.SaveItem(title, description, value, currency))
+            onSave = { title, description, value, currency, date ->
+                viewModel.onIntent(VaultHomeIntent.SaveItem(title, description, value, currency, date))
             },
             onDelete = {
                 pendingDelete = state.editingBalance

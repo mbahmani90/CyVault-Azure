@@ -10,16 +10,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,17 +41,22 @@ import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.vault_home_add_item_cancel
 import cyvault.vault.generated.resources.vault_home_add_item_currency_description
+import cyvault.vault.generated.resources.vault_home_add_item_date_description
+import cyvault.vault.generated.resources.vault_home_add_item_date_done
+import cyvault.vault.generated.resources.vault_home_add_item_date_next
 import cyvault.vault.generated.resources.vault_home_add_item_description
 import cyvault.vault.generated.resources.vault_home_add_item_save
-import cyvault.vault.generated.resources.vault_home_add_item_title
 import cyvault.vault.generated.resources.vault_home_add_item_title_field
 import cyvault.vault.generated.resources.vault_home_add_item_type_description
 import cyvault.vault.generated.resources.vault_home_add_item_type_income
 import cyvault.vault.generated.resources.vault_home_add_item_type_purchase
 import cyvault.vault.generated.resources.vault_home_add_item_value
 import cyvault.vault.generated.resources.vault_home_balance_delete_confirm
-import cyvault.vault.generated.resources.vault_home_edit_item_title
 import org.jetbrains.compose.resources.stringResource
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.math.abs
 
 /** The currencies the dialog offers, as ISO 4217 codes. */
@@ -58,16 +70,19 @@ internal fun currencySymbol(code: String): String = when (code) {
 }
 
 /**
- * Asks for an item's title, description, type and value with its currency, and saves it as a
- * balance: a purchase is saved as a negative amount, income as a positive one. Edits [item]
- * when it isn't null. Save needs a title and a numeric value.
+ * Asks for an item's title, description, type, value with its currency, and date and time, and
+ * saves it as a balance: a purchase is saved as a negative amount, income as a positive one.
+ * The date starts at now, or at the stored date when editing [item]. Save needs a title and a
+ * numeric value.
  */
+@OptIn(ExperimentalMaterial3Api::class) // DatePicker, TimePicker
 @Composable
 internal fun AddItemDialog(
     item: Balance?,
     isSaving: Boolean,
     onDismiss: () -> Unit,
-    onSave: (title: String, description: String, value: Double, currency: String) -> Unit,
+    /** [date] is ISO 8601. */
+    onSave: (title: String, description: String, value: Double, currency: String, date: String) -> Unit,
     /** Asks to delete [item]; the Delete button only shows when editing. */
     onDelete: () -> Unit,
 ) {
@@ -86,15 +101,62 @@ internal fun AddItemDialog(
         if (isIncome) Res.string.vault_home_add_item_type_income else Res.string.vault_home_add_item_type_purchase
     )
 
+    // When it happened: now for a new item, the stored date when editing. Epoch millis so it
+    // survives rotation.
+    var dateMillis by rememberSaveable {
+        mutableStateOf((parseBalanceDate(item?.date) ?: Clock.System.now()).toEpochMilliseconds())
+    }
+    var isDatePickerOpen by rememberSaveable { mutableStateOf(false) }
+    // The day picked in the date picker, waiting for the time picker; null when not picking.
+    var pickedDayMillis by rememberSaveable { mutableStateOf<Long?>(null) }
+    val date = Instant.fromEpochMilliseconds(dateMillis)
+
+    if (isDatePickerOpen) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = toDatePickerMillis(date))
+        DatePickerDialog(
+            onDismissRequest = { isDatePickerOpen = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pickedDayMillis = datePickerState.selectedDateMillis
+                        isDatePickerOpen = false
+                    },
+                    enabled = datePickerState.selectedDateMillis != null,
+                ) { Text(stringResource(Res.string.vault_home_add_item_date_next)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { isDatePickerOpen = false }) {
+                    Text(stringResource(Res.string.vault_home_add_item_cancel))
+                }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    pickedDayMillis?.let { dayMillis ->
+        val local = date.toLocalDateTime(TimeZone.currentSystemDefault())
+        val timePickerState = rememberTimePickerState(initialHour = local.hour, initialMinute = local.minute)
+        AlertDialog(
+            onDismissRequest = { pickedDayMillis = null },
+            text = { TimePicker(state = timePickerState) },
+            confirmButton = {
+                TextButton(onClick = {
+                    dateMillis = fromPickers(dayMillis, timePickerState.hour, timePickerState.minute)
+                        .toEpochMilliseconds()
+                    pickedDayMillis = null
+                }) { Text(stringResource(Res.string.vault_home_add_item_date_done)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pickedDayMillis = null }) {
+                    Text(stringResource(Res.string.vault_home_add_item_cancel))
+                }
+            },
+        )
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                stringResource(
-                    if (item == null) Res.string.vault_home_add_item_title else Res.string.vault_home_edit_item_title
-                )
-            )
-        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -186,6 +248,17 @@ internal fun AddItemDialog(
                         }
                     }
                 }
+                // Date and time, picked with the date picker and then the time picker.
+                OutlinedButton(
+                    onClick = { isDatePickerOpen = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(formatBalanceDate(date), modifier = Modifier.weight(1f))
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = stringResource(Res.string.vault_home_add_item_date_description),
+                    )
+                }
             }
         },
         // One row instead of confirm/dismiss slots, so Delete can sit on the left when editing.
@@ -207,7 +280,7 @@ internal fun AddItemDialog(
                 TextButton(
                     onClick = {
                         val signed = if (isIncome) parsedValue!! else -parsedValue!!
-                        onSave(title.trim(), description.trim(), signed, currency)
+                        onSave(title.trim(), description.trim(), signed, currency, date.toString())
                     },
                     enabled = title.isNotBlank() && parsedValue != null && !isSaving,
                 ) {

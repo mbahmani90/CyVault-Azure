@@ -10,7 +10,6 @@
     <string name="vault_home_photo_updated">Profile photo updated</string>
     <string name="vault_home_add_card">Add Card</string>
     <string name="vault_home_add_item_description_fab">Add item</string>
-    <string name="vault_home_add_item_title">Add Item</string>
     <string name="vault_home_edit_item_title">Edit Item</string>
     <string name="vault_home_add_item_currency_description">Currency</string>
     <string name="vault_home_add_item_type_description">Type</string>
@@ -19,6 +18,9 @@
     <string name="vault_home_add_item_title_field">Title</string>
     <string name="vault_home_add_item_description">Description</string>
     <string name="vault_home_add_item_value">Value</string>
+    <string name="vault_home_add_item_date_description">Date and time</string>
+    <string name="vault_home_add_item_date_next">Next</string>
+    <string name="vault_home_add_item_date_done">OK</string>
     <string name="vault_home_add_item_cancel">Cancel</string>
     <string name="vault_home_add_item_save">Save</string>
     <string name="vault_home_photo_update_failed">Couldn't update your photo. Please try again.</string>
