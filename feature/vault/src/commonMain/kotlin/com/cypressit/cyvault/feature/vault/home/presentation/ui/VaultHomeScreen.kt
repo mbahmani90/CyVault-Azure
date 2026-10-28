@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCard
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Card
@@ -59,6 +60,8 @@ import com.cypressit.cyvault.systemdesign.components.StatusBarIconsFor
 import com.cypressit.cyvault.systemdesign.theme.CyTheme
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.cyvault_logo
+import cyvault.vault.generated.resources.vault_home_add_card
+import cyvault.vault.generated.resources.vault_home_add_item_description_fab
 import cyvault.vault.generated.resources.vault_home_change_photo_description
 import cyvault.vault.generated.resources.vault_home_logo_description
 import cyvault.vault.generated.resources.vault_home_open_menu_description
@@ -77,7 +80,10 @@ private fun Double.fmt2dp(): String {
     return "$intPart.${decPart.toString().padStart(2, '0')}"
 }
 
-/** The vault's home: the card list with total assets, a drawer with sign-out, and an add-card button. */
+/**
+ * The vault's home: the card list with total assets, a drawer with add-card and sign-out,
+ * and an add button that opens the add-item dialog.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VaultHomeScreen(
@@ -94,7 +100,17 @@ internal fun VaultHomeScreen(
         drawerState = drawerState,
         snackBarHostState = snackBarHostState,
         onSignedOut = onSignedOut,
+        onAddCard = onAddCardClick,
     )
+
+    if (state.isAddItemDialogVisible) {
+        AddItemDialog(
+            onDismiss = { viewModel.onIntent(VaultHomeIntent.DismissAddItemDialog) },
+            onSave = { title, description, value ->
+                viewModel.onIntent(VaultHomeIntent.SaveItem(title, description, value))
+            },
+        )
+    }
 
     // Platform actions are created here, next to the ViewModel, and passed down as lambdas.
     val pickProfilePhoto = rememberProfilePhotoPicker { photo ->
@@ -120,6 +136,13 @@ internal fun VaultHomeScreen(
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
+                NavigationDrawerItem(
+                    icon = { Icon(imageVector = Icons.Default.AddCard, contentDescription = null) },
+                    label = { Text(stringResource(Res.string.vault_home_add_card)) },
+                    selected = false,
+                    onClick = { viewModel.onIntent(VaultHomeIntent.AddCardFromDrawer) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
                 NavigationDrawerItem(
                     icon = {
                         Icon(
@@ -172,8 +195,11 @@ internal fun VaultHomeScreen(
                 )
             },
             floatingActionButton = {
-                FloatingActionButton(onClick = onAddCardClick) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Card")
+                FloatingActionButton(onClick = { viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog) }) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(Res.string.vault_home_add_item_description_fab),
+                    )
                 }
             },
         ) { paddingValues ->

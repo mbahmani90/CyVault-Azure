@@ -49,6 +49,14 @@ class VaultHomeViewModel(
             VaultHomeIntent.SignOut -> signOut()
             VaultHomeIntent.OpenDrawer -> viewModelScope.launch { _effect.send(VaultHomeEffect.OpenDrawer) }
             is VaultHomeIntent.ChangeProfilePhoto -> updateProfilePhoto(intent.photo)
+            VaultHomeIntent.AddCardFromDrawer -> viewModelScope.launch {
+                _effect.send(VaultHomeEffect.CloseDrawer)
+                _effect.send(VaultHomeEffect.NavigateToAddCard)
+            }
+            VaultHomeIntent.ShowAddItemDialog -> _state.update { it.copy(isAddItemDialogVisible = true) }
+            VaultHomeIntent.DismissAddItemDialog -> _state.update { it.copy(isAddItemDialogVisible = false) }
+            // Items aren't stored anywhere yet; saving only closes the dialog.
+            is VaultHomeIntent.SaveItem -> _state.update { it.copy(isAddItemDialogVisible = false) }
         }
     }
 

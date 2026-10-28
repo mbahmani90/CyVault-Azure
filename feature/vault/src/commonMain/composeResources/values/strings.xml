@@ -8,5 +8,13 @@
     <string name="vault_home_logo_description">CyVault logo</string>
     <string name="vault_home_change_photo_description">Change profile photo</string>
     <string name="vault_home_photo_updated">Profile photo updated</string>
+    <string name="vault_home_add_card">Add Card</string>
+    <string name="vault_home_add_item_description_fab">Add item</string>
+    <string name="vault_home_add_item_title">Add Item</string>
+    <string name="vault_home_add_item_title_field">Title</string>
+    <string name="vault_home_add_item_description">Description</string>
+    <string name="vault_home_add_item_value">Value</string>
+    <string name="vault_home_add_item_cancel">Cancel</string>
+    <string name="vault_home_add_item_save">Save</string>
     <string name="vault_home_photo_update_failed">Couldn't update your photo. Please try again.</string>
 </resources>
