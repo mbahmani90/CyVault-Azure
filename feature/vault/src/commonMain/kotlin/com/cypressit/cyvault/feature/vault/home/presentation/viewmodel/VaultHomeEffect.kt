@@ -6,6 +6,7 @@ sealed class VaultHomeEffect {
     data object ProfilePhotoUpdated : VaultHomeEffect()
     data object ProfilePhotoUpdateFailed : VaultHomeEffect()
     data object NavigateToLogin : VaultHomeEffect()
+    data object NavigateToAddCard : VaultHomeEffect()
     data object OpenDrawer : VaultHomeEffect()
     data object CloseDrawer : VaultHomeEffect()
 }

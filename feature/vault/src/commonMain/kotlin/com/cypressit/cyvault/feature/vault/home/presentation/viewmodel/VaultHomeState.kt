@@ -12,4 +12,5 @@ data class VaultHomeState(
     /** JPEG bytes of the user's profile photo, or null to show the initials avatar. */
     val profilePhoto: ByteArray? = null,
     val isUpdatingPhoto: Boolean = false,
+    val isAddItemDialogVisible: Boolean = false,
 )

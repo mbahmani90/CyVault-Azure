@@ -17,11 +17,13 @@ internal fun VaultHomeScreenEffect(
     drawerState: DrawerState,
     snackBarHostState: SnackbarHostState,
     onSignedOut: () -> Unit,
+    onAddCard: () -> Unit,
 ) {
     LaunchedEffect(Unit) {
         effects.collect { effect ->
             when (effect) {
                 VaultHomeEffect.NavigateToLogin -> onSignedOut()
+                VaultHomeEffect.NavigateToAddCard -> onAddCard()
                 is VaultHomeEffect.ShowError -> snackBarHostState.showSnackbar(effect.message)
                 VaultHomeEffect.CardDeleted -> snackBarHostState.showSnackbar("Card deleted")
                 VaultHomeEffect.ProfilePhotoUpdated ->
