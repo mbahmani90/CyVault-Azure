@@ -1,14 +1,20 @@
 package com.cypressit.cyvault.feature.vault.home.di
 
 import com.cypressit.cyvault.core.di.IO_DISPATCHER
+import com.cypressit.cyvault.feature.vault.home.data.remote.BalanceApiService
 import com.cypressit.cyvault.feature.vault.home.data.remote.ProfilePhotoApiService
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
+import com.cypressit.cyvault.feature.vault.home.data.repository.BalanceRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.data.repository.ProfilePhotoRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.domain.repository.AccountRepository
+import com.cypressit.cyvault.feature.vault.home.domain.repository.BalanceRepository
 import com.cypressit.cyvault.feature.vault.home.domain.repository.ProfilePhotoRepository
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
@@ -23,9 +29,11 @@ internal val homeModule = module {
 
     // Remote
     single { ProfilePhotoApiService(get(), get()) }
+    single { BalanceApiService(get(), get()) }
 
     // Repository (AuthClient comes from :auth's authClientModule)
     single<AccountRepository> { AccountRepositoryImpl(get()) }
+    single<BalanceRepository> { BalanceRepositoryImpl(get()) }
     single<ProfilePhotoRepository> {
         ProfilePhotoRepositoryImpl(
             apiService = get(),
@@ -43,6 +51,9 @@ internal val homeModule = module {
     factory { GetProfilePhotoUseCase(get()) }
     factory { ChangeProfilePhotoUseCase(get()) }
     factory { ClearProfilePhotoCacheUseCase(get()) }
+    factory { GetBalancesUseCase(get()) }
+    factory { SaveBalanceUseCase(get()) }
+    factory { DeleteBalanceUseCase(get()) }
 
     // ViewModel
     viewModelOf(::VaultHomeViewModel)

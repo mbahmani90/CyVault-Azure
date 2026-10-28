@@ -6,6 +6,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeEffect
 import cyvault.vault.generated.resources.Res
+import cyvault.vault.generated.resources.vault_home_balance_deleted
+import cyvault.vault.generated.resources.vault_home_balance_request_failed
+import cyvault.vault.generated.resources.vault_home_balance_saved
 import cyvault.vault.generated.resources.vault_home_photo_update_failed
 import cyvault.vault.generated.resources.vault_home_photo_updated
 import kotlinx.coroutines.flow.Flow
@@ -30,6 +33,12 @@ internal fun VaultHomeScreenEffect(
                     snackBarHostState.showSnackbar(getString(Res.string.vault_home_photo_updated))
                 VaultHomeEffect.ProfilePhotoUpdateFailed ->
                     snackBarHostState.showSnackbar(getString(Res.string.vault_home_photo_update_failed))
+                VaultHomeEffect.BalanceSaved ->
+                    snackBarHostState.showSnackbar(getString(Res.string.vault_home_balance_saved))
+                VaultHomeEffect.BalanceDeleted ->
+                    snackBarHostState.showSnackbar(getString(Res.string.vault_home_balance_deleted))
+                VaultHomeEffect.BalanceRequestFailed ->
+                    snackBarHostState.showSnackbar(getString(Res.string.vault_home_balance_request_failed))
                 VaultHomeEffect.OpenDrawer -> drawerState.open()
                 VaultHomeEffect.CloseDrawer -> drawerState.close()
             }

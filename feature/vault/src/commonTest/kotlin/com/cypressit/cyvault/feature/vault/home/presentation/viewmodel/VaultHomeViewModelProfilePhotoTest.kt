@@ -1,5 +1,6 @@
 package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
+import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
@@ -8,10 +9,13 @@ import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositor
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +46,7 @@ class VaultHomeViewModelProfilePhotoTest {
     private val accounts = AccountRepositoryImpl(authClient)
     private val photos = FakeProfilePhotoRepository()
     private val cards = FakeCardRepository()
+    private val balances = FakeBalanceRepository()
 
     private val photo = PickedPhoto("content://media/picker/0/1")
 
@@ -56,6 +61,9 @@ class VaultHomeViewModelProfilePhotoTest {
         getProfilePhoto = GetProfilePhotoUseCase(photos),
         changeProfilePhoto = ChangeProfilePhotoUseCase(photos),
         clearProfilePhotoCache = ClearProfilePhotoCacheUseCase(photos),
+        getBalances = GetBalancesUseCase(balances),
+        saveBalance = SaveBalanceUseCase(balances),
+        deleteBalance = DeleteBalanceUseCase(balances),
     )
 
     @Test

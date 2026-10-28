@@ -60,6 +60,9 @@ kotlin {
             implementation(libs.ktor.client.logging)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.kotlinx.serialization.json)
+
+            // Dates shown in the user's time zone
+            implementation(libs.kotlinx.datetime)
         }
 
         androidMain.dependencies {

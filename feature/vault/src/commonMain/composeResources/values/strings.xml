@@ -11,10 +11,24 @@
     <string name="vault_home_add_card">Add Card</string>
     <string name="vault_home_add_item_description_fab">Add item</string>
     <string name="vault_home_add_item_title">Add Item</string>
+    <string name="vault_home_edit_item_title">Edit Item</string>
+    <string name="vault_home_add_item_currency_description">Currency</string>
+    <string name="vault_home_add_item_type_description">Type</string>
+    <string name="vault_home_add_item_type_purchase">Purchase</string>
+    <string name="vault_home_add_item_type_income">Income</string>
     <string name="vault_home_add_item_title_field">Title</string>
     <string name="vault_home_add_item_description">Description</string>
     <string name="vault_home_add_item_value">Value</string>
     <string name="vault_home_add_item_cancel">Cancel</string>
     <string name="vault_home_add_item_save">Save</string>
     <string name="vault_home_photo_update_failed">Couldn't update your photo. Please try again.</string>
+    <string name="vault_home_total_since">From %1$s</string>
+    <string name="vault_home_balances_empty">No balances yet. Tap + to add one.</string>
+    <string name="vault_home_delete_balance_description">Delete balance</string>
+    <string name="vault_home_balance_delete_title">Delete balance?</string>
+    <string name="vault_home_balance_delete_message">%1$s will be removed.</string>
+    <string name="vault_home_balance_delete_confirm">Delete</string>
+    <string name="vault_home_balance_saved">Balance saved</string>
+    <string name="vault_home_balance_deleted">Balance deleted</string>
+    <string name="vault_home_balance_request_failed">Couldn't update your balances. Please try again.</string>
 </resources>

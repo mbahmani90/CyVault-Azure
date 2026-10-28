@@ -15,6 +15,7 @@ public sealed class BalanceEntity : ITableEntity
     public ETag ETag { get; set; }
 
     public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
 
     /// <summary>
     /// The amount as an invariant decimal string: Table Storage has no decimal type, and a
@@ -23,10 +24,25 @@ public sealed class BalanceEntity : ITableEntity
     public string Amount { get; set; } = "0";
 
     public string Currency { get; set; } = "";
+
+    /// <summary>
+    /// When the purchase or income happened. Unlike Timestamp, it doesn't move when the row is
+    /// edited. Null only on rows stored before this column existed.
+    /// </summary>
+    public DateTimeOffset? Date { get; set; }
 }
 
 /// <summary>What the client sends to create or replace a balance.</summary>
-public sealed record BalanceRequest(string? Name, decimal? Amount, string? Currency);
+/// Without a date, a new balance gets the current time and an edited one keeps its date.
+public sealed record BalanceRequest(
+    string? Name, string? Description, decimal? Amount, string? Currency, DateTimeOffset? Date);
 
 /// <summary>What the API returns for a balance.</summary>
-public sealed record BalanceResponse(string Id, string Name, decimal Amount, string Currency, DateTimeOffset? UpdatedAt);
+public sealed record BalanceResponse(
+    string Id,
+    string Name,
+    string Description,
+    decimal Amount,
+    string Currency,
+    DateTimeOffset? Date,
+    DateTimeOffset? UpdatedAt);
