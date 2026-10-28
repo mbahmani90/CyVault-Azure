@@ -4,6 +4,7 @@ import kotlinx.datetime.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.time.Instant
 
 class BalanceDateFormatTest {
 
@@ -40,6 +41,33 @@ class BalanceDateFormatTest {
     fun oldestBalanceDate_withoutDates_isNull() {
         assertNull(oldestBalanceDate(emptyList()))
         assertNull(oldestBalanceDate(listOf(null)))
+    }
+
+    @Test
+    fun datePickerMillis_isTheUtcMidnightOfTheLocalDay() {
+        // 23:30 UTC on 27 Jul is already 28 Jul in Lisbon (UTC+1), so the picker shows the 28th.
+        val instant = Instant.parse("2026-07-27T23:30:00Z")
+        val expected = Instant.parse("2026-07-28T00:00:00Z").toEpochMilliseconds()
+
+        assertEquals(expected, toDatePickerMillis(instant, TimeZone.of("Europe/Lisbon")))
+    }
+
+    @Test
+    fun fromPickers_isThePickedDayAtThePickedLocalTime() {
+        val day = Instant.parse("2026-07-28T00:00:00Z").toEpochMilliseconds()
+
+        assertEquals(
+            Instant.parse("2026-07-28T08:15:00Z"),
+            fromPickers(day, hour = 9, minute = 15, timeZone = TimeZone.of("Europe/Lisbon")),
+        )
+    }
+
+    @Test
+    fun pickers_roundTripTheSameLocalDay() {
+        val zone = TimeZone.of("Europe/Lisbon")
+        val original = Instant.parse("2026-10-28T22:02:00Z")
+
+        assertEquals(original, fromPickers(toDatePickerMillis(original, zone), 22, 2, zone))
     }
 
     @Test

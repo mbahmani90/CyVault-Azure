@@ -69,7 +69,8 @@ class VaultHomeViewModel(
                 _state.update { it.copy(isAddItemDialogVisible = true, editingBalance = null) }
             VaultHomeIntent.DismissAddItemDialog ->
                 _state.update { it.copy(isAddItemDialogVisible = false, editingBalance = null) }
-            is VaultHomeIntent.SaveItem -> saveItem(intent.title, intent.description, intent.value, intent.currency)
+            is VaultHomeIntent.SaveItem ->
+                saveItem(intent.title, intent.description, intent.value, intent.currency, intent.date)
             is VaultHomeIntent.EditBalance ->
                 _state.update { it.copy(isAddItemDialogVisible = true, editingBalance = intent.balance) }
             is VaultHomeIntent.DeleteBalance -> deleteExistingBalance(intent.id)
@@ -91,7 +92,7 @@ class VaultHomeViewModel(
     }
 
     @OptIn(ExperimentalUuidApi::class)
-    private fun saveItem(title: String, description: String, value: Double, currency: String) {
+    private fun saveItem(title: String, description: String, value: Double, currency: String, date: String) {
         // Editing keeps the row's ID; a new balance gets a random one.
         val id = _state.value.editingBalance?.id ?: Uuid.random().toHexString()
         val balance = Balance(
@@ -100,8 +101,7 @@ class VaultHomeViewModel(
             description = description,
             amount = value,
             currency = currency,
-            // An edit keeps its date; a new balance has none, so the API dates it now.
-            date = _state.value.editingBalance?.date,
+            date = date,
         )
         viewModelScope.launch {
             _state.update { it.copy(isSavingBalance = true) }
