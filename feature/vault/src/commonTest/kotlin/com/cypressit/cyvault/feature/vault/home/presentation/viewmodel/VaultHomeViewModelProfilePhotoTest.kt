@@ -1,10 +1,10 @@
 package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
+import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
+import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient.Companion.USER_ID
 import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
-import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
-import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient.Companion.USER_ID
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
@@ -51,6 +51,7 @@ class VaultHomeViewModelProfilePhotoTest {
     private val photo = PickedPhoto("content://media/picker/0/1")
 
     @BeforeTest fun setUp() = Dispatchers.setMain(dispatcher)
+
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel() = VaultHomeViewModel(

@@ -92,7 +92,9 @@ internal class MsalAuthClient(
                     .withCallback(object : AuthenticationCallback {
                         override fun onSuccess(result: IAuthenticationResult) = continuation.resume(result)
                         override fun onError(exception: MsalException) = continuation.resumeWithException(exception)
-                        override fun onCancel() = continuation.resumeWithException(Exception("Google sign-in was cancelled"))
+                        override fun onCancel() = continuation.resumeWithException(
+                            Exception("Google sign-in was cancelled"),
+                        )
                     })
                     .build()
                 client.acquireToken(parameters)

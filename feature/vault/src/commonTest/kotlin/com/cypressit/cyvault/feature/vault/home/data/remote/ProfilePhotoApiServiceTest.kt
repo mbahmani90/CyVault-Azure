@@ -27,7 +27,12 @@ class ProfilePhotoApiServiceTest {
 
     private fun api(handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
         ProfilePhotoApiService(
-            client = HttpClient(MockEngine { request -> requests += request; handler(request) }),
+            client = HttpClient(
+                MockEngine { request ->
+                    requests += request
+                    handler(request)
+                },
+            ),
             authClient = authClient,
         )
 

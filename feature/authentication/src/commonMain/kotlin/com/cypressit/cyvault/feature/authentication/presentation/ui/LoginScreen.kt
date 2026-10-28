@@ -35,6 +35,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthIntent
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthState
 import cyvault.authentication.generated.resources.Res
 import cyvault.authentication.generated.resources.cyvault_logo
 import cyvault.authentication.generated.resources.login_email_label
@@ -45,8 +47,6 @@ import cyvault.authentication.generated.resources.login_password_label
 import cyvault.authentication.generated.resources.login_password_show
 import cyvault.authentication.generated.resources.login_register_link
 import cyvault.authentication.generated.resources.login_sign_in_button
-import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthIntent
-import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthState
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -124,7 +124,9 @@ private fun LoginForm(
             trailingIcon = {
                 TextButton(onClick = { passwordVisible = !passwordVisible }) {
                     Text(
-                        text = stringResource(if (passwordVisible) Res.string.login_password_hide else Res.string.login_password_show),
+                        text = stringResource(
+                            if (passwordVisible) Res.string.login_password_hide else Res.string.login_password_show,
+                        ),
                         style = MaterialTheme.typography.labelMedium,
                     )
                 }

@@ -1,8 +1,8 @@
 package com.cypressit.cyvault.feature.vault.card.data.repository
 
-import com.cypressit.cyvault.feature.vault.card.data.remote.dto.CreateCardRequestDto
 import com.cypressit.cyvault.feature.vault.card.data.mapper.toDomain
 import com.cypressit.cyvault.feature.vault.card.data.remote.CardApiService
+import com.cypressit.cyvault.feature.vault.card.data.remote.dto.CreateCardRequestDto
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.model.CardType
 import com.cypressit.cyvault.feature.vault.card.domain.repository.CardRepository
@@ -32,7 +32,7 @@ class CardRepositoryImpl(
                 expiryDate = expiryDate,
                 balance = balance,
                 cardType = cardType.name,
-            )
+            ),
         ).toDomain()
     }
 

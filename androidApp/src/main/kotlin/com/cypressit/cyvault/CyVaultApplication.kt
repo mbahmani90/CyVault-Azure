@@ -18,8 +18,8 @@ class CyVaultApplication : Application() {
         }
     }
 }
-fun initKoin(configuration: KoinAppDeclaration? = null){
-    startKoin{
+fun initKoin(configuration: KoinAppDeclaration? = null) {
+    startKoin {
         configuration?.invoke(this)
         modules(appModules)
     }

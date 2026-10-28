@@ -1,7 +1,7 @@
 package com.cypressit.cyvault.feature.vault.home.data.remote
 
-import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceRequestDto
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
+import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceRequestDto
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -31,7 +31,12 @@ class BalanceApiServiceTest {
 
     private fun api(handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
         BalanceApiService(
-            client = HttpClient(MockEngine { request -> requests += request; handler(request) }) {
+            client = HttpClient(
+                MockEngine { request ->
+                    requests += request
+                    handler(request)
+                },
+            ) {
                 install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             },
             authClient = authClient,
@@ -60,7 +65,15 @@ class BalanceApiServiceTest {
     @Test
     fun putBalance_sendsTheJsonBodyToTheBalanceUrl() = runTest {
         val saved = api { respondJson(mainJson) }
-            .putBalance("main", BalanceRequestDto(name = "Main account", description = "Daily spending", amount = 1250.5, currency = "EUR"))
+            .putBalance(
+                "main",
+                BalanceRequestDto(
+                    name = "Main account",
+                    description = "Daily spending",
+                    amount = 1250.5,
+                    currency = "EUR",
+                ),
+            )
 
         val request = requests.single()
         assertEquals(HttpMethod.Put, request.method)

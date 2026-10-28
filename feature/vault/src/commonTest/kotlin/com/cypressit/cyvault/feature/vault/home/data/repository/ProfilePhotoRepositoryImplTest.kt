@@ -1,9 +1,9 @@
 package com.cypressit.cyvault.feature.vault.home.data.repository
 
-import com.cypressit.cyvault.feature.vault.fake.FakeAvatarFileStore
-import com.cypressit.cyvault.feature.vault.fake.FakePickedPhotoReader
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient.Companion.USER_ID
+import com.cypressit.cyvault.feature.vault.fake.FakeAvatarFileStore
+import com.cypressit.cyvault.feature.vault.fake.FakePickedPhotoReader
 import com.cypressit.cyvault.feature.vault.home.data.remote.ProfilePhotoApiService
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import io.ktor.client.HttpClient
@@ -43,19 +43,27 @@ class ProfilePhotoRepositoryImplTest {
     }
 
     private fun TestScope.repository() = ProfilePhotoRepositoryImpl(
-        apiService = ProfilePhotoApiService(HttpClient(MockEngine { request ->
-            requests += request
-            when {
-                serverDown -> respond("", HttpStatusCode.ServiceUnavailable)
-                request.method == HttpMethod.Put -> {
-                    serverPhoto = SERVER_VERSION
-                    respond("", HttpStatusCode.NoContent)
-                }
-                else -> serverPhoto
-                    ?.let { respond(it, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "image/jpeg")) }
-                    ?: respond("", HttpStatusCode.NotFound)
-            }
-        }), FakeAuthClient()),
+        apiService = ProfilePhotoApiService(
+            HttpClient(
+                MockEngine { request ->
+                    requests += request
+                    when {
+                        serverDown -> respond("", HttpStatusCode.ServiceUnavailable)
+                        request.method == HttpMethod.Put -> {
+                            serverPhoto = SERVER_VERSION
+                            respond("", HttpStatusCode.NoContent)
+                        }
+                        else ->
+                            serverPhoto
+                                ?.let {
+                                    respond(it, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "image/jpeg"))
+                                }
+                                ?: respond("", HttpStatusCode.NotFound)
+                    }
+                },
+            ),
+            FakeAuthClient(),
+        ),
         fileStore = fileStore,
         photoReader = photoReader,
         ioDispatcher = StandardTestDispatcher(testScheduler),

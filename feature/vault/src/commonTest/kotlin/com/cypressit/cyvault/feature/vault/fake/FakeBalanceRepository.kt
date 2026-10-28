@@ -12,6 +12,7 @@ class FakeBalanceRepository(var balances: List<Balance> = emptyList()) : Balance
     }
 
     var failure: Exception? = null
+
     /** When set, getBalances waits for it, so a test can see the loading state. */
     var gate: CompletableDeferred<Unit>? = null
     val saved = mutableListOf<Balance>()
@@ -31,7 +32,7 @@ class FakeBalanceRepository(var balances: List<Balance> = emptyList()) : Balance
                 name = balance.name.trim(),
                 currency = balance.currency.uppercase(),
                 date = balance.date ?: NOW,
-            )
+            ),
         )
     }
 
