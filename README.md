@@ -272,6 +272,28 @@ locally against the real storage through `az login`.
 - **Android:** `./gradlew :androidApp:assembleDebug`, or use the run configuration in Android Studio
 - **iOS:** open `iosApp/` in Xcode and run
 
+## Continuous integration
+
+[`azure-pipelines.yml`](azure-pipelines.yml) runs the Android checks in Azure Pipelines on every pull
+request to `main`. Changes that only touch `iosApp/`, the backends, `docs/` or Markdown don't start it.
+
+| Stage | Job | Gradle task |
+|---|---|---|
+| Build | Build | `:androidApp:assembleDebug` |
+| Verify | Unit tests | `testDebugUnitTest testAndroidHostTest` |
+| Verify | Android Lint | `:androidApp:lintDebug` (also lints the library modules) |
+| Verify | Code style | `ktlintCheck` (rules in `.editorconfig`; fix with `./gradlew ktlintFormat`) |
+| Verify | SonarQube | `koverXmlReport`, then SonarQube Cloud analysis |
+| CI result | CI result | Fails if any job above failed |
+
+To set it up:
+
+1. In Azure DevOps, create a pipeline from this GitHub repository and pick the existing `azure-pipelines.yml`.
+2. In GitHub, add a branch protection rule on `main` that requires the **CI result** check.
+3. For SonarQube, install the SonarQube Cloud extension, add a service connection named `SonarCloud`,
+   set `sonarOrganization` and `sonarProjectKey` in `azure-pipelines.yml` to your project's values, and set
+   `sonarEnabled: true`. Until then the SonarQube job is left out of the run.
+
 ## Security notes & roadmap
 
 CyVault is a portfolio / learning project and **not production-ready**. The known gaps and the planned fixes are:

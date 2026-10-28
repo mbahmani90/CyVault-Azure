@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -29,10 +30,12 @@
         </activity>
 
         <!-- MSAL redirect handler. The path is the signing certificate hash (debug keystore),
-             not URL-encoded; it must match redirect_uri in auth_config_native_auth.json. -->
+             not URL-encoded; it must match redirect_uri in auth_config_native_auth.json.
+             MissingClass: MSAL is an implementation dependency of :auth, so lint can't see it from here. -->
         <activity
             android:name="com.microsoft.identity.client.BrowserTabActivity"
-            android:exported="true">
+            android:exported="true"
+            tools:ignore="MissingClass">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

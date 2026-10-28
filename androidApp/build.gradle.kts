@@ -51,4 +51,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
         isCoreLibraryDesugaringEnabled = true
     }
+    lint {
+        // The library modules have no lint tasks of their own, so lint them from the app
+        checkDependencies = true
+        xmlReport = true
+        htmlReport = true
+    }
 }

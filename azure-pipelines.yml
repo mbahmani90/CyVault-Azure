@@ -1,0 +1,163 @@
+# Android CI: Build, then Unit tests, Android Lint, Code style and SonarQube in parallel,
+# then CI result. Make "CI result" the one required check on main.
+
+trigger:
+  branches:
+    include: [ main ]
+  paths:
+    exclude:
+      - iosApp/**
+      - azure-backend/**
+      - amplify-backend/**
+      - docs/**
+      - "*.md"
+
+pr:
+  branches:
+    include: [ main ]
+  paths:
+    exclude:
+      - iosApp/**
+      - azure-backend/**
+      - amplify-backend/**
+      - docs/**
+      - "*.md"
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  GRADLE_USER_HOME: $(Pipeline.Workspace)/.gradle
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+  # Set to 'true' once the SonarQube Cloud service connection and project exist (see README)
+  sonarEnabled: false
+  sonarServiceConnection: SonarCloud
+  sonarOrganization: cyvault
+  sonarProjectKey: cyvault-android
+
+stages:
+  - stage: Build
+    jobs:
+      - job: Build
+        displayName: Build
+        steps:
+          - template: .azure-pipelines/steps/gradle-setup.yml
+          - bash: ./gradlew :androidApp:assembleDebug
+            displayName: Assemble debug APK
+          - publish: androidApp/build/outputs/apk/debug
+            artifact: debug-apk
+            displayName: Publish APK
+
+  - stage: Verify
+    dependsOn: Build
+    jobs:
+      - job: UnitTests
+        displayName: Unit tests
+        steps:
+          - template: .azure-pipelines/steps/gradle-setup.yml
+          # testAndroidHostTest covers the KMP modules, testDebugUnitTest the app module
+          - bash: ./gradlew testDebugUnitTest testAndroidHostTest
+            displayName: Run unit tests
+          - task: PublishTestResults@2
+            displayName: Publish test results
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: "**/build/test-results/**/TEST-*.xml"
+              failTaskOnMissingResultsFile: true
+
+      - job: AndroidLint
+        displayName: Android Lint
+        steps:
+          - template: .azure-pipelines/steps/gradle-setup.yml
+          - bash: ./gradlew :androidApp:lintDebug
+            displayName: Run Android Lint
+          - publish: androidApp/build/reports
+            artifact: lint-report
+            displayName: Publish lint report
+            condition: succeededOrFailed()
+
+      - job: CodeStyle
+        displayName: Code style
+        steps:
+          - template: .azure-pipelines/steps/gradle-setup.yml
+          - bash: ./gradlew ktlintCheck
+            displayName: Run ktlint
+          - bash: |
+              mkdir -p "$(Build.ArtifactStagingDirectory)/ktlint"
+              find . -path "*/build/reports/ktlint/*" -type f -exec cp --parents {} "$(Build.ArtifactStagingDirectory)/ktlint" \;
+            displayName: Collect ktlint reports
+            condition: failed()
+          - publish: $(Build.ArtifactStagingDirectory)/ktlint
+            artifact: ktlint-report
+            displayName: Publish ktlint report
+            condition: failed()
+
+      - ${{ if eq(variables.sonarEnabled, 'true') }}:
+          - job: SonarQube
+            displayName: SonarQube
+            steps:
+              - template: .azure-pipelines/steps/gradle-setup.yml
+              - task: SonarCloudPrepare@3
+                inputs:
+                  SonarQube: $(sonarServiceConnection)
+                  organization: $(sonarOrganization)
+                  scannerMode: cli
+                  configMode: manual
+                  cliProjectKey: $(sonarProjectKey)
+                  cliProjectName: CyVault Android
+                  cliSources: .
+                  extraProperties: |
+                    sonar.inclusions=**/src/*Main/**/*.kt,androidApp/src/main/**/*.kt
+                    sonar.tests=.
+                    sonar.test.inclusions=**/src/*Test/**/*.kt
+                    sonar.exclusions=**/build/**,iosApp/**,azure-backend/**,amplify-backend/**
+                    sonar.coverage.jacoco.xmlReportPaths=build/reports/kover/report.xml
+              - bash: ./gradlew koverXmlReport
+                displayName: Run tests with coverage
+              - task: SonarCloudAnalyze@3
+              - task: SonarCloudPublish@3
+                inputs:
+                  pollingTimeoutSec: "300"
+
+  - stage: Result
+    displayName: CI result
+    dependsOn: [ Build, Verify ]
+    condition: always()
+    jobs:
+      - job: Result
+        displayName: CI result
+        variables:
+          buildResult: $[ stageDependencies.Build.Build.result ]
+          unitTestsResult: $[ stageDependencies.Verify.UnitTests.result ]
+          lintResult: $[ stageDependencies.Verify.AndroidLint.result ]
+          codeStyleResult: $[ stageDependencies.Verify.CodeStyle.result ]
+          sonarResult: $[ stageDependencies.Verify.SonarQube.result ]
+        steps:
+          - checkout: none
+          - bash: |
+              failed=0
+              check() {
+                echo "$1: ${2:-not run}"
+                # Empty or an unexpanded "$(...)" means the job is not in this run
+                # (SonarQube while sonarEnabled is false)
+                case "$2" in
+                  Succeeded|SucceededWithIssues|Skipped|""|'$('*) ;;
+                  *) failed=1 ;;
+                esac
+              }
+              check "Build" "${BUILD_RESULT:-}"
+              check "Unit tests" "${UNIT_TESTS_RESULT:-}"
+              check "Android Lint" "${LINT_RESULT:-}"
+              check "Code style" "${CODE_STYLE_RESULT:-}"
+              check "SonarQube" "${SONAR_RESULT:-}"
+              # Build must have run: if it failed or was cancelled, nothing else ran
+              [ "${BUILD_RESULT:-}" = "Succeeded" ] || failed=1
+              exit $failed
+            env:
+              BUILD_RESULT: $(buildResult)
+              UNIT_TESTS_RESULT: $(unitTestsResult)
+              LINT_RESULT: $(lintResult)
+              CODE_STYLE_RESULT: $(codeStyleResult)
+              SONAR_RESULT: $(sonarResult)
+            displayName: Check job results

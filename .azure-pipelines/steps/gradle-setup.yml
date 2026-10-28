@@ -1,0 +1,24 @@
+# Checkout, JDK and Gradle cache shared by every Android job.
+steps:
+  - checkout: self
+    fetchDepth: 0 # SonarQube needs history for blame and new-code detection
+
+  # Launches the wrapper; Gradle then provisions the daemon JDK in gradle/gradle-daemon-jvm.properties
+  - task: JavaToolInstaller@0
+    displayName: Use JDK 21
+    inputs:
+      versionSpec: "21"
+      jdkArchitectureOption: x64
+      jdkSourceOption: PreInstalled
+
+  - task: Cache@2
+    displayName: Cache Gradle
+    inputs:
+      key: 'gradle | "$(Agent.OS)" | gradle/wrapper/gradle-wrapper.properties | gradle/libs.versions.toml | **/*.gradle.kts'
+      restoreKeys: |
+        gradle | "$(Agent.OS)" | gradle/wrapper/gradle-wrapper.properties
+        gradle | "$(Agent.OS)"
+      path: $(GRADLE_USER_HOME)
+
+  - bash: chmod +x gradlew
+    displayName: Make gradlew executable
