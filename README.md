@@ -107,6 +107,8 @@ On Android, Google sign-in goes through Entra External ID, with Google set up as
 
 Profile photos live in a private Blob Storage container behind the Azure Functions API in `azure-backend/` (`PUT`, `GET` and `DELETE /api/me/avatar`). On Android, the app asks MSAL for an access token with the API's `Profile.ReadWrite` scope and sends it as `Authorization: Bearer`, only on these requests. No route takes a user ID. The Function validates the upload by decoding it, turns it upright, downscales it to at most 512 px and re-encodes it as JPEG, which also drops EXIF metadata such as GPS location. The Function App reaches Storage through its **Managed Identity**, so no storage keys or connection strings exist anywhere. The SDK (`DefaultAzureCredential`) gets a token for that identity from Entra ID and sends it with each blob request. Blob Storage validates the token and checks the identity's **IAM role assignment** (`Storage Blob Data Contributor` on the `avatars` container) before allowing the write. Users get no Storage permissions at all: the Function builds every blob path from the `oid` in the user's validated access token, so each account can only reach its own photo.
 
+Balances use the same pattern with Table Storage (`GET /api/me/balances`, and `GET`, `PUT` and `DELETE /api/me/balances/{id}`), behind the `Balance.ReadWrite` scope. Each row's `PartitionKey` is the caller's `oid` and its `RowKey` the balance ID, and the Function's identity has `Storage Table Data Contributor` on the `balances` table only. A `PUT` body is `{ "name": "Main account", "amount": 1250.50, "currency": "EUR" }`; the amount is kept as a decimal string so money is never rounded.
+
 The app gets the access token from Entra's token endpoint, which MSAL discovers from the tenant's metadata, and the Function checks it against Entra's published signing keys:
 
 ![Getting an access token and calling the profile photo API](docs/api-token-flow.svg)
@@ -219,16 +221,16 @@ Copy the generated `amplify_outputs.json` to `iosApp/iosApp/amplify_outputs.json
 Create a Yapily sandbox application and put your credentials in
 `feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/addcard/data/remote/YapilyConfig.kt`.
 
-### 3. Azure backend (profile photo API)
+### 3. Azure backend (profile photo and balances API)
 
 **Register the API in Entra External ID** (once, in the same external tenant as the app):
 
 1. **App registrations → New registration** → `CyVault API`, single tenant. No platform or redirect URI.
 2. **Manifest**: set `requestedAccessTokenVersion` to `2`.
-3. **Expose an API**: accept the default Application ID URI (`api://<API client ID>`) and add the scope
-   `Profile.ReadWrite`.
-4. In the **mobile app's** registration: **API permissions → Add a permission → My APIs → CyVault API →
-   `Profile.ReadWrite`**, then grant admin consent.
+3. **Expose an API**: accept the default Application ID URI (`api://<API client ID>`) and add the scopes
+   `Profile.ReadWrite` and `Balance.ReadWrite`.
+4. In the **mobile app's** registration: **API permissions → Add a permission → APIs my organization uses →
+   CyVault API → `Profile.ReadWrite` and `Balance.ReadWrite`**, then grant admin consent.
 
 **Run locally** (from `azure-backend/src/CyVault.Api`):
 
