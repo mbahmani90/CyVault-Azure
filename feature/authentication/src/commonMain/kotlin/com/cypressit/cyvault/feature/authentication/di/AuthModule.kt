@@ -1,6 +1,5 @@
 package com.cypressit.cyvault.feature.authentication.di
 
-import com.cypressit.cyvault.feature.authentication.data.remote.AuthApiService
 import com.cypressit.cyvault.feature.authentication.data.repository.AuthRepositoryImpl
 import com.cypressit.cyvault.feature.authentication.domain.repository.AuthRepository
 import com.cypressit.cyvault.feature.authentication.domain.usecase.ConfirmSignUpUseCase
@@ -11,20 +10,12 @@ import com.cypressit.cyvault.feature.authentication.domain.usecase.RegisterUseCa
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SignInWithGoogleUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SignOutUseCase
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthViewModel
-import com.cypressit.cyvault.feature.authentication.session.SessionManagerImpl
-import com.cypressit.cyvault.core.session.SessionManager
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val authModule = module {
-    // Remote
-    single { AuthApiService() }
-
-    // Repository
+    // Repository (AuthClient comes from :auth's authModule)
     single<AuthRepository> { AuthRepositoryImpl(get()) }
-
-    // Session
-    single<SessionManager> { SessionManagerImpl(get()) }
 
     // Use cases
     factory { LoginUseCase(get()) }

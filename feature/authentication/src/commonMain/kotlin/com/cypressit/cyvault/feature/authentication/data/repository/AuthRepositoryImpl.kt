@@ -1,34 +1,32 @@
 package com.cypressit.cyvault.feature.authentication.data.repository
 
-import com.cypressit.cyvault.feature.authentication.data.remote.AuthApiService
+import com.cypressit.cyvault.auth.AuthClient
+import com.cypressit.cyvault.feature.authentication.data.mapper.toDomain
 import com.cypressit.cyvault.feature.authentication.domain.model.User
 import com.cypressit.cyvault.feature.authentication.domain.repository.AuthRepository
 
 class AuthRepositoryImpl(
-    private val apiService: AuthApiService,
+    private val authClient: AuthClient,
 ) : AuthRepository {
 
     override suspend fun login(email: String, password: String): Result<User> =
-        runCatching { apiService.login(email, password) }
+        runCatching { authClient.signIn(email, password).toDomain() }
 
     override suspend fun register(name: String, email: String, password: String): Result<Unit> =
-        runCatching { apiService.register(name, email, password) }
+        runCatching { authClient.signUp(name, email, password) }
 
     override suspend fun confirmSignUp(email: String, code: String): Result<Unit> =
-        runCatching { apiService.confirmSignUp(email, code) }
+        runCatching { authClient.confirmSignUp(email, code) }
 
     override suspend fun forgotPassword(email: String): Result<Unit> =
-        runCatching { apiService.forgotPassword(email) }
+        runCatching { authClient.resetPassword(email) }
 
     override suspend fun signOut(): Result<Unit> =
-        runCatching { apiService.signOut() }
+        runCatching { authClient.signOut() }
 
     override suspend fun getCurrentUser(): User? =
-        apiService.getCurrentUser()
+        authClient.currentUser()?.toDomain()
 
     override suspend fun signInWithGoogle(): Result<User> =
-        runCatching { apiService.signInWithGoogle() }
-
-    override suspend fun accessToken(scopes: List<String>): String =
-        apiService.accessToken(scopes)
+        runCatching { authClient.signInWithGoogle().toDomain() }
 }

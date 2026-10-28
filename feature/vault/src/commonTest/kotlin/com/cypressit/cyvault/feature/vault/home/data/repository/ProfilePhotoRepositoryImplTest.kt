@@ -2,8 +2,8 @@ package com.cypressit.cyvault.feature.vault.home.data.repository
 
 import com.cypressit.cyvault.feature.vault.fake.FakeAvatarFileStore
 import com.cypressit.cyvault.feature.vault.fake.FakePickedPhotoReader
-import com.cypressit.cyvault.feature.vault.fake.FakeSessionManager
-import com.cypressit.cyvault.feature.vault.fake.FakeSessionManager.Companion.USER_ID
+import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
+import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient.Companion.USER_ID
 import com.cypressit.cyvault.feature.vault.home.data.remote.ProfilePhotoApiService
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import io.ktor.client.HttpClient
@@ -55,7 +55,7 @@ class ProfilePhotoRepositoryImplTest {
                     ?.let { respond(it, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "image/jpeg")) }
                     ?: respond("", HttpStatusCode.NotFound)
             }
-        }), FakeSessionManager()),
+        }), FakeAuthClient()),
         fileStore = fileStore,
         photoReader = photoReader,
         ioDispatcher = StandardTestDispatcher(testScheduler),

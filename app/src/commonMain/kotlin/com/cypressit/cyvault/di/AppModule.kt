@@ -1,5 +1,6 @@
 package com.cypressit.cyvault.di
 
+import com.cypressit.cyvault.auth.di.authClientModule
 import com.cypressit.cyvault.core.di.dispatcherModule
 import com.cypressit.cyvault.core.di.networkModule
 import com.cypressit.cyvault.core.di.platformModule
@@ -16,6 +17,7 @@ val appModules: List<Module>
         platformModule,
         dispatcherModule,
         networkModule,
+        authClientModule,
         authModule,
         vaultFeatureModule,
     )

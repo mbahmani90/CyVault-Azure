@@ -2,14 +2,17 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
-import com.cypressit.cyvault.feature.vault.fake.FakeSessionManager
-import com.cypressit.cyvault.feature.vault.fake.FakeSessionManager.Companion.USER_ID
+import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
+import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient.Companion.USER_ID
+import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,7 +38,8 @@ import kotlin.test.assertTrue
 class VaultHomeViewModelProfilePhotoTest {
 
     private val dispatcher = StandardTestDispatcher()
-    private val session = FakeSessionManager()
+    private val authClient = FakeAuthClient()
+    private val accounts = AccountRepositoryImpl(authClient)
     private val photos = FakeProfilePhotoRepository()
     private val cards = FakeCardRepository()
 
@@ -47,7 +51,8 @@ class VaultHomeViewModelProfilePhotoTest {
     private fun viewModel() = VaultHomeViewModel(
         getCards = GetCardsUseCase(cards),
         deleteCard = DeleteCardUseCase(cards),
-        sessionManager = session,
+        getCurrentAccount = GetCurrentAccountUseCase(accounts),
+        signOutUser = SignOutUseCase(accounts),
         getProfilePhoto = GetProfilePhotoUseCase(photos),
         changeProfilePhoto = ChangeProfilePhotoUseCase(photos),
         clearProfilePhotoCache = ClearProfilePhotoCacheUseCase(photos),
@@ -114,7 +119,7 @@ class VaultHomeViewModelProfilePhotoTest {
 
     @Test
     fun changeProfilePhoto_signedOut_doesNothing() = runTest(dispatcher) {
-        session.user = null
+        authClient.user = null
         val viewModel = viewModel()
         advanceUntilIdle()
 
@@ -132,7 +137,7 @@ class VaultHomeViewModelProfilePhotoTest {
         viewModel.onIntent(VaultHomeIntent.SignOut)
         advanceUntilIdle()
 
-        assertEquals(1, session.signOutCount)
+        assertEquals(1, authClient.signOutCount)
         assertEquals(1, photos.clearCount)
         assertEquals(
             listOf(VaultHomeEffect.CloseDrawer, VaultHomeEffect.NavigateToLogin),

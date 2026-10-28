@@ -1,6 +1,6 @@
 package com.cypressit.cyvault.feature.vault.home.data.remote
 
-import com.cypressit.cyvault.core.session.SessionManager
+import com.cypressit.cyvault.auth.AuthClient
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.bearerAuth
@@ -19,7 +19,7 @@ import io.ktor.http.isSuccess
  */
 class ProfilePhotoApiService(
     private val client: HttpClient,
-    private val sessionManager: SessionManager,
+    private val authClient: AuthClient,
 ) {
 
     companion object {
@@ -47,7 +47,7 @@ class ProfilePhotoApiService(
         }.requireSuccess()
     }
 
-    private suspend fun accessToken(): String = sessionManager.accessToken(listOf(PROFILE_SCOPE))
+    private suspend fun accessToken(): String = authClient.accessToken(listOf(PROFILE_SCOPE))
 
     private fun HttpResponse.requireSuccess(): HttpResponse {
         if (!status.isSuccess()) throw Exception("Profile photo request failed (${status.value})")

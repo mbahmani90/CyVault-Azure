@@ -32,8 +32,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            // Core infrastructure
-            implementation(projects.core)
+            // Sign-in and session (Entra External ID)
+            implementation(projects.auth)
 
             // Compose Multiplatform
             implementation(libs.compose.runtime)
@@ -61,9 +61,6 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.ktor.client.okhttp)
-
-            // MSAL
-            implementation(libs.msal)
         }
 
         iosMain.dependencies {
