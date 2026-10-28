@@ -1,3 +1,4 @@
+using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Storage.Blobs;
@@ -28,8 +29,28 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
 
 builder.Services.AddSingleton(_ => CreateAvatarContainer(builder.Configuration.GetSection("AvatarStorage")));
+builder.Services.AddSingleton(_ => CreateBalanceTable(builder.Configuration.GetSection("BalanceStorage")));
 
 builder.Build().Run();
+
+static TableClient CreateBalanceTable(IConfigurationSection config)
+{
+    var tableName = config["TableName"] ?? "balances";
+
+    // Local development against Azurite. In Azure the Managed Identity is used, and Bicep
+    // creates the table.
+    var connectionString = config["ConnectionString"];
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        var local = new TableClient(connectionString, tableName);
+        local.CreateIfNotExists();
+        return local;
+    }
+
+    var serviceUri = config["TableServiceUri"]
+        ?? throw new InvalidOperationException("Set BalanceStorage:TableServiceUri or BalanceStorage:ConnectionString.");
+    return new TableClient(new Uri(serviceUri), tableName, new DefaultAzureCredential());
+}
 
 static BlobContainerClient CreateAvatarContainer(IConfigurationSection config)
 {
