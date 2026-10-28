@@ -19,6 +19,7 @@ namespace CyVault.Api.Balance;
 public sealed partial class BalanceFunctions(TableClient balances, ILogger<BalanceFunctions> logger)
 {
     private const int MaxNameLength = 100;
+    private const int MaxDescriptionLength = 500;
 
     [Function("ListBalances")]
     public async Task<IActionResult> List(
@@ -34,7 +35,12 @@ public sealed partial class BalanceFunctions(TableClient balances, ILogger<Balan
         {
             result.Add(ToResponse(entity));
         }
-        return new OkObjectResult(result);
+        // Table Storage returns rows in RowKey order, and RowKeys are random IDs; newest first is
+        // what a list of purchases and income needs. The ID breaks ties so the order is stable.
+        return new OkObjectResult(result
+            .OrderByDescending(b => b.Date)
+            .ThenBy(b => b.Id, StringComparer.Ordinal)
+            .ToList());
     }
 
     [Function("GetBalance")]
@@ -71,19 +77,33 @@ public sealed partial class BalanceFunctions(TableClient balances, ILogger<Balan
         }
         catch (JsonException)
         {
-            return new BadRequestObjectResult("The body must be JSON: { \"name\", \"amount\", \"currency\" }.");
+            return new BadRequestObjectResult("The body must be JSON: { \"name\", \"description\", \"amount\", \"currency\", \"date\" }.");
         }
 
         var error = Validate(body);
         if (error is not null) return new BadRequestObjectResult(error);
 
+        // Without a date in the body, an edit keeps the row's date (or, on a row stored before
+        // the Date column, when it was last written) and a new row is dated now.
+        var date = body!.Date;
+        if (date is null)
+        {
+            var existing = await balances.GetEntityIfExistsAsync<BalanceEntity>(
+                caller.ObjectId!, id, cancellationToken: cancellationToken);
+            date = existing.HasValue
+                ? existing.Value!.Date ?? existing.Value.Timestamp
+                : DateTimeOffset.UtcNow;
+        }
+
         var entity = new BalanceEntity
         {
             PartitionKey = caller.ObjectId!,
             RowKey = id,
-            Name = body!.Name!.Trim(),
+            Name = body.Name!.Trim(),
+            Description = body.Description?.Trim() ?? "",
             Amount = body.Amount!.Value.ToString(CultureInfo.InvariantCulture),
             Currency = body.Currency!.ToUpperInvariant(),
+            Date = date!.Value.ToUniversalTime(),
         };
         await balances.UpsertEntityAsync(entity, TableUpdateMode.Replace, cancellationToken);
 
@@ -111,15 +131,19 @@ public sealed partial class BalanceFunctions(TableClient balances, ILogger<Balan
     private static BalanceResponse ToResponse(BalanceEntity entity) => new(
         entity.RowKey,
         entity.Name,
+        entity.Description,
         decimal.Parse(entity.Amount, CultureInfo.InvariantCulture),
         entity.Currency,
+        entity.Date ?? entity.Timestamp,
         entity.Timestamp);
 
     private static string? Validate(BalanceRequest? body)
     {
-        if (body is null) return "The body must be JSON: { \"name\", \"amount\", \"currency\" }.";
+        if (body is null) return "The body must be JSON: { \"name\", \"description\", \"amount\", \"currency\", \"date\" }.";
         if (string.IsNullOrWhiteSpace(body.Name) || body.Name.Trim().Length > MaxNameLength)
             return $"name is required and must be at most {MaxNameLength} characters.";
+        if (body.Description?.Trim().Length > MaxDescriptionLength)
+            return $"description must be at most {MaxDescriptionLength} characters.";
         if (body.Amount is null) return "amount is required.";
         if (body.Currency is null || !CurrencyPattern().IsMatch(body.Currency))
             return "currency must be a three-letter ISO 4217 code, such as EUR.";

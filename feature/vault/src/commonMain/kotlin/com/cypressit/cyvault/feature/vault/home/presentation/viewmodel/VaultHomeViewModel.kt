@@ -2,13 +2,17 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +21,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Instant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class VaultHomeViewModel(
     private val getCards: GetCardsUseCase,
@@ -26,6 +33,9 @@ class VaultHomeViewModel(
     private val getProfilePhoto: GetProfilePhotoUseCase,
     private val changeProfilePhoto: ChangeProfilePhotoUseCase,
     private val clearProfilePhotoCache: ClearProfilePhotoCacheUseCase,
+    private val getBalances: GetBalancesUseCase,
+    private val saveBalance: SaveBalanceUseCase,
+    private val deleteBalance: DeleteBalanceUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(VaultHomeState())
@@ -39,7 +49,9 @@ class VaultHomeViewModel(
 
     init {
         loadUser()
-        loadCards()
+        // Cards aren't loaded on start: CardApiService still points to a placeholder host that
+        // doesn't exist, so every start showed an error. Load them again once cards move to Azure.
+        loadBalances()
     }
 
     fun onIntent(intent: VaultHomeIntent) {
@@ -53,10 +65,75 @@ class VaultHomeViewModel(
                 _effect.send(VaultHomeEffect.CloseDrawer)
                 _effect.send(VaultHomeEffect.NavigateToAddCard)
             }
-            VaultHomeIntent.ShowAddItemDialog -> _state.update { it.copy(isAddItemDialogVisible = true) }
-            VaultHomeIntent.DismissAddItemDialog -> _state.update { it.copy(isAddItemDialogVisible = false) }
-            // Items aren't stored anywhere yet; saving only closes the dialog.
-            is VaultHomeIntent.SaveItem -> _state.update { it.copy(isAddItemDialogVisible = false) }
+            VaultHomeIntent.ShowAddItemDialog ->
+                _state.update { it.copy(isAddItemDialogVisible = true, editingBalance = null) }
+            VaultHomeIntent.DismissAddItemDialog ->
+                _state.update { it.copy(isAddItemDialogVisible = false, editingBalance = null) }
+            is VaultHomeIntent.SaveItem -> saveItem(intent.title, intent.description, intent.value, intent.currency)
+            is VaultHomeIntent.EditBalance ->
+                _state.update { it.copy(isAddItemDialogVisible = true, editingBalance = intent.balance) }
+            is VaultHomeIntent.DeleteBalance -> deleteExistingBalance(intent.id)
+        }
+    }
+
+    private fun loadBalances() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingBalances = true) }
+            getBalances()
+                .onSuccess { balances ->
+                    _state.update { it.copy(balances = balances.newestFirst(), isLoadingBalances = false) }
+                }
+                .onFailure {
+                    _state.update { it.copy(isLoadingBalances = false) }
+                    _effect.send(VaultHomeEffect.BalanceRequestFailed)
+                }
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun saveItem(title: String, description: String, value: Double, currency: String) {
+        // Editing keeps the row's ID; a new balance gets a random one.
+        val id = _state.value.editingBalance?.id ?: Uuid.random().toHexString()
+        val balance = Balance(
+            id = id,
+            name = title,
+            description = description,
+            amount = value,
+            currency = currency,
+            // An edit keeps its date; a new balance has none, so the API dates it now.
+            date = _state.value.editingBalance?.date,
+        )
+        viewModelScope.launch {
+            _state.update { it.copy(isSavingBalance = true) }
+            saveBalance(balance)
+                .onSuccess { saved ->
+                    _state.update { state ->
+                        val others = state.balances.filterNot { it.id == saved.id }
+                        state.copy(
+                            balances = (others + saved).newestFirst(),
+                            isSavingBalance = false,
+                            isAddItemDialogVisible = false,
+                            editingBalance = null,
+                        )
+                    }
+                    _effect.send(VaultHomeEffect.BalanceSaved)
+                }
+                .onFailure {
+                    // The dialog stays open with what the user typed, so they can retry.
+                    _state.update { it.copy(isSavingBalance = false) }
+                    _effect.send(VaultHomeEffect.BalanceRequestFailed)
+                }
+        }
+    }
+
+    private fun deleteExistingBalance(id: String) {
+        viewModelScope.launch {
+            deleteBalance(id)
+                .onSuccess {
+                    _state.update { state -> state.copy(balances = state.balances.filterNot { it.id == id }) }
+                    _effect.send(VaultHomeEffect.BalanceDeleted)
+                }
+                .onFailure { _effect.send(VaultHomeEffect.BalanceRequestFailed) }
         }
     }
 
@@ -140,3 +217,12 @@ class VaultHomeViewModel(
         }
     }
 }
+
+/**
+ * Newest date first, like the API returns them; balances without a readable date go last, and
+ * the ID breaks ties so the order never jumps around.
+ */
+internal fun List<Balance>.newestFirst(): List<Balance> = sortedWith(
+    compareByDescending<Balance> { balance -> balance.date?.let { runCatching { Instant.parse(it) }.getOrNull() } }
+        .thenBy { it.id }
+)
