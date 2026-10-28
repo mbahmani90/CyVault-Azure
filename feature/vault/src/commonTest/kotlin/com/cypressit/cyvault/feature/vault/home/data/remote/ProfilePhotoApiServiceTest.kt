@@ -1,6 +1,6 @@
 package com.cypressit.cyvault.feature.vault.home.data.remote
 
-import com.cypressit.cyvault.feature.vault.fake.FakeSessionManager
+import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -23,12 +23,12 @@ import kotlin.test.assertNull
 class ProfilePhotoApiServiceTest {
 
     private val requests = mutableListOf<HttpRequestData>()
-    private val session = FakeSessionManager()
+    private val authClient = FakeAuthClient()
 
     private fun api(handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
         ProfilePhotoApiService(
             client = HttpClient(MockEngine { request -> requests += request; handler(request) }),
-            sessionManager = session,
+            authClient = authClient,
         )
 
     private fun MockRequestHandleScope.respondJpeg(bytes: ByteArray) =
@@ -42,7 +42,7 @@ class ProfilePhotoApiServiceTest {
         assertEquals(HttpMethod.Get, request.method)
         assertEquals(ProfilePhotoApiService.AVATAR_URL, request.url.toString())
         assertEquals("Bearer test-token", request.headers[HttpHeaders.Authorization])
-        assertEquals(listOf(listOf(ProfilePhotoApiService.PROFILE_SCOPE)), session.requestedScopes)
+        assertEquals(listOf(listOf(ProfilePhotoApiService.PROFILE_SCOPE)), authClient.requestedScopes)
     }
 
     @Test

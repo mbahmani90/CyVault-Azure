@@ -34,6 +34,7 @@ kotlin {
         commonMain.dependencies {
             // Core infrastructure
             implementation(projects.core)
+            implementation(projects.auth)
             implementation(projects.systemdesign)
 
             // Compose Multiplatform

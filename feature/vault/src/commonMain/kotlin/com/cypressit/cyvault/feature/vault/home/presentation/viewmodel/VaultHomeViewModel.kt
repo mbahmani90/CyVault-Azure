@@ -2,13 +2,14 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.cypressit.cyvault.core.session.SessionManager
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,8 @@ import kotlinx.coroutines.launch
 class VaultHomeViewModel(
     private val getCards: GetCardsUseCase,
     private val deleteCard: DeleteCardUseCase,
-    private val sessionManager: SessionManager,
+    private val getCurrentAccount: GetCurrentAccountUseCase,
+    private val signOutUser: SignOutUseCase,
     private val getProfilePhoto: GetProfilePhotoUseCase,
     private val changeProfilePhoto: ChangeProfilePhotoUseCase,
     private val clearProfilePhotoCache: ClearProfilePhotoCacheUseCase,
@@ -52,7 +54,7 @@ class VaultHomeViewModel(
 
     private fun loadUser() {
         viewModelScope.launch {
-            val user = sessionManager.currentUser() ?: return@launch
+            val user = getCurrentAccount() ?: return@launch
             userId = user.id
             _state.update { it.copy(userName = user.name, userEmail = user.email) }
             // The cached photo shows at once; the server's copy follows when it arrives.
@@ -118,7 +120,7 @@ class VaultHomeViewModel(
     private fun signOut() {
         viewModelScope.launch {
             _effect.send(VaultHomeEffect.CloseDrawer)
-            sessionManager.signOut()
+            signOutUser()
                 .onSuccess {
                     // The photo is personal: don't leave it on the device after sign-out.
                     clearProfilePhotoCache()

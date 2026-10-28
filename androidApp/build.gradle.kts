@@ -15,6 +15,8 @@ dependencies {
     coreLibraryDesugaring(libs.android.desugar.jdk.libs)
 
     implementation(projects.app)
+    // For MsalConfig: the shell hands its MSAL config file to :auth
+    implementation(projects.auth)
 
     implementation(libs.koin.android)
     implementation(libs.androidx.activity.compose)

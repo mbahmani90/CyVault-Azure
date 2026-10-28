@@ -64,11 +64,11 @@
   <path d="M565 146 L495 191" class="dep"/>
 
   <!-- Band: feature modules -->
-  <rect x="40" y="275" width="810" height="375" rx="10" fill="#F1F6FF" stroke="#3B82F6"/>
+  <rect x="40" y="275" width="810" height="335" rx="10" fill="#F1F6FF" stroke="#3B82F6"/>
   <text x="52" y="292" class="t-band">FEATURE MODULES</text>
 
   <!-- feature:authentication -->
-  <rect x="55" y="305" width="220" height="333" rx="8" class="box" stroke="#2563EB"/>
+  <rect x="55" y="305" width="220" height="293" rx="8" class="box" stroke="#2563EB"/>
   <text x="165" y="327" class="t-box">authentication</text>
   <text x="165" y="343" class="t-boxsub">one flow · layers at the module root</text>
 
@@ -85,17 +85,12 @@
 
   <rect x="67" y="500" width="196" height="70" rx="5" class="dat"/>
   <text x="165" y="515" class="t-chip">data</text>
-  <text x="165" y="530" class="t-chipsub">AuthRepositoryImpl · AuthApiService</text>
-  <text x="165" y="543" class="t-chipsub">Android: MSAL native auth</text>
-  <text x="165" y="556" class="t-chipsub">iOS: IosAuthBridge (Swift)</text>
-
-  <rect x="67" y="578" width="196" height="48" rx="5" class="wire"/>
-  <text x="165" y="593" class="t-chip">session</text>
-  <text x="165" y="607" class="t-chipsub">SessionManagerImpl</text>
-  <text x="165" y="619" class="t-chipsub">implements core's SessionManager</text>
+  <text x="165" y="530" class="t-chipsub">AuthRepositoryImpl · UserMapper</text>
+  <text x="165" y="543" class="t-chipsub">calls :auth's AuthClient,</text>
+  <text x="165" y="556" class="t-chipsub">maps AuthUser → User</text>
 
   <!-- feature:vault -->
-  <rect x="290" y="305" width="545" height="333" rx="8" class="box" stroke="#2563EB"/>
+  <rect x="290" y="305" width="545" height="293" rx="8" class="box" stroke="#2563EB"/>
   <text x="562" y="327" class="t-box">vault</text>
   <text x="562" y="343" class="t-boxsub">feature:vault · one package per screen, each with its own layers and Koin module, plus a shared card/ package</text>
 
@@ -111,14 +106,16 @@
   <rect x="300" y="384" width="168" height="70" rx="5" class="ui"/>
   <text x="384" y="399" class="t-chip">presentation</text>
   <text x="384" y="414" class="t-chipsub">VaultHomeScreen</text>
-  <text x="384" y="427" class="t-chipsub">card list · drawer · sign-out</text>
+  <text x="384" y="427" class="t-chipsub">card list · drawer · photo</text>
   <text x="384" y="440" class="t-chipsub">VaultHomeViewModel</text>
   <rect x="300" y="462" width="168" height="58" rx="5" class="dom"/>
   <text x="384" y="477" class="t-chip">domain</text>
-  <text x="384" y="492" class="t-chipsub">GetCardsUseCase</text>
-  <text x="384" y="505" class="t-chipsub">DeleteCardUseCase</text>
-  <text x="384" y="546" class="t-empty">data from card/ · sign-out</text>
-  <text x="384" y="559" class="t-empty">via core's SessionManager</text>
+  <text x="384" y="492" class="t-chipsub">Get/DeleteCard · GetCurrentAccount</text>
+  <text x="384" y="505" class="t-chipsub">SignOut · Get/ChangeProfilePhoto</text>
+  <rect x="300" y="528" width="168" height="58" rx="5" class="dat"/>
+  <text x="384" y="543" class="t-chip">data</text>
+  <text x="384" y="558" class="t-chipsub">AccountRepositoryImpl → AuthClient</text>
+  <text x="384" y="571" class="t-chipsub">ProfilePhotoApiService · cache</text>
 
   <!-- addcard/ -->
   <rect x="477" y="384" width="168" height="70" rx="5" class="ui"/>
@@ -159,33 +156,39 @@
   <text x="282" y="322" font-size="10" font-weight="700" fill="#DC2626" text-anchor="middle">✕</text>
 
   <!-- Band: shared modules -->
-  <rect x="40" y="675" width="810" height="100" rx="10" fill="#EEEEF0" stroke="#94A3B8"/>
-  <text x="52" y="692" class="t-band">SHARED MODULES</text>
-  <rect x="150" y="702" width="320" height="56" rx="8" class="box" stroke="#64748B"/>
-  <text x="310" y="723" class="t-box">core</text>
-  <text x="310" y="739" class="t-boxsub">Ktor HttpClient · OkHttp / Darwin engines (Koin)</text>
-  <text x="310" y="751" class="t-boxsub">SessionManager interface · no Compose, no routes</text>
-  <rect x="500" y="702" width="335" height="56" rx="8" class="box" stroke="#64748B"/>
-  <text x="667" y="723" class="t-box">systemdesign</text>
-  <text x="667" y="739" class="t-boxsub">CyTheme · colors · typography · shapes</text>
-  <text x="667" y="751" class="t-boxsub">CyButton · CyOutlinedTextField · CyTopAppBar</text>
+  <rect x="40" y="635" width="810" height="100" rx="10" fill="#EEEEF0" stroke="#94A3B8"/>
+  <text x="52" y="652" class="t-band">SHARED MODULES</text>
+  <rect x="55" y="662" width="250" height="56" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="180" y="683" class="t-box">auth</text>
+  <text x="180" y="699" class="t-boxsub">AuthClient · AuthUser · MSAL / iOS bridge</text>
+  <text x="180" y="711" class="t-boxsub">reusable: no core, no app IDs</text>
+  <rect x="320" y="662" width="250" height="56" rx="8" class="box" stroke="#64748B"/>
+  <text x="445" y="683" class="t-box">core</text>
+  <text x="445" y="699" class="t-boxsub">Ktor HttpClient · engines · I/O dispatcher</text>
+  <text x="445" y="711" class="t-boxsub">no Compose, no routes</text>
+  <rect x="585" y="662" width="250" height="56" rx="8" class="box" stroke="#64748B"/>
+  <text x="710" y="683" class="t-box">systemdesign</text>
+  <text x="710" y="699" class="t-boxsub">CyTheme · colors · typography · shapes</text>
+  <text x="710" y="711" class="t-boxsub">CyAvatar · CyButton · CyTopAppBar</text>
 
   <!-- features -> shared modules -->
-  <path d="M230 640 L260 700" class="dep"/>
-  <path d="M420 640 L380 700" class="dep"/>
-  <path d="M700 640 L690 700" class="dep"/>
+  <path d="M165 600 L170 660" class="dep"/>
+  <path d="M330 600 L250 660" class="dep"/>
+  <path d="M470 600 L450 660" class="dep"/>
+  <path d="M700 600 L705 660" class="dep"/>
 
   <!-- app -> core (side route) -->
-  <path d="M637 215 H868 V786 H310 V761" class="dep"/>
-  <text x="882" y="500" class="t-small" transform="rotate(90 882 500)" text-anchor="middle">app loads core's platform + network Koin modules</text>
+  <path d="M637 215 H868 V746 H445 V721" class="dep"/>
+  <text x="882" y="500" class="t-small" transform="rotate(90 882 500)" text-anchor="middle">app loads the core and auth Koin modules</text>
 
   <!-- Rules + legend -->
-  <rect x="40" y="795" width="810" height="210" rx="10" class="panel"/>
-  <text x="56" y="823" class="t-panel">Dependency rules · a module only sees what its build.gradle.kts declares</text>
-  <text x="56" y="855" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  app  →  authentication, vault, core   (the only composition root: NavHost, Koin modules, iOS framework)</text>
-  <text x="56" y="883" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  authentication  →  core     ·     vault  →  core, systemdesign</text>
-  <text x="56" y="911" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  authentication ↔ vault: never import each other; app connects them with navigation callbacks</text>
-  <text x="56" y="939" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  vault's screen packages never import each other; only VaultScreens.kt puts them together</text>
+  <rect x="40" y="755" width="810" height="250" rx="10" class="panel"/>
+  <text x="56" y="787" class="t-panel">Dependency rules · a module only sees what its build.gradle.kts declares</text>
+  <text x="56" y="825" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  app  →  authentication, vault, core, auth   (the only composition root: NavHost, Koin, iOS framework)</text>
+  <text x="56" y="856" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  authentication  →  auth     ·     vault  →  core, auth, systemdesign</text>
+  <text x="56" y="887" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  auth  →  core, a feature or app: reusable on its own; the app passes it its MSAL config</text>
+  <text x="56" y="918" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  authentication ↔ vault: never import each other; app connects them with navigation callbacks</text>
+  <text x="56" y="949" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  vault's screen packages never import each other; only VaultScreens.kt puts them together</text>
 
   <line x1="56" y1="986" x2="96" y2="986" class="dep"/>
   <text x="104" y="990" class="t-small">depends on</text>
@@ -195,8 +198,6 @@
   <text x="352" y="990" class="t-small">domain</text>
   <rect x="410" y="978" width="30" height="15" rx="4" class="dat"/>
   <text x="447" y="990" class="t-small">data</text>
-  <rect x="490" y="978" width="30" height="15" rx="4" class="wire"/>
-  <text x="527" y="990" class="t-small">session</text>
 
   <!-- ===================== RIGHT A: NAVIGATION ===================== -->
   <rect x="900" y="55" width="480" height="330" rx="10" class="panel"/>
@@ -232,67 +233,75 @@
 
   <!-- ===================== RIGHT B: SIGN-OUT CONTRACT ===================== -->
   <rect x="900" y="400" width="480" height="240" rx="10" class="panel"/>
-  <text x="916" y="425" class="t-panel">Sign-out across features</text>
+  <text x="916" y="425" class="t-panel">Sign-out through :auth</text>
   <text x="916" y="445" class="t-small">vault signs the user out without importing authentication.</text>
 
   <rect x="920" y="462" width="200" height="46" rx="8" class="box" stroke="#2563EB"/>
   <text x="1020" y="481" class="t-box">VaultHomeViewModel</text>
   <text x="1020" y="497" class="t-boxsub">feature:vault · home/</text>
   <rect x="1165" y="462" width="200" height="46" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
-  <text x="1265" y="481" class="t-box">SessionManager</text>
-  <text x="1265" y="497" class="t-boxsub">core · interface: signOut()</text>
-  <rect x="1165" y="535" width="200" height="46" rx="8" class="box" stroke="#2563EB"/>
-  <text x="1265" y="554" class="t-box">SessionManagerImpl</text>
-  <text x="1265" y="570" class="t-boxsub">feature:authentication · authModule</text>
+  <text x="1265" y="481" class="t-box">AuthClient</text>
+  <text x="1265" y="497" class="t-boxsub">:auth · interface: signOut()</text>
+  <rect x="1165" y="535" width="200" height="46" rx="8" class="box" stroke="#7C3AED"/>
+  <text x="1265" y="554" class="t-box">MsalAuthClient</text>
+  <text x="1265" y="570" class="t-boxsub">:auth · Android (iOS: BridgeAuthClient)</text>
   <rect x="920" y="535" width="200" height="46" rx="8" class="box" stroke="#D97706"/>
-  <text x="1020" y="554" class="t-box">AuthRepository</text>
-  <text x="1020" y="570" class="t-boxsub">signOut() → AuthApiService</text>
+  <text x="1020" y="554" class="t-box">AccountRepositoryImpl</text>
+  <text x="1020" y="570" class="t-boxsub">feature:vault · home/data</text>
 
-  <path d="M1122 485 L1162 485" class="dep"/>
-  <text x="1142" y="478" class="t-small" text-anchor="middle">calls</text>
+  <path d="M1020 510 L1020 532" class="dep"/>
+  <text x="1028" y="526" class="t-small">SignOutUseCase</text>
+  <path d="M1122 550 L1240 511" class="dep"/>
+  <text x="1168" y="524" class="t-small">calls</text>
   <path d="M1265 533 L1265 511" class="dep"/>
   <text x="1273" y="526" class="t-small">implements</text>
-  <path d="M1163 558 L1123 558" class="dep"/>
-  <text x="1143" y="551" class="t-small" text-anchor="middle">uses</text>
 
-  <text x="916" y="608" class="t-small">Koin injects SessionManagerImpl into VaultHomeViewModel; on success the</text>
-  <text x="916" y="624" class="t-small">NavigateToLogin effect calls app's callback, which goes back to AuthRoute.</text>
+  <text x="916" y="608" class="t-small">authentication's AuthRepositoryImpl uses the same AuthClient: one MSAL</text>
+  <text x="916" y="624" class="t-small">client and token cache. On success, NavigateToLogin goes back to AuthRoute.</text>
 
   <!-- ===================== RIGHT C: EXTERNAL SERVICES ===================== -->
   <rect x="900" y="655" width="480" height="350" rx="10" class="panel"/>
   <text x="916" y="680" class="t-panel">External services</text>
 
-  <rect x="920" y="700" width="180" height="50" rx="8" class="box" stroke="#D97706"/>
-  <text x="1010" y="720" class="t-box">authentication · data</text>
-  <text x="1010" y="737" class="t-boxsub">Android</text>
-  <rect x="1160" y="700" width="200" height="50" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
-  <text x="1260" y="720" class="t-box">Entra External ID</text>
-  <text x="1260" y="737" class="t-boxsub">MSAL native auth · cyvault.ciamlogin.com</text>
-  <path d="M1102 725 L1157 725" class="dep"/>
+  <rect x="920" y="695" width="180" height="44" rx="8" class="box" stroke="#7C3AED"/>
+  <text x="1010" y="713" class="t-box">auth</text>
+  <text x="1010" y="728" class="t-boxsub">Android (MsalAuthClient)</text>
+  <rect x="1160" y="695" width="200" height="44" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
+  <text x="1260" y="713" class="t-box">Entra External ID</text>
+  <text x="1260" y="728" class="t-boxsub">MSAL native auth · cyvault.ciamlogin.com</text>
+  <path d="M1102 717 L1157 717" class="dep"/>
 
-  <rect x="920" y="770" width="180" height="50" rx="8" class="box" stroke="#D97706" stroke-dasharray="5 4"/>
-  <text x="1010" y="790" class="t-box">authentication · data</text>
-  <text x="1010" y="807" class="t-boxsub">iOS (IosAuthBridge)</text>
-  <rect x="1160" y="770" width="200" height="50" rx="8" fill="#FFF7ED" stroke="#D97706" stroke-width="1.5" stroke-dasharray="5 4"/>
-  <text x="1260" y="790" class="t-box">AWS Cognito (Amplify)</text>
-  <text x="1260" y="807" class="t-boxsub">iOS not migrated to Entra yet</text>
-  <path d="M1102 795 L1157 795" class="dep"/>
+  <rect x="920" y="753" width="180" height="44" rx="8" class="box" stroke="#7C3AED" stroke-dasharray="5 4"/>
+  <text x="1010" y="771" class="t-box">auth</text>
+  <text x="1010" y="786" class="t-boxsub">iOS (IosAuthBridge)</text>
+  <rect x="1160" y="753" width="200" height="44" rx="8" fill="#FFF7ED" stroke="#D97706" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="1260" y="771" class="t-box">AWS Cognito (Amplify)</text>
+  <text x="1260" y="786" class="t-boxsub">iOS not migrated to Entra yet</text>
+  <path d="M1102 775 L1157 775" class="dep"/>
 
-  <rect x="920" y="840" width="180" height="50" rx="8" class="box" stroke="#D97706"/>
-  <text x="1010" y="860" class="t-box">vault · addcard/data</text>
-  <text x="1010" y="877" class="t-boxsub">YapilyService</text>
-  <rect x="1160" y="840" width="200" height="50" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
-  <text x="1260" y="860" class="t-box">Yapily API</text>
-  <text x="1260" y="877" class="t-boxsub">open banking · api.yapily.com</text>
-  <path d="M1102 865 L1157 865" class="dep"/>
+  <rect x="920" y="811" width="180" height="44" rx="8" class="box" stroke="#D97706"/>
+  <text x="1010" y="829" class="t-box">vault · home/data</text>
+  <text x="1010" y="844" class="t-boxsub">ProfilePhotoApiService</text>
+  <rect x="1160" y="811" width="200" height="44" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
+  <text x="1260" y="829" class="t-box">CyVault photo API</text>
+  <text x="1260" y="844" class="t-boxsub">Azure Functions · Blob Storage</text>
+  <path d="M1102 833 L1157 833" class="dep"/>
 
-  <rect x="920" y="910" width="180" height="50" rx="8" class="box" stroke="#D97706"/>
-  <text x="1010" y="930" class="t-box">vault · card/data</text>
-  <text x="1010" y="947" class="t-boxsub">CardApiService</text>
-  <rect x="1160" y="910" width="200" height="50" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
-  <text x="1260" y="930" class="t-box">CyVault card API</text>
-  <text x="1260" y="947" class="t-boxsub">api.cyvault.com/v1/cards</text>
-  <path d="M1102 935 L1157 935" class="dep"/>
+  <rect x="920" y="869" width="180" height="44" rx="8" class="box" stroke="#D97706"/>
+  <text x="1010" y="887" class="t-box">vault · addcard/data</text>
+  <text x="1010" y="902" class="t-boxsub">YapilyService</text>
+  <rect x="1160" y="869" width="200" height="44" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
+  <text x="1260" y="887" class="t-box">Yapily API</text>
+  <text x="1260" y="902" class="t-boxsub">open banking · api.yapily.com</text>
+  <path d="M1102 891 L1157 891" class="dep"/>
 
-  <text x="916" y="988" class="t-small">Yapily and the card API use core's shared Ktor HttpClient; dashed = still on AWS.</text>
+  <rect x="920" y="927" width="180" height="44" rx="8" class="box" stroke="#D97706"/>
+  <text x="1010" y="945" class="t-box">vault · card/data</text>
+  <text x="1010" y="960" class="t-boxsub">CardApiService</text>
+  <rect x="1160" y="927" width="200" height="44" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
+  <text x="1260" y="945" class="t-box">CyVault card API</text>
+  <text x="1260" y="960" class="t-boxsub">api.cyvault.com/v1/cards</text>
+  <path d="M1102 949 L1157 949" class="dep"/>
+
+  <text x="916" y="993" class="t-small">The vault's APIs use core's shared Ktor HttpClient; dashed = still on AWS.</text>
 </svg>

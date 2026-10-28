@@ -45,10 +45,11 @@ The project uses **Clean Architecture** with **MVI**, split into feature modules
 
 ```
 CyVault
-├── androidApp       Android entry point (Application, MainActivity)
+├── androidApp       Android entry point (Application, MainActivity, the app's MSAL config)
 ├── iosApp           iOS entry point (SwiftUI host + Amplify Swift auth bridge)
 ├── app              Composition root: root Compose App, NavHost, Koin setup, the only iOS framework
-├── core             Shared non-UI code: Ktor client, platform DI, SessionManager
+├── core             Shared non-UI code: Ktor client, platform DI, I/O dispatcher
+├── auth             Sign-in and session library: AuthClient (MSAL native auth / iOS bridge), reusable
 ├── systemdesign     Design system: theme, colors, typography, shapes, reusable components
 ├── feature
 │   ├── authentication   Feature: sign-in / sign-up / Google / password reset
@@ -56,6 +57,14 @@ CyVault
 ├── azure-backend    Azure Functions API (.NET 10) + Bicep infrastructure, deployed with azd
 └── amplify-backend  AWS Amplify Gen 2 backend (Cognito + Google IdP), TypeScript
 ```
+
+`:auth` is a library, not a feature: it has no screens and no CyVault types or IDs, and it doesn't
+depend on `:core`, so another app can use it as it is. It exposes `AuthClient` (sign-in, sign-up,
+Google, password reset, current user, access tokens, sign-out) and `AuthUser`. The features call it
+from their data layer and map `AuthUser` to their own models: `feature:authentication` in
+`AuthRepositoryImpl`, the vault in `home/data/AccountRepositoryImpl` and `ProfilePhotoApiService`.
+The app supplies the Entra registration: `androidApp` passes `MsalConfig(R.raw.auth_config_native_auth)`
+to Koin, and on iOS Swift sets `IosAuthBridgeHolder.bridge`.
 
 Features never depend on each other and know nothing about navigation: they don't depend on
 Navigation Compose and have no routes. Each feature exposes plain screen composables
@@ -84,7 +93,7 @@ feature/vault/…/feature/vault/
 
 ### Architecture diagram
 
-The diagram below shows the modules as they are today: the two feature modules (authentication, and vault with its screen packages), the shared modules, the dependency rules, navigation, how vault signs out through core's `SessionManager`, and the external services.
+The diagram below shows the modules as they are today: the two feature modules (authentication, and vault with its screen packages), the shared modules, the dependency rules, navigation, how vault signs out through `:auth`'s `AuthClient`, and the external services.
 
 ![CyVault modular architecture](docs/architecture.svg)
 
@@ -124,10 +133,10 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 
 | Concern | Shared API | Android | iOS |
 |---|---|---|---|
-| Authentication | `AuthApiService` (`expect`/`actual`) | MSAL native auth (Entra External ID) | Amplify Swift (Cognito), through the `IosAuthBridge` callback interface implemented in Swift |
+| Authentication (`:auth`) | `AuthClient` interface, bound in `authClientModule` | `MsalAuthClient`: MSAL native auth (Entra External ID); `ActivityProvider` gives MSAL's browser sign-in the on-screen activity | `BridgeAuthClient`: Amplify Swift (Cognito), through the `IosAuthBridge` callback interface implemented in Swift |
 | Open bank authorisation page | `BankAppLauncher` (`expect`/`actual`) | Chrome Custom Tabs | `SFSafariViewController` |
 | Profile photo | `rememberProfilePhotoPicker` (`expect`/`actual`); `PickedPhotoReader` and `AvatarFileStore` interfaces bound in `homePlatformModule` | Photo Picker; `AndroidPickedPhotoReader` turns the photo upright from EXIF and scales it to 1024 px; `AndroidAvatarFileStore` caches it in `filesDir` | Not implemented yet (iOS can't reach the Azure API without Entra sign-in) |
-| DI | `platformModule` | Ktor OkHttp engine, `ActivityProvider` (the on-screen activity, for MSAL's browser sign-in) | Ktor Darwin engine |
+| DI | `platformModule` | Ktor OkHttp engine | Ktor Darwin engine |
 
 ## Tech stack
 
@@ -170,7 +179,7 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 4. Create a user flow with **Email with password** and the **Display Name** attribute, and add the app to it.
 5. Under **API permissions**, add `openid` and `offline_access`, then grant admin consent.
 6. Put your client ID, tenant subdomain and redirect URI in
-   `feature/authentication/src/androidMain/res/raw/auth_config_native_auth.json`, and your signature
+   `androidApp/src/main/res/raw/auth_config_native_auth.json`, and your signature
    hash in the MSAL `BrowserTabActivity` entry of `androidApp/src/main/AndroidManifest.xml`.
 7. Optional, for **Sign in with Google**:
    - In the [Google Cloud Console](https://console.cloud.google.com), create a project, set up the
