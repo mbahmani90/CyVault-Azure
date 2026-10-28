@@ -4,6 +4,7 @@ import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient.Companion.USER_ID
+import com.cypressit.cyvault.feature.vault.home.data.remote.SessionApiService
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
@@ -13,6 +14,10 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,7 +44,10 @@ class VaultHomeViewModelProfilePhotoTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val authClient = FakeAuthClient()
-    private val accounts = AccountRepositoryImpl(authClient)
+    private val accounts = AccountRepositoryImpl(
+        authClient = authClient,
+        sessionApi = SessionApiService(HttpClient(MockEngine { respond("", HttpStatusCode.NoContent) }), authClient),
+    )
     private val photos = FakeProfilePhotoRepository()
     private val cards = FakeCardRepository()
 
@@ -135,13 +143,13 @@ class VaultHomeViewModelProfilePhotoTest {
         advanceUntilIdle()
 
         viewModel.onIntent(VaultHomeIntent.SignOut)
-        advanceUntilIdle()
 
-        assertEquals(1, authClient.signOutCount)
-        assertEquals(1, photos.clearCount)
+        // The sign-out request runs on the HTTP engine's own thread, so wait for the navigation.
         assertEquals(
             listOf(VaultHomeEffect.CloseDrawer, VaultHomeEffect.NavigateToLogin),
             viewModel.effect.take(2).toList(),
         )
+        assertEquals(1, authClient.signOutCount)
+        assertEquals(1, photos.clearCount)
     }
 }

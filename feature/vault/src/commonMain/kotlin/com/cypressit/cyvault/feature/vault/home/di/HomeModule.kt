@@ -2,6 +2,7 @@ package com.cypressit.cyvault.feature.vault.home.di
 
 import com.cypressit.cyvault.core.di.IO_DISPATCHER
 import com.cypressit.cyvault.feature.vault.home.data.remote.ProfilePhotoApiService
+import com.cypressit.cyvault.feature.vault.home.data.remote.SessionApiService
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.data.repository.ProfilePhotoRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.domain.repository.AccountRepository
@@ -23,9 +24,10 @@ internal val homeModule = module {
 
     // Remote
     single { ProfilePhotoApiService(get(), get()) }
+    single { SessionApiService(get(), get()) }
 
     // Repository (AuthClient comes from :auth's authClientModule)
-    single<AccountRepository> { AccountRepositoryImpl(get()) }
+    single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
     single<ProfilePhotoRepository> {
         ProfilePhotoRepositoryImpl(
             apiService = get(),

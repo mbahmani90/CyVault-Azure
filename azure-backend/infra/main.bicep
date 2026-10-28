@@ -48,3 +48,5 @@ output AZURE_RESOURCE_GROUP string = rg.name
 output AZURE_FUNCTION_APP_NAME string = resources.outputs.functionAppName
 output API_BASE_URL string = resources.outputs.apiBaseUrl
 output AVATAR_STORAGE_BLOB_URI string = resources.outputs.avatarBlobServiceUri
+output FUNCTION_PRINCIPAL_ID string = resources.outputs.functionPrincipalId
+output AZURE_TENANT_ID string = tenant().tenantId

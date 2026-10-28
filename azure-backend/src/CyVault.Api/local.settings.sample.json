@@ -7,6 +7,7 @@
         "AzureAd__TenantId": "e5cb5788-11bc-499b-82f2-095c6f201b40",
         "AzureAd__ClientId": "<CyVault API app registration client ID>",
         "AvatarStorage__ConnectionString": "UseDevelopmentStorage=true",
-        "AvatarStorage__ContainerName": "avatars"
+        "AvatarStorage__ContainerName": "avatars",
+        "Graph__ClientSecret": "<CyVault API client secret, only for POST /me/signout>"
     }
 }

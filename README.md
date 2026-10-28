@@ -229,6 +229,12 @@ Create a Yapily sandbox application and put your credentials in
    `Profile.ReadWrite`.
 4. In the **mobile app's** registration: **API permissions → Add a permission → My APIs → CyVault API →
    `Profile.ReadWrite`**, then grant admin consent.
+5. For server-side sign-out (`POST /me/signout`), in the **CyVault API** registration: **API permissions →
+   Add a permission → Microsoft Graph → Application permissions → `User.RevokeSessions.All`**, then grant
+   admin consent. The Function calls Graph as this app; the mobile app gets no Graph permission.
+
+Signing out revokes the user's refresh tokens on **all** devices. Access tokens already issued stay valid
+until they expire (about an hour).
 
 **Run locally** (from `azure-backend/src/CyVault.Api`):
 
@@ -236,7 +242,9 @@ Create a Yapily sandbox application and put your credentials in
 cp local.settings.sample.json local.settings.json
 ```
 
-Put the API's client ID in `AzureAd__ClientId` in `local.settings.json`, which is git-ignored. Start
+Put the API's client ID in `AzureAd__ClientId` in `local.settings.json`, which is git-ignored. To try
+sign-out locally, create a client secret in the CyVault API registration (**Certificates & secrets**) and
+put it in `Graph__ClientSecret`. Start
 Azurite (the local Blob Storage emulator) in one terminal and the Function in another:
 
 ```bash
@@ -264,6 +272,17 @@ Function App, two storage accounts with shared keys disabled, Application Insigh
 Managed Identity and its role assignments) and deploys the code. It prints `API_BASE_URL` at the end.
 The signed-in developer also gets blob access to the `avatars` container, so the Function can run
 locally against the real storage through `az login`.
+
+**Let the Function call Graph without a secret** (once, after the first `azd up`): in the **CyVault API**
+registration, **Certificates & secrets → Federated credentials → Add credential → Other issuer**:
+
+- Issuer: `https://login.microsoftonline.com/<AZURE_TENANT_ID>/v2.0`
+- Subject identifier: `<FUNCTION_PRINCIPAL_ID>`
+- Audience: `api://AzureADTokenExchange`
+
+Both values are printed by `azd up` (`azd env get-values`). The Function's Managed Identity then signs
+in as the CyVault API app. If your tenant doesn't accept the federated credential, set the
+`Graph__ClientSecret` app setting on the Function App instead.
 
 ### 4. Run
 
