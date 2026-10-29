@@ -33,4 +33,6 @@
     <string name="vault_home_balance_saved">Balance saved</string>
     <string name="vault_home_balance_deleted">Balance deleted</string>
     <string name="vault_home_balance_request_failed">Couldn't update your balances. Please try again.</string>
+    <string name="vault_home_add_sample_balances">Add 50 sample items (debug)</string>
+    <string name="vault_home_sample_balances_added">Added %1$d sample items</string>
 </resources>

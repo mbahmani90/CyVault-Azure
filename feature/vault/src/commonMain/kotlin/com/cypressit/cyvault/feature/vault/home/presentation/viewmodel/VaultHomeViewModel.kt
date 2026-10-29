@@ -2,6 +2,7 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
@@ -36,9 +37,11 @@ class VaultHomeViewModel(
     private val getBalances: GetBalancesUseCase,
     private val saveBalance: SaveBalanceUseCase,
     private val deleteBalance: DeleteBalanceUseCase,
+    /** Null unless :feature:vault-debug is loaded, which only debug builds do. */
+    private val sampleBalancesSeeder: SampleBalancesSeeder? = null,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(VaultHomeState())
+    private val _state = MutableStateFlow(VaultHomeState(canAddSampleBalances = sampleBalancesSeeder != null))
     val state: StateFlow<VaultHomeState> = _state.asStateFlow()
 
     private val _effect = Channel<VaultHomeEffect>(Channel.BUFFERED)
@@ -74,6 +77,7 @@ class VaultHomeViewModel(
             is VaultHomeIntent.EditBalance ->
                 _state.update { it.copy(isAddItemDialogVisible = true, editingBalance = intent.balance) }
             is VaultHomeIntent.DeleteBalance -> deleteExistingBalance(intent.id)
+            VaultHomeIntent.AddSampleBalances -> addSamples()
         }
     }
 
@@ -133,6 +137,22 @@ class VaultHomeViewModel(
                     _state.update { state -> state.copy(balances = state.balances.filterNot { it.id == id }) }
                     _effect.send(VaultHomeEffect.BalanceDeleted)
                 }
+                .onFailure { _effect.send(VaultHomeEffect.BalanceRequestFailed) }
+        }
+    }
+
+    private fun addSamples() {
+        val seeder = sampleBalancesSeeder ?: return
+        if (_state.value.isAddingSampleBalances) return
+        viewModelScope.launch {
+            _effect.send(VaultHomeEffect.CloseDrawer)
+            _state.update { it.copy(isAddingSampleBalances = true) }
+            val result = seeder.addSampleBalances()
+            _state.update { it.copy(isAddingSampleBalances = false) }
+            // Reload either way: a failure part way through still saved some.
+            loadBalances()
+            result
+                .onSuccess { _effect.send(VaultHomeEffect.SampleBalancesAdded(it)) }
                 .onFailure { _effect.send(VaultHomeEffect.BalanceRequestFailed) }
         }
     }

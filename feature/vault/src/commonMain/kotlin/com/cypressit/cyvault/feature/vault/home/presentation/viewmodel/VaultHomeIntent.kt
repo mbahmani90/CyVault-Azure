@@ -29,6 +29,9 @@ sealed class VaultHomeIntent {
     data class EditBalance(val balance: Balance) : VaultHomeIntent()
     data class DeleteBalance(val id: String) : VaultHomeIntent()
 
+    /** Debug builds only: saves a batch of random balances. */
+    data object AddSampleBalances : VaultHomeIntent()
+
     /** The user picked a new profile photo. */
     data class ChangeProfilePhoto(val photo: PickedPhoto) : VaultHomeIntent()
 }

@@ -20,6 +20,9 @@ data class VaultHomeState(
     /** The balance being edited in the add-item dialog, or null when adding a new one. */
     val editingBalance: Balance? = null,
     val isSavingBalance: Boolean = false,
+    /** True in debug builds, where :feature:vault-debug can add sample balances. */
+    val canAddSampleBalances: Boolean = false,
+    val isAddingSampleBalances: Boolean = false,
 ) {
     /**
      * The balances added up per currency, since euros and pounds can't be summed together.
