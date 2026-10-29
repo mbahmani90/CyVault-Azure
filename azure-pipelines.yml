@@ -192,7 +192,8 @@ stages:
               testResultsFiles: "e2e/build/test-results/e2eTest/TEST-*.xml"
               testRunTitle: E2E tests
           - publish: $(Agent.TempDirectory)
-            artifact: e2e-logs
+            # One artifact per attempt, so re-running the stage doesn't clash with the last upload
+            artifact: e2e-logs-$(System.JobAttempt)
             displayName: Publish emulator and Appium logs
             condition: failed()
 
