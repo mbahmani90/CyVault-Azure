@@ -223,14 +223,26 @@ Create a Yapily sandbox application and put your credentials in
 
 ### 3. Azure backend (profile photo and balances API)
 
-**Register the API in Entra External ID** (once, in the same external tenant as the app):
+**Environments.** Each azd environment is a full copy of the backend: its own Entra External ID
+tenant (so its own users), app registrations, user flow, Function App and storage.
 
-1. **App registrations → New registration** → `CyVault API`, single tenant. No platform or redirect URI.
-2. **Manifest**: set `requestedAccessTokenVersion` to `2`.
-3. **Expose an API**: accept the default Application ID URI (`api://<API client ID>`) and add the scopes
-   `Profile.ReadWrite` and `Balance.ReadWrite`.
-4. In the **mobile app's** registration: **API permissions → Add a permission → APIs my organization uses →
-   CyVault API → `Profile.ReadWrite` and `Balance.ReadWrite`**, then grant admin consent.
+| azd environment | Used by | Tenant (users) | Entra apps | Azure resources |
+|---|---|---|---|---|
+| `dev` | release builds (production) | `cyvault.onmicrosoft.com` | `CyVault API`, `CyVault Mobile`, user flow `SignUpSignIn` | `rg-cyvault-dev` |
+| `debug` | debug builds | `cyvaultdebug.onmicrosoft.com` | `CyVault API (debug)`, `CyVault Mobile (debug)`, user flow `SignUpSignIn (debug)` | `rg-cyvault-debug` |
+
+All of it is code:
+
+- **Tenant:** [`infra/tenant/tenant.bicep`](azure-backend/infra/tenant/tenant.bicep), one `.bicepparam`
+  per tenant. Deployed once, outside azd; azd never deletes a tenant.
+- **Google sign-in in the tenant:** [`Set-GoogleProvider.ps1`](azure-backend/infra/entra/Set-GoogleProvider.ps1),
+  once per tenant. It asks for the Google client secret and sends it only to Entra.
+- **App registrations, consent and user flow:** [`entra.json`](azure-backend/infra/entra/entra.json),
+  applied by [`Set-EntraApps.ps1`](azure-backend/infra/entra/Set-EntraApps.ps1), which azd runs before
+  every `azd provision` and `azd up`. It creates what's missing, updates what differs, and saves the app
+  IDs for Bicep. `-WhatIf` shows what it would change without changing anything.
+- **Function App and storage:** `infra/main.bicep`, wired to the environment's tenant through the
+  Function App's `AzureAd__*` settings.
 
 **Run locally** (from `azure-backend/src/CyVault.Api`):
 
@@ -254,12 +266,60 @@ On Windows PowerShell, use `azurite.cmd` if script execution is disabled. The AP
 
 **Deploy to Azure** (from `azure-backend/`):
 
-```bash
-azd auth login
-azd env new dev
-azd env set ENTRA_API_CLIENT_ID <API client ID>
-azd up
-```
+Needs PowerShell 7 (`pwsh`) for the Entra hooks, and for Google sign-in the Microsoft Graph module
+(`Install-Module Microsoft.Graph.Authentication -Scope CurrentUser`).
+
+To create the **debug** environment from nothing:
+
+1. Create its tenant (prints `tenantId` and `instance`):
+
+   ```bash
+   az deployment group create -g cyvault-rg -f infra/tenant/tenant.bicep -p infra/tenant/debug.bicepparam
+   ```
+
+2. Sign the Azure CLI in to the new tenant, and tell azd about it:
+
+   ```bash
+   az login --tenant <tenantId> --allow-no-subscriptions
+   ```
+
+   ```bash
+   azd env new debug
+   ```
+
+   ```bash
+   azd env set ENTRA_TENANT_ID <tenantId>
+   ```
+
+   ```bash
+   azd env set ENTRA_INSTANCE https://cyvaultdebug.ciamlogin.com/
+   ```
+
+3. Add Google sign-in with your Google OAuth client ID. It asks for the secret, then prints the
+   redirect URIs to add to that client in the Google Cloud console:
+
+   ```bash
+   pwsh ./infra/entra/Set-GoogleProvider.ps1 -EnvironmentName debug -ClientId <Google client ID>
+   ```
+
+4. Set the region (some, like West Europe, refuse new resources), create the Entra apps once on their
+   own (on a new environment `azd up` asks for `entraApiClientId` before it runs hooks), then deploy:
+
+   ```bash
+   azd env set AZURE_LOCATION northeurope
+   ```
+
+   ```bash
+   azd hooks run preprovision
+   ```
+
+   ```bash
+   azd up
+   ```
+
+An environment whose Entra apps already exist (like `dev`) has their IDs saved in the azd environment
+(`ENTRA_API_CLIENT_ID`, `ENTRA_MOBILE_CLIENT_ID`), so the hook updates them instead of creating new
+ones; without `ENTRA_TENANT_ID` it uses the production tenant.
 
 `azd up` asks for a subscription and region, creates the resources in `infra/` (Flex Consumption
 Function App, two storage accounts with shared keys disabled, Application Insights, the Function's
