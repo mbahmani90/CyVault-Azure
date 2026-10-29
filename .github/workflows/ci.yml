@@ -1,5 +1,5 @@
-# The same checks as azure-pipelines.yml, on every PR, every push to main and manual runs,
-# plus E2E tests on an emulator, which run only when started by hand with "Run E2E tests" ticked:
+# The same checks as azure-pipelines.yml, plus E2E tests on an emulator, on every PR, every push
+# to main and manual runs:
 #   Changes ─► Build ─┬─► Unit tests   ─┐
 #                     ├─► Android Lint ─┼─► CI result
 #                     ├─► Code style   ─┘
@@ -13,11 +13,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      run_e2e:
-        description: Run E2E tests
-        type: boolean
-        default: false
 
 # A new push to the same branch cancels the run in progress.
 concurrency:
@@ -133,8 +128,6 @@ jobs:
   e2e-tests:
     name: E2E tests
     needs: build
-    # Manual runs with "Run E2E tests" ticked only; skipped (shown grey) on PRs and pushes.
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_e2e }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -188,7 +181,7 @@ jobs:
   e2e-result:
     name: E2E result
     needs: e2e-tests
-    if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.run_e2e }}
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - env:
