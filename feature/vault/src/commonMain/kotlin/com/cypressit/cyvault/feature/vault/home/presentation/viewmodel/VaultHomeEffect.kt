@@ -8,6 +8,7 @@ sealed class VaultHomeEffect {
     data object BalanceSaved : VaultHomeEffect()
     data object BalanceDeleted : VaultHomeEffect()
     data object BalanceRequestFailed : VaultHomeEffect()
+    data class SampleBalancesAdded(val count: Int) : VaultHomeEffect()
     data object NavigateToLogin : VaultHomeEffect()
     data object NavigateToAddCard : VaultHomeEffect()
     data object OpenDrawer : VaultHomeEffect()

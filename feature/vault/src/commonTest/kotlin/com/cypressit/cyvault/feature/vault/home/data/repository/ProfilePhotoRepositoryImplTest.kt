@@ -4,6 +4,7 @@ import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient.Companion.USER_ID
 import com.cypressit.cyvault.feature.vault.fake.FakeAvatarFileStore
 import com.cypressit.cyvault.feature.vault.fake.FakePickedPhotoReader
+import com.cypressit.cyvault.feature.vault.home.data.remote.CyVaultApiConfig
 import com.cypressit.cyvault.feature.vault.home.data.remote.ProfilePhotoApiService
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import io.ktor.client.HttpClient
@@ -63,6 +64,7 @@ class ProfilePhotoRepositoryImplTest {
                 },
             ),
             FakeAuthClient(),
+            CyVaultApiConfig.Production,
         ),
         fileStore = fileStore,
         photoReader = photoReader,

@@ -17,6 +17,10 @@ dependencies {
     implementation(projects.app)
     // For MsalConfig: the shell hands its MSAL config file to :auth
     implementation(projects.auth)
+    // Developer tools, such as the vault's sample items: never in a release build
+    debugImplementation(projects.feature.vaultDebug)
+    // For CyVaultApiConfig: debug builds point the vault at the debug environment's API
+    debugImplementation(projects.feature.vault)
 
     implementation(libs.koin.android)
     implementation(libs.androidx.activity.compose)

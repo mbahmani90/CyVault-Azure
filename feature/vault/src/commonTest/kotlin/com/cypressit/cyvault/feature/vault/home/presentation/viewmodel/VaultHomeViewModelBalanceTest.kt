@@ -5,6 +5,7 @@ import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
+import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
@@ -51,7 +52,7 @@ class VaultHomeViewModelBalanceTest {
 
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel(): VaultHomeViewModel {
+    private fun viewModel(sampleBalancesSeeder: SampleBalancesSeeder? = null): VaultHomeViewModel {
         val accounts = AccountRepositoryImpl(FakeAuthClient())
         return VaultHomeViewModel(
             getCards = GetCardsUseCase(cards),
@@ -64,6 +65,7 @@ class VaultHomeViewModelBalanceTest {
             getBalances = GetBalancesUseCase(balances),
             saveBalance = SaveBalanceUseCase(balances),
             deleteBalance = DeleteBalanceUseCase(balances),
+            sampleBalancesSeeder = sampleBalancesSeeder,
         )
     }
 
@@ -188,5 +190,40 @@ class VaultHomeViewModelBalanceTest {
         assertEquals(listOf("main"), balances.deletedIds)
         assertEquals(listOf(savings), viewModel.state.value.balances)
         assertEquals(VaultHomeEffect.BalanceDeleted, viewModel.effect.first())
+    }
+
+    @Test
+    fun addSampleBalances_withASeeder_addsThemAndReloads() = runTest(dispatcher) {
+        var seeded = 0
+        val viewModel = viewModel(
+            sampleBalancesSeeder = {
+                seeded++
+                Result.success(50)
+            },
+        )
+        advanceUntilIdle()
+        balances.balances = listOf(main)
+
+        assertTrue(viewModel.state.value.canAddSampleBalances)
+        viewModel.onIntent(VaultHomeIntent.AddSampleBalances)
+        advanceUntilIdle()
+
+        assertEquals(1, seeded)
+        assertEquals(listOf(main), viewModel.state.value.balances)
+        assertFalse(viewModel.state.value.isAddingSampleBalances)
+        assertEquals(VaultHomeEffect.CloseDrawer, viewModel.effect.first())
+        assertEquals(VaultHomeEffect.SampleBalancesAdded(50), viewModel.effect.first())
+    }
+
+    @Test
+    fun addSampleBalances_withoutASeeder_isHiddenAndDoesNothing() = runTest(dispatcher) {
+        val viewModel = viewModel(sampleBalancesSeeder = null)
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.AddSampleBalances)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.canAddSampleBalances)
+        assertFalse(viewModel.state.value.isAddingSampleBalances)
     }
 }

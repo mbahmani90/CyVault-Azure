@@ -1,0 +1,56 @@
+{
+  "$comment": "The CyVault Entra External ID setup that each azd environment gets. Set-EntraApps.ps1 applies it before `azd provision`: each environment gets its own app registrations, consent grants and user flow, in the tenant its azd environment names (ENTRA_TENANT_ID). The tenant itself comes from infra/tenant/, and its Google identity provider from Set-GoogleProvider.ps1.",
+  "$tenantComment": "The production tenant: the default for environments that don't set ENTRA_TENANT_ID, ENTRA_INSTANCE and ENTRA_GOOGLE_PROVIDER_ID.",
+  "tenant": {
+    "id": "e5cb5788-11bc-499b-82f2-095c6f201b40",
+    "instance": "https://cyvault.ciamlogin.com/",
+    "googleProviderId": "3dea3585-ce74-4f0d-abf9-dba6621a275c"
+  },
+  "api": {
+    "displayName": "CyVault API",
+    "scopes": [
+      {
+        "value": "Balance.ReadWrite",
+        "adminConsentDisplayName": "Read and write balances",
+        "adminConsentDescription": "Allows the app to read and write the signed-in user's balances."
+      },
+      {
+        "value": "Profile.ReadWrite",
+        "adminConsentDisplayName": "Read and write the user's CyVault profile",
+        "adminConsentDescription": "Lets the CyVault app manage the user's profile photo."
+      }
+    ],
+    "graphScopes": ["User.Read"]
+  },
+  "mobile": {
+    "displayName": "CyVault Mobile",
+    "redirectUris": [
+      "msauth://com.cypressit.cyvault/%2B6PpzKBqQ%2F0GponbMHq4NRPWiMc%3D"
+    ],
+    "graphScopes": ["email", "offline_access", "openid", "User.Read"],
+    "idTokenOptionalClaims": ["email"]
+  },
+  "userFlow": {
+    "displayName": "SignUpSignIn",
+    "isSignUpAllowed": true,
+    "identityProviders": ["EmailPassword", "Google"],
+    "attributes": [
+      {
+        "id": "email",
+        "label": "Email Address",
+        "hidden": true,
+        "editable": false,
+        "required": true,
+        "validationRegEx": "^[a-zA-Z0-9.!#$%&amp;&#8217;'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$"
+      },
+      {
+        "id": "displayName",
+        "label": "Display Name",
+        "hidden": false,
+        "editable": true,
+        "required": false,
+        "validationRegEx": "^.*"
+      }
+    ]
+  }
+}

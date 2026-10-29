@@ -20,18 +20,17 @@ import io.ktor.http.isSuccess
 class ProfilePhotoApiService(
     private val client: HttpClient,
     private val authClient: AuthClient,
+    config: CyVaultApiConfig,
 ) {
 
-    companion object {
-        const val AVATAR_URL = "https://func-cyvault-24xpnyg5tfwui.azurewebsites.net/api/me/avatar"
+    private val avatarUrl = "${config.baseUrl}/me/avatar"
 
-        /** The CyVault API app registration's scope in the Entra External ID tenant. */
-        const val PROFILE_SCOPE = "api://61a46c01-e17b-43da-8630-17d521ef888b/Profile.ReadWrite"
-    }
+    /** The CyVault API app registration's scope in the environment's Entra tenant. */
+    private val profileScope = "${config.appIdUri}/Profile.ReadWrite"
 
     /** The photo as JPEG bytes, or null when the user hasn't set one. */
     suspend fun getPhoto(): ByteArray? {
-        val response = client.get(AVATAR_URL) { bearerAuth(accessToken()) }
+        val response = client.get(avatarUrl) { bearerAuth(accessToken()) }
         return when (response.status) {
             HttpStatusCode.NotFound -> null
             else -> response.requireSuccess().body()
@@ -40,14 +39,14 @@ class ProfilePhotoApiService(
 
     /** Uploads a photo; the API re-encodes it as a 512 px JPEG without metadata. */
     suspend fun putPhoto(jpeg: ByteArray) {
-        client.put(AVATAR_URL) {
+        client.put(avatarUrl) {
             bearerAuth(accessToken())
             contentType(ContentType.Image.JPEG)
             setBody(jpeg)
         }.requireSuccess()
     }
 
-    private suspend fun accessToken(): String = authClient.accessToken(listOf(PROFILE_SCOPE))
+    private suspend fun accessToken(): String = authClient.accessToken(listOf(profileScope))
 
     private fun HttpResponse.requireSuccess(): HttpResponse {
         if (!status.isSuccess()) throw Exception("Profile photo request failed (${status.value})")
