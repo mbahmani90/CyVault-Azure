@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCard
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.AlertDialog
@@ -73,6 +74,7 @@ import cyvault.vault.generated.resources.cyvault_logo
 import cyvault.vault.generated.resources.vault_home_add_card
 import cyvault.vault.generated.resources.vault_home_add_item_cancel
 import cyvault.vault.generated.resources.vault_home_add_item_description_fab
+import cyvault.vault.generated.resources.vault_home_add_sample_balances
 import cyvault.vault.generated.resources.vault_home_balance_delete_confirm
 import cyvault.vault.generated.resources.vault_home_balance_delete_message
 import cyvault.vault.generated.resources.vault_home_balance_delete_title
@@ -216,6 +218,21 @@ internal fun VaultHomeScreen(
                     onClick = { viewModel.onIntent(VaultHomeIntent.AddCardFromDrawer) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
+                if (state.canAddSampleBalances) {
+                    NavigationDrawerItem(
+                        icon = {
+                            if (state.isAddingSampleBalances) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(imageVector = Icons.Default.BugReport, contentDescription = null)
+                            }
+                        },
+                        label = { Text(stringResource(Res.string.vault_home_add_sample_balances)) },
+                        selected = false,
+                        onClick = { viewModel.onIntent(VaultHomeIntent.AddSampleBalances) },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                }
                 NavigationDrawerItem(
                     icon = {
                         Icon(

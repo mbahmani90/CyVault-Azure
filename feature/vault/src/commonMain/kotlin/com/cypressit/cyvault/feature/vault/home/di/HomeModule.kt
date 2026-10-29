@@ -20,7 +20,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccount
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeViewModel
-import org.koin.core.module.dsl.viewModelOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
@@ -56,5 +56,21 @@ internal val homeModule = module {
     factory { DeleteBalanceUseCase(get()) }
 
     // ViewModel
-    viewModelOf(::VaultHomeViewModel)
+    // Written out because the sample-balances seeder is optional: only debug builds load
+    // :feature:vault-debug, which provides it.
+    viewModel {
+        VaultHomeViewModel(
+            getCards = get(),
+            deleteCard = get(),
+            getCurrentAccount = get(),
+            signOutUser = get(),
+            getProfilePhoto = get(),
+            changeProfilePhoto = get(),
+            clearProfilePhotoCache = get(),
+            getBalances = get(),
+            saveBalance = get(),
+            deleteBalance = get(),
+            sampleBalancesSeeder = getOrNull(),
+        )
+    }
 }
