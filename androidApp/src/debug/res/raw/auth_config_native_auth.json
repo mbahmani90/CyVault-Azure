@@ -1,0 +1,16 @@
+{
+  "client_id": "990b363b-ef2e-4d6b-ba0e-53957631370b",
+  "redirect_uri": "msauth://com.cypressit.cyvault/%2B6PpzKBqQ%2F0GponbMHq4NRPWiMc%3D",
+  "authorities": [
+    {
+      "type": "CIAM",
+      "authority_url": "https://cyvaultdebug.ciamlogin.com/cyvaultdebug.onmicrosoft.com/"
+    }
+  ],
+  "challenge_types": ["password", "oob"],
+  "logging": {
+    "pii_enabled": false,
+    "log_level": "INFO",
+    "logcat_enabled": true
+  }
+}

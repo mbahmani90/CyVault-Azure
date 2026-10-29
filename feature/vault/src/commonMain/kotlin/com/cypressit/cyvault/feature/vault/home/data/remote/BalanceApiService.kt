@@ -23,17 +23,16 @@ import io.ktor.http.isSuccess
 class BalanceApiService(
     private val client: HttpClient,
     private val authClient: AuthClient,
+    config: CyVaultApiConfig,
 ) {
 
-    companion object {
-        const val BALANCES_URL = "https://func-cyvault-24xpnyg5tfwui.azurewebsites.net/api/me/balances"
+    private val balancesUrl = "${config.baseUrl}/me/balances"
 
-        /** The CyVault API app registration's balance scope in the Entra External ID tenant. */
-        const val BALANCE_SCOPE = "api://61a46c01-e17b-43da-8630-17d521ef888b/Balance.ReadWrite"
-    }
+    /** The CyVault API app registration's balance scope in the environment's Entra tenant. */
+    private val balanceScope = "${config.appIdUri}/Balance.ReadWrite"
 
     suspend fun getBalances(): List<BalanceResponseDto> =
-        client.get(BALANCES_URL) { bearerAuth(accessToken()) }.requireSuccess().body()
+        client.get(balancesUrl) { bearerAuth(accessToken()) }.requireSuccess().body()
 
     /** Creates the balance, or replaces it when [id] already exists; returns it as stored. */
     suspend fun putBalance(id: String, request: BalanceRequestDto): BalanceResponseDto =
@@ -47,9 +46,9 @@ class BalanceApiService(
         client.delete(urlFor(id)) { bearerAuth(accessToken()) }.requireSuccess()
     }
 
-    private fun urlFor(id: String) = "$BALANCES_URL/${id.encodeURLPathPart()}"
+    private fun urlFor(id: String) = "$balancesUrl/${id.encodeURLPathPart()}"
 
-    private suspend fun accessToken(): String = authClient.accessToken(listOf(BALANCE_SCOPE))
+    private suspend fun accessToken(): String = authClient.accessToken(listOf(balanceScope))
 
     private fun HttpResponse.requireSuccess(): HttpResponse {
         if (!status.isSuccess()) throw Exception("Balance request failed (${status.value})")

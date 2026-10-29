@@ -29,6 +29,7 @@ class ProfilePhotoApiServiceTest {
         ProfilePhotoApiService(
             client = HttpClient(MockEngine { request -> requests += request; handler(request) }),
             authClient = authClient,
+            config = CyVaultApiConfig(baseUrl = "https://api.test/api", appIdUri = "api://test-api"),
         )
 
     private fun MockRequestHandleScope.respondJpeg(bytes: ByteArray) =
@@ -40,9 +41,9 @@ class ProfilePhotoApiServiceTest {
 
         val request = requests.single()
         assertEquals(HttpMethod.Get, request.method)
-        assertEquals(ProfilePhotoApiService.AVATAR_URL, request.url.toString())
+        assertEquals("https://api.test/api/me/avatar", request.url.toString())
         assertEquals("Bearer test-token", request.headers[HttpHeaders.Authorization])
-        assertEquals(listOf(listOf(ProfilePhotoApiService.PROFILE_SCOPE)), authClient.requestedScopes)
+        assertEquals(listOf(listOf("api://test-api/Profile.ReadWrite")), authClient.requestedScopes)
     }
 
     @Test

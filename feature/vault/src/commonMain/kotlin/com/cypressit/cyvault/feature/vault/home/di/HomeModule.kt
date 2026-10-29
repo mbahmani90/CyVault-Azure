@@ -2,6 +2,7 @@ package com.cypressit.cyvault.feature.vault.home.di
 
 import com.cypressit.cyvault.core.di.IO_DISPATCHER
 import com.cypressit.cyvault.feature.vault.home.data.remote.BalanceApiService
+import com.cypressit.cyvault.feature.vault.home.data.remote.CyVaultApiConfig
 import com.cypressit.cyvault.feature.vault.home.data.remote.ProfilePhotoApiService
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.data.repository.BalanceRepositoryImpl
@@ -22,14 +23,15 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
+import org.koin.core.scope.Scope
 import org.koin.dsl.module
 
 internal val homeModule = module {
     includes(homePlatformModule)
 
     // Remote
-    single { ProfilePhotoApiService(get(), get()) }
-    single { BalanceApiService(get(), get()) }
+    single { ProfilePhotoApiService(get(), get(), apiConfig()) }
+    single { BalanceApiService(get(), get(), apiConfig()) }
 
     // Repository (AuthClient comes from :auth's authClientModule)
     single<AccountRepository> { AccountRepositoryImpl(get()) }
@@ -74,3 +76,6 @@ internal val homeModule = module {
         )
     }
 }
+
+/** Android debug builds provide the debug environment's API; everything else uses production. */
+private fun Scope.apiConfig(): CyVaultApiConfig = getOrNull() ?: CyVaultApiConfig.Production
