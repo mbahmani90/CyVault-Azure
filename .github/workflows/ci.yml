@@ -2,10 +2,13 @@
 # to main and manual runs:
 #   Changes ─► Build ─┬─► Unit tests   ─┐
 #                     ├─► Android Lint ─┼─► CI result
-#                     ├─► Code style   ─┘
+#                     ├─► Code style   ─┤
+#                     ├─► SonarQube    ─┘
 #                     └─► E2E tests ─────► E2E result
 # E2E needs the repository secrets E2E_EMAIL and E2E_PASSWORD (a test account in the debug Entra
 # tenant; the tests delete every balance on it).
+# SonarQube needs the repository secret SONAR_TOKEN and the repository variables SONAR_ORGANIZATION
+# and SONAR_PROJECT_KEY; until SONAR_PROJECT_KEY is set the job is skipped.
 name: CI
 
 on:
@@ -125,6 +128,38 @@ jobs:
           path: '**/build/reports/ktlint/'
           retention-days: 7
 
+  # The same analysis as the SonarQube job in azure-pipelines.yml; turn off Automatic Analysis in
+  # SonarQube Cloud first, or the scan fails.
+  sonarqube:
+    name: SonarQube
+    needs: build
+    if: ${{ vars.SONAR_PROJECT_KEY != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # SonarQube needs history for blame and new-code detection
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Run tests with coverage
+        run: ./gradlew koverXmlReport
+      - uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            -Dsonar.projectName=CyVault
+            -Dsonar.sources=.
+            -Dsonar.inclusions=**/src/*Main/**/*.kt,androidApp/src/main/**/*.kt
+            -Dsonar.tests=.
+            -Dsonar.test.inclusions=**/src/*Test/**/*.kt
+            -Dsonar.exclusions=**/build/**,iosApp/**,azure-backend/**,amplify-backend/**
+            -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/kover/report.xml
+
   e2e-tests:
     name: E2E tests
     needs: build
@@ -196,7 +231,7 @@ jobs:
   # One check for branch protection: passes when every job passed or was skipped (docs-only change).
   ci-result:
     name: CI result
-    needs: [changes, build, unit-tests, lint, code-style]
+    needs: [changes, build, unit-tests, lint, code-style, sonarqube]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
