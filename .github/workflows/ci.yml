@@ -1,0 +1,138 @@
+# The same checks as azure-pipelines.yml, on every PR, every push to main and manual runs:
+#   Changes ─► Build ─┬─► Unit tests   ─┐
+#                     ├─► Android Lint ─┼─► CI result
+#                     └─► Code style   ─┘
+# E2E tests are a separate workflow (e2e.yml), started by hand.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A new push to the same branch cancels the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          # "some-with-excludes": matches at least one pattern and none of the ! patterns.
+          # The same exclusions as azure-pipelines.yml.
+          predicate-quantifier: some-with-excludes
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+              - '!iosApp/**'
+              - '!azure-backend/**'
+              - '!amplify-backend/**'
+
+  build:
+    name: Build
+    needs: changes
+    # A manual run always builds, even if the last change was docs only.
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.code == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      # Launches the wrapper; Gradle then provisions the daemon JDK in gradle/gradle-daemon-jvm.properties
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew :androidApp:assembleDebug
+      - uses: actions/upload-artifact@v7
+        with:
+          name: debug-apk
+          path: androidApp/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+  unit-tests:
+    name: Unit tests
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v6
+      # testAndroidHostTest covers the KMP modules, testDebugUnitTest the app module
+      - run: ./gradlew testDebugUnitTest testAndroidHostTest --continue
+      - name: Test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          retention-days: 7
+
+  lint:
+    name: Android Lint
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew :androidApp:lintDebug
+      - name: Lint report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: lint-report
+          path: androidApp/build/reports/
+          retention-days: 7
+
+  code-style:
+    name: Code style
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v6
+      # Rules in .editorconfig; fix locally with ./gradlew ktlintFormat
+      - run: ./gradlew ktlintCheck
+      - name: ktlint reports
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ktlint-report
+          path: '**/build/reports/ktlint/'
+          retention-days: 7
+
+  # One check for branch protection: passes when every job passed or was skipped (docs-only change).
+  ci-result:
+    name: CI result
+    needs: [changes, build, unit-tests, lint, code-style]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          for result in $RESULTS; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then exit 1; fi
+          done
