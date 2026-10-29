@@ -31,7 +31,7 @@ fun App() {
                         navController.navigate(VaultHomeRoute) {
                             popUpTo(AuthRoute) { inclusive = true }
                         }
-                    }
+                    },
                 )
             }
 

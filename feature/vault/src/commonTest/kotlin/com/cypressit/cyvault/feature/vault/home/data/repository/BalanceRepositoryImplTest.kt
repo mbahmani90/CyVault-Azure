@@ -1,9 +1,9 @@
 package com.cypressit.cyvault.feature.vault.home.data.repository
 
+import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.home.data.remote.BalanceApiService
 import com.cypressit.cyvault.feature.vault.home.data.remote.CyVaultApiConfig
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
-import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -21,12 +21,14 @@ class BalanceRepositoryImplTest {
 
     private fun repository(status: HttpStatusCode, json: String = "") = BalanceRepositoryImpl(
         BalanceApiService(
-            client = HttpClient(MockEngine {
-                respond(json, status, headersOf(HttpHeaders.ContentType, "application/json"))
-            }) { install(ContentNegotiation) { json() } },
+            client = HttpClient(
+                MockEngine {
+                    respond(json, status, headersOf(HttpHeaders.ContentType, "application/json"))
+                },
+            ) { install(ContentNegotiation) { json() } },
             authClient = FakeAuthClient(),
             config = CyVaultApiConfig.Production,
-        )
+        ),
     )
 
     @Test
@@ -36,7 +38,10 @@ class BalanceRepositoryImplTest {
             """{"id":"main","name":"Main account","amount":1250.5,"currency":"EUR"}""",
         ).saveBalance(Balance(id = "main", name = " Main account ", amount = 1250.5, currency = "eur"))
 
-        assertEquals(Balance(id = "main", name = "Main account", amount = 1250.5, currency = "EUR"), result.getOrThrow())
+        assertEquals(
+            Balance(id = "main", name = "Main account", amount = 1250.5, currency = "EUR"),
+            result.getOrThrow(),
+        )
     }
 
     @Test

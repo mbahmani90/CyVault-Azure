@@ -41,17 +41,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.cypressit.cyvault.systemdesign.components.CyButton
-import com.cypressit.cyvault.systemdesign.components.CyOutlinedTextField
-import com.cypressit.cyvault.systemdesign.components.CyTopAppBar
-import com.cypressit.cyvault.feature.vault.addcard.presentation.BankAppLauncher
 import com.cypressit.cyvault.feature.vault.addcard.domain.model.BankAccount
+import com.cypressit.cyvault.feature.vault.addcard.presentation.BankAppLauncher
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardEffect
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardIntent
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardState
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardStep
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardViewModel
 import com.cypressit.cyvault.feature.vault.card.domain.model.CardType
+import com.cypressit.cyvault.systemdesign.components.CyButton
+import com.cypressit.cyvault.systemdesign.components.CyOutlinedTextField
+import com.cypressit.cyvault.systemdesign.components.CyTopAppBar
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -143,7 +143,9 @@ private fun SelectBankStep(
             modifier = Modifier.fillMaxWidth(),
             trailingIcon = if (state.isInstitutionsLoading) {
                 { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
-            } else null,
+            } else {
+                null
+            },
         )
 
         if (state.institutions.isNotEmpty()) {
@@ -331,7 +333,7 @@ private fun EnterCardDetailsStep(
                         onClick = {
                             onIntent(AddCardIntent.CardTypeChanged(type))
                             cardTypeExpanded = false
-                        }
+                        },
                     )
                 }
             }

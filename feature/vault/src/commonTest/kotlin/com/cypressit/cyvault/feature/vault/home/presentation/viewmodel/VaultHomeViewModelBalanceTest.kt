@@ -43,10 +43,13 @@ class VaultHomeViewModelBalanceTest {
     private val cards = FakeCardRepository()
     private val balances = FakeBalanceRepository()
 
-    private val main = Balance(id = "main", name = "Main account", amount = 1250.5, currency = "EUR", date = "2026-10-20T00:00:00Z")
-    private val savings = Balance(id = "savings", name = "Savings", amount = 300.0, currency = "EUR", date = "2026-10-01T00:00:00Z")
+    private val main =
+        Balance(id = "main", name = "Main account", amount = 1250.5, currency = "EUR", date = "2026-10-20T00:00:00Z")
+    private val savings =
+        Balance(id = "savings", name = "Savings", amount = 300.0, currency = "EUR", date = "2026-10-01T00:00:00Z")
 
     @BeforeTest fun setUp() = Dispatchers.setMain(dispatcher)
+
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel(sampleBalancesSeeder: SampleBalancesSeeder? = null): VaultHomeViewModel {
@@ -103,7 +106,13 @@ class VaultHomeViewModelBalanceTest {
             ),
         )
 
-        assertEquals(listOf("EUR" to 74.31, "GBP" to -12.5), state.balanceTotals.map { (c, t) -> c to (kotlin.math.round(t * 100) / 100) })
+        assertEquals(
+            listOf("EUR" to 74.31, "GBP" to -12.5),
+            state.balanceTotals.map { (c, t) ->
+                c to
+                    (kotlin.math.round(t * 100) / 100)
+            },
+        )
     }
 
     @Test
@@ -123,7 +132,9 @@ class VaultHomeViewModelBalanceTest {
         advanceUntilIdle()
 
         viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
-        viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "Daily spending", 1250.5, "EUR", "2026-10-28T09:00:00Z"))
+        viewModel.onIntent(
+            VaultHomeIntent.SaveItem("Main account", "Daily spending", 1250.5, "EUR", "2026-10-28T09:00:00Z"),
+        )
         advanceUntilIdle()
 
         val saved = balances.saved.single()
@@ -184,7 +195,12 @@ class VaultHomeViewModelBalanceTest {
     @Test
     fun addSampleBalances_withASeeder_addsThemAndReloads() = runTest(dispatcher) {
         var seeded = 0
-        val viewModel = viewModel(sampleBalancesSeeder = { seeded++; Result.success(50) })
+        val viewModel = viewModel(
+            sampleBalancesSeeder = {
+                seeded++
+                Result.success(50)
+            },
+        )
         advanceUntilIdle()
         balances.balances = listOf(main)
 

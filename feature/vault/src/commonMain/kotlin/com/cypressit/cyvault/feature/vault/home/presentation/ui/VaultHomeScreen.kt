@@ -30,7 +30,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,6 +40,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -79,9 +79,9 @@ import cyvault.vault.generated.resources.vault_home_balance_delete_confirm
 import cyvault.vault.generated.resources.vault_home_balance_delete_message
 import cyvault.vault.generated.resources.vault_home_balance_delete_title
 import cyvault.vault.generated.resources.vault_home_balances_empty
+import cyvault.vault.generated.resources.vault_home_change_photo_description
 import cyvault.vault.generated.resources.vault_home_delete_balance_description
 import cyvault.vault.generated.resources.vault_home_edit_item_title
-import cyvault.vault.generated.resources.vault_home_change_photo_description
 import cyvault.vault.generated.resources.vault_home_logo_description
 import cyvault.vault.generated.resources.vault_home_open_menu_description
 import cyvault.vault.generated.resources.vault_home_sign_out
@@ -246,7 +246,7 @@ internal fun VaultHomeScreen(
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
             }
-        }
+        },
     ) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackBarHostState) },
@@ -479,7 +479,12 @@ private fun HomeContent(
                         trailingContent = {
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text = formatAmount(balance.amount, balance.currency, plusSign = true, symbolAfter = true),
+                                    text = formatAmount(
+                                        balance.amount,
+                                        balance.currency,
+                                        plusSign = true,
+                                        symbolAfter = true,
+                                    ),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = if (isIncome) IncomeGreen else MaterialTheme.colorScheme.error,
                                 )

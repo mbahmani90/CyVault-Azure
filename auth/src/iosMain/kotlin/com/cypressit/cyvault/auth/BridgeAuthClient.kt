@@ -25,40 +25,55 @@ internal class BridgeAuthClient : AuthClient {
     override suspend fun signUp(name: String, email: String, password: String) =
         suspendCancellableCoroutine { continuation ->
             bridge.register(name, email, password) { error ->
-                if (error != null) continuation.resumeWithException(Exception(error))
-                else continuation.resume(Unit)
+                if (error != null) {
+                    continuation.resumeWithException(Exception(error))
+                } else {
+                    continuation.resume(Unit)
+                }
             }
         }
 
     override suspend fun confirmSignUp(email: String, code: String) =
         suspendCancellableCoroutine { continuation ->
             bridge.confirmSignUp(email, code) { error ->
-                if (error != null) continuation.resumeWithException(Exception(error))
-                else continuation.resume(Unit)
+                if (error != null) {
+                    continuation.resumeWithException(Exception(error))
+                } else {
+                    continuation.resume(Unit)
+                }
             }
         }
 
     override suspend fun resetPassword(email: String) =
         suspendCancellableCoroutine { continuation ->
             bridge.forgotPassword(email) { error ->
-                if (error != null) continuation.resumeWithException(Exception(error))
-                else continuation.resume(Unit)
+                if (error != null) {
+                    continuation.resumeWithException(Exception(error))
+                } else {
+                    continuation.resume(Unit)
+                }
             }
         }
 
     override suspend fun signOut() =
         suspendCancellableCoroutine { continuation ->
             bridge.signOut { error ->
-                if (error != null) continuation.resumeWithException(Exception(error))
-                else continuation.resume(Unit)
+                if (error != null) {
+                    continuation.resumeWithException(Exception(error))
+                } else {
+                    continuation.resume(Unit)
+                }
             }
         }
 
     override suspend fun currentUser(): AuthUser? =
         suspendCancellableCoroutine { continuation ->
             bridge.getCurrentUser { userId, name, email, error ->
-                if (error != null || userId == null) continuation.resume(null)
-                else continuation.resume(AuthUser(id = userId, name = name ?: "", email = email ?: ""))
+                if (error != null || userId == null) {
+                    continuation.resume(null)
+                } else {
+                    continuation.resume(AuthUser(id = userId, name = name ?: "", email = email ?: ""))
+                }
             }
         }
 

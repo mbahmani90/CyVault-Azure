@@ -15,10 +15,10 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCase
-import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeViewModel
 import org.koin.core.module.dsl.viewModel

@@ -52,12 +52,12 @@ import cyvault.vault.generated.resources.vault_home_add_item_type_income
 import cyvault.vault.generated.resources.vault_home_add_item_type_purchase
 import cyvault.vault.generated.resources.vault_home_add_item_value
 import cyvault.vault.generated.resources.vault_home_balance_delete_confirm
-import org.jetbrains.compose.resources.stringResource
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringResource
+import kotlin.math.abs
 import kotlin.time.Clock
 import kotlin.time.Instant
-import kotlin.math.abs
 
 /** The currencies the dialog offers, as ISO 4217 codes. */
 internal val itemCurrencies = listOf("EUR", "GBP", "USD")
@@ -98,7 +98,7 @@ internal fun AddItemDialog(
     // Accept a decimal comma too, as many keyboards offer only that.
     val parsedValue = value.trim().replace(',', '.').toDoubleOrNull()?.let { abs(it) }
     val typeLabel = stringResource(
-        if (isIncome) Res.string.vault_home_add_item_type_income else Res.string.vault_home_add_item_type_purchase
+        if (isIncome) Res.string.vault_home_add_item_type_income else Res.string.vault_home_add_item_type_purchase,
     )
 
     // When it happened: now for a new item, the stored date when editing. Epoch millis so it
@@ -195,9 +195,12 @@ internal fun AddItemDialog(
                                 text = {
                                     Text(
                                         stringResource(
-                                            if (income) Res.string.vault_home_add_item_type_income
-                                            else Res.string.vault_home_add_item_type_purchase
-                                        )
+                                            if (income) {
+                                                Res.string.vault_home_add_item_type_income
+                                            } else {
+                                                Res.string.vault_home_add_item_type_purchase
+                                            },
+                                        ),
                                     )
                                 },
                                 onClick = {

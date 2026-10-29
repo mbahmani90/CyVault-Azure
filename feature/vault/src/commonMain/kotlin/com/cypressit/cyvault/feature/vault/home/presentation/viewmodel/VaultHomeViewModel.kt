@@ -244,5 +244,5 @@ class VaultHomeViewModel(
  */
 internal fun List<Balance>.newestFirst(): List<Balance> = sortedWith(
     compareByDescending<Balance> { balance -> balance.date?.let { runCatching { Instant.parse(it) }.getOrNull() } }
-        .thenBy { it.id }
+        .thenBy { it.id },
 )

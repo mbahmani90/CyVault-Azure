@@ -11,7 +11,7 @@ plugins {
 kotlin {
     listOf(
         iosArm64(),
-        iosSimulatorArm64()
+        iosSimulatorArm64(),
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             // Named CyVaultApp to avoid conflicting with Swift's built-in App protocol

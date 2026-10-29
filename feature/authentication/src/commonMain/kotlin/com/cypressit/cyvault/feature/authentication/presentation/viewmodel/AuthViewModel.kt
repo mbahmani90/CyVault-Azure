@@ -70,7 +70,14 @@ class AuthViewModel(
                 _state.update { it.copy(isForgotPasswordMode = true, isRegisterMode = false, emailError = null) }
 
             AuthIntent.BackToLogin ->
-                _state.update { it.copy(isForgotPasswordMode = false, isRegisterMode = false, isVerificationMode = false, emailError = null) }
+                _state.update {
+                    it.copy(
+                        isForgotPasswordMode = false,
+                        isRegisterMode = false,
+                        isVerificationMode = false,
+                        emailError = null,
+                    )
+                }
 
             AuthIntent.SubmitLogin -> handleLogin()
             AuthIntent.SubmitRegister -> handleRegister()
@@ -101,7 +108,9 @@ class AuthViewModel(
                 .onSuccess {
                     _state.update { it.copy(isVerificationMode = true, isRegisterMode = false) }
                 }
-                .onFailure { _effect.send(AuthEffect.ShowError(it.message ?: "Registration failed. Please try again.")) }
+                .onFailure {
+                    _effect.send(AuthEffect.ShowError(it.message ?: "Registration failed. Please try again."))
+                }
             _state.update { it.copy(isLoading = false) }
         }
     }
@@ -116,7 +125,9 @@ class AuthViewModel(
             _state.update { it.copy(isLoading = true) }
             confirmSignUpUseCase(s.email.trim(), s.verificationCode.trim())
                 .onSuccess { _effect.send(AuthEffect.NavigateToHome) }
-                .onFailure { _effect.send(AuthEffect.ShowError(it.message ?: "Verification failed. Please try again.")) }
+                .onFailure {
+                    _effect.send(AuthEffect.ShowError(it.message ?: "Verification failed. Please try again."))
+                }
             _state.update { it.copy(isLoading = false) }
         }
     }
@@ -126,7 +137,9 @@ class AuthViewModel(
             _state.update { it.copy(isLoading = true) }
             signInWithGoogleUseCase()
                 .onSuccess { _effect.send(AuthEffect.NavigateToHome) }
-                .onFailure { _effect.send(AuthEffect.ShowError(it.message ?: "Google sign-in failed. Please try again.")) }
+                .onFailure {
+                    _effect.send(AuthEffect.ShowError(it.message ?: "Google sign-in failed. Please try again."))
+                }
             _state.update { it.copy(isLoading = false) }
         }
     }
@@ -144,7 +157,13 @@ class AuthViewModel(
                     _effect.send(AuthEffect.ShowMessage("Password reset email sent. Please check your inbox."))
                     _state.update { it.copy(isForgotPasswordMode = false) }
                 }
-                .onFailure { _effect.send(AuthEffect.ShowError(it.message ?: "Failed to send reset email. Please try again.")) }
+                .onFailure {
+                    _effect.send(
+                        AuthEffect.ShowError(
+                            it.message ?: "Failed to send reset email. Please try again.",
+                        ),
+                    )
+                }
             _state.update { it.copy(isLoading = false) }
         }
     }
