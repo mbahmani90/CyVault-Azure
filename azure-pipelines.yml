@@ -32,11 +32,11 @@ pool:
 variables:
   GRADLE_USER_HOME: $(Pipeline.Workspace)/.gradle
   GRADLE_OPTS: -Dorg.gradle.daemon=false
-  # Set to 'true' once the SonarQube Cloud service connection and project exist (see README)
-  sonarEnabled: false
+  # Needs the SonarQube Cloud service connection below (see README); 'false' leaves the job out
+  sonarEnabled: true
   sonarServiceConnection: SonarCloud
-  sonarOrganization: cyvault
-  sonarProjectKey: cyvault-android
+  sonarOrganization: mbahmani90
+  sonarProjectKey: mbahmani90_CyVault-Azure
 
 stages:
   - stage: Build
@@ -108,7 +108,7 @@ stages:
                   scannerMode: cli
                   configMode: manual
                   cliProjectKey: $(sonarProjectKey)
-                  cliProjectName: CyVault Android
+                  cliProjectName: CyVault
                   cliSources: .
                   extraProperties: |
                     sonar.inclusions=**/src/*Main/**/*.kt,androidApp/src/main/**/*.kt

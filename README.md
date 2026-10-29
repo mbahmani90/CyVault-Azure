@@ -371,13 +371,13 @@ To set it up:
    its credentials as `E2E_EMAIL` and `E2E_PASSWORD`: repository secrets in GitHub, secret pipeline variables
    in Azure DevOps. The Azure E2E stage needs an agent with KVM for the emulator.
 4. For SonarQube, first turn off Automatic Analysis in the SonarQube Cloud project (Administration →
-   Analysis Method), then set it up in the CI that should report to it; running both makes them overwrite
-   each other's results. Until then the SonarQube job is left out of the run.
+   Analysis Method). Both CIs report to the same project, so the latest analysis of a branch is the one shown.
    - GitHub Actions: add a SonarQube Cloud token as the repository secret `SONAR_TOKEN`, and the
-     repository variables `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY` with your project's values.
-   - Azure Pipelines: install the SonarQube Cloud extension, add a service connection named `SonarCloud`,
-     set `sonarOrganization` and `sonarProjectKey` in `azure-pipelines.yml` to your project's values, and
-     set `sonarEnabled: true`.
+     repository variables `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY` with your project's values. Until
+     `SONAR_PROJECT_KEY` is set the SonarQube job is skipped.
+   - Azure Pipelines: install the SonarQube Cloud extension and add a service connection named `SonarCloud`;
+     the organization and project keys are in `azure-pipelines.yml`. `sonarEnabled: false` leaves the
+     SonarQube job out of the run.
 
 To run the E2E tests locally, start an emulator or connect a phone, start `appium` (with `ANDROID_HOME`
 and `JAVA_HOME` set), put the test account in the git-ignored `e2e/.env`, then run `./e2e/run-e2e.sh`.
