@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform) apply false
     alias(libs.plugins.composeCompiler) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
+    alias(libs.plugins.kotlinJvm) apply false
     alias(libs.plugins.kotlinx.serialization) apply false
     alias(libs.plugins.android.lint) apply false
     alias(libs.plugins.ktlint) apply false
@@ -21,6 +22,7 @@ val codeModules = listOf(
     ":systemdesign",
     ":feature:authentication",
     ":feature:vault",
+    ":testtags",
 )
 
 dependencies {

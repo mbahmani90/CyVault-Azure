@@ -58,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,7 +69,10 @@ import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHome
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeViewModel
 import com.cypressit.cyvault.systemdesign.components.CyAvatar
 import com.cypressit.cyvault.systemdesign.components.StatusBarIconsFor
+import com.cypressit.cyvault.systemdesign.components.exposeTestTags
 import com.cypressit.cyvault.systemdesign.theme.CyTheme
+import com.cypressit.cyvault.testtags.DeleteBalanceDialogTags
+import com.cypressit.cyvault.testtags.VaultHomeTags
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.cyvault_logo
 import cyvault.vault.generated.resources.vault_home_add_card
@@ -169,18 +173,26 @@ internal fun VaultHomeScreen(
     pendingDelete?.let { balance ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
+            // A dialog is its own window, so it needs exposeTestTags as well as the app root.
+            modifier = Modifier.exposeTestTags().testTag(DeleteBalanceDialogTags.DIALOG),
             title = { Text(stringResource(Res.string.vault_home_balance_delete_title)) },
             text = { Text(stringResource(Res.string.vault_home_balance_delete_message, balance.name)) },
             confirmButton = {
-                TextButton(onClick = {
-                    pendingDelete = null
-                    viewModel.onIntent(VaultHomeIntent.DeleteBalance(balance.id))
-                }) {
+                TextButton(
+                    onClick = {
+                        pendingDelete = null
+                        viewModel.onIntent(VaultHomeIntent.DeleteBalance(balance.id))
+                    },
+                    modifier = Modifier.testTag(DeleteBalanceDialogTags.CONFIRM_BUTTON),
+                ) {
                     Text(stringResource(Res.string.vault_home_balance_delete_confirm))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) {
+                TextButton(
+                    onClick = { pendingDelete = null },
+                    modifier = Modifier.testTag(DeleteBalanceDialogTags.CANCEL_BUTTON),
+                ) {
                     Text(stringResource(Res.string.vault_home_add_item_cancel))
                 }
             },
@@ -429,7 +441,10 @@ private fun HomeContent(
                             )
                         }
                     }
-                    SmallFloatingActionButton(onClick = onAddItem) {
+                    SmallFloatingActionButton(
+                        onClick = onAddItem,
+                        modifier = Modifier.testTag(VaultHomeTags.ADD_ITEM_BUTTON),
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = stringResource(Res.string.vault_home_add_item_description_fab),
@@ -438,7 +453,7 @@ private fun HomeContent(
                 }
             }
 
-            LazyColumn {
+            LazyColumn(modifier = Modifier.testTag(VaultHomeTags.BALANCE_LIST)) {
                 if (state.isLoadingBalances && state.balances.isEmpty()) {
                     item(key = "balances-loading") {
                         LinearProgressIndicator(
@@ -456,7 +471,9 @@ private fun HomeContent(
                             text = stringResource(Res.string.vault_home_balances_empty),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .testTag(VaultHomeTags.BALANCES_EMPTY_TEXT),
                         )
                     }
                 }
@@ -500,6 +517,7 @@ private fun HomeContent(
                         // Tap edits; a long press asks to delete.
                         modifier = Modifier
                             .fillMaxWidth()
+                            .testTag(VaultHomeTags.BALANCE_ROW)
                             .combinedClickable(
                                 onClickLabel = stringResource(Res.string.vault_home_edit_item_title),
                                 onLongClickLabel = stringResource(Res.string.vault_home_delete_balance_description),

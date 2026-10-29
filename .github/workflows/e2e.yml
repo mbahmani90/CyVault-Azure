@@ -1,0 +1,77 @@
+# E2E tests on an Android emulator, alongside the Azure Pipelines CI.
+# Needs the repository secrets E2E_EMAIL and E2E_PASSWORD (a test account in the debug Entra tenant).
+name: E2E tests
+
+# Manual only for now (Actions tab → E2E tests → Run workflow). To run on every change, add:
+#   push:
+#     branches: [ main ]
+#   pull_request:
+#     branches: [ main ]
+on:
+  workflow_dispatch:
+
+# A newer push to the same branch makes the older run pointless
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # Launches the wrapper; Gradle then provisions the daemon JDK in gradle/gradle-daemon-jvm.properties
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Built before the emulator starts, so the two don't compete for CPU
+      - name: Assemble debug APK
+        run: ./gradlew :androidApp:assembleDebug
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Start Appium
+        run: |
+          npm install -g appium
+          appium driver install uiautomator2
+          nohup appium --log "$RUNNER_TEMP/appium.log" > /dev/null 2>&1 &
+          timeout 60 bash -c 'until curl -sf http://127.0.0.1:4723/status > /dev/null; do sleep 2; done'
+
+      # The emulator needs hardware acceleration; let the runner user open /dev/kvm
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run E2E tests
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          script: ./e2e/run-e2e.sh
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            e2e/build/test-results/e2eTest/
+            e2e/build/reports/tests/e2eTest/
+            ${{ runner.temp }}/appium.log

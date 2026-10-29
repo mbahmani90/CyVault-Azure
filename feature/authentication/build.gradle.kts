@@ -34,6 +34,7 @@ kotlin {
         commonMain.dependencies {
             // Sign-in and session (Entra External ID)
             implementation(projects.auth)
+            implementation(projects.testtags)
 
             // Compose Multiplatform
             implementation(libs.compose.runtime)

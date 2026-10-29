@@ -34,10 +34,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
+import com.cypressit.cyvault.systemdesign.components.exposeTestTags
+import com.cypressit.cyvault.testtags.AddItemDialogTags
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.vault_home_add_item_cancel
 import cyvault.vault.generated.resources.vault_home_add_item_currency_description
@@ -157,6 +160,8 @@ internal fun AddItemDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        // A dialog is its own window, so it needs exposeTestTags as well as the app root.
+        modifier = Modifier.exposeTestTags().testTag(AddItemDialogTags.DIALOG),
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -165,7 +170,7 @@ internal fun AddItemDialog(
                     label = { Text(stringResource(Res.string.vault_home_add_item_title_field)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag(AddItemDialogTags.TITLE_FIELD),
                 )
                 OutlinedTextField(
                     value = description,
@@ -173,7 +178,7 @@ internal fun AddItemDialog(
                     label = { Text(stringResource(Res.string.vault_home_add_item_description)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag(AddItemDialogTags.DESCRIPTION_FIELD),
                 )
                 Box {
                     OutlinedButton(
@@ -225,7 +230,7 @@ internal fun AddItemDialog(
                             keyboardType = KeyboardType.Decimal,
                             imeAction = ImeAction.Done,
                         ),
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).testTag(AddItemDialogTags.VALUE_FIELD),
                     )
                     // OutlinedTextField reserves 8 dp above its box for the floating label, so
                     // the same top padding centers the button on the box, not the whole field.
@@ -277,7 +282,7 @@ internal fun AddItemDialog(
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = onDismiss) {
+                TextButton(onClick = onDismiss, modifier = Modifier.testTag(AddItemDialogTags.CANCEL_BUTTON)) {
                     Text(stringResource(Res.string.vault_home_add_item_cancel))
                 }
                 TextButton(
@@ -286,6 +291,7 @@ internal fun AddItemDialog(
                         onSave(title.trim(), description.trim(), signed, currency, date.toString())
                     },
                     enabled = title.isNotBlank() && parsedValue != null && !isSaving,
+                    modifier = Modifier.testTag(AddItemDialogTags.SAVE_BUTTON),
                 ) {
                     Text(stringResource(Res.string.vault_home_add_item_save))
                 }
