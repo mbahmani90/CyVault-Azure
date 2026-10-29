@@ -177,7 +177,8 @@ jobs:
             ${{ runner.temp }}/appium.log
           retention-days: 7
 
-  # The E2E line's own result, so a failing emulator run never blocks CI result.
+  # The E2E line's own result, so a failing emulator run never blocks CI result. Like CI result,
+  # it passes when E2E tests was skipped because a docs-only change skipped Build.
   e2e-result:
     name: E2E result
     needs: e2e-tests
@@ -189,7 +190,7 @@ jobs:
         run: |
           echo "Results: $RESULTS"
           for result in $RESULTS; do
-            if [ "$result" != "success" ]; then exit 1; fi
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then exit 1; fi
           done
 
   # One check for branch protection: passes when every job passed or was skipped (docs-only change).
