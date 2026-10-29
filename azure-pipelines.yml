@@ -1,5 +1,8 @@
-# Android CI: Build, then Unit tests, Android Lint, Code style and SonarQube in parallel,
-# then CI result. Make "CI result" the one required check on main.
+# Android CI, the same as .github/workflows/ci.yml:
+#   Build ─┬─► Verify: Unit tests, Android Lint, Code style, SonarQube ─► CI result
+#          └─► E2E tests ─► E2E result
+# Make "CI result" the one required check on main. E2E signs in with the secret pipeline
+# variables E2E_EMAIL and E2E_PASSWORD (a test account; the tests delete every balance on it).
 
 trigger:
   branches:
@@ -161,3 +164,55 @@ stages:
               CODE_STYLE_RESULT: $(codeStyleResult)
               SONAR_RESULT: $(sonarResult)
             displayName: Check job results
+
+  # The E2E line runs next to Verify, like in .github/workflows/ci.yml; CI result doesn't depend on it.
+  - stage: E2E
+    displayName: E2E tests
+    dependsOn: Build
+    jobs:
+      - job: E2ETests
+        displayName: E2E tests
+        timeoutInMinutes: 45
+        steps:
+          - template: .azure-pipelines/steps/gradle-setup.yml
+          - template: .azure-pipelines/steps/android-emulator.yml
+          - bash: |
+              chmod +x e2e/run-e2e.sh
+              ./e2e/run-e2e.sh
+            displayName: Run E2E tests
+            env:
+              # Secret variables reach scripts only when mapped explicitly
+              E2E_EMAIL: $(E2E_EMAIL)
+              E2E_PASSWORD: $(E2E_PASSWORD)
+          - task: PublishTestResults@2
+            displayName: Publish E2E test results
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: "e2e/build/test-results/e2eTest/TEST-*.xml"
+              testRunTitle: E2E tests
+          - publish: $(Agent.TempDirectory)
+            artifact: e2e-logs
+            displayName: Publish emulator and Appium logs
+            condition: failed()
+
+  - stage: E2EResult
+    displayName: E2E result
+    dependsOn: E2E
+    condition: always()
+    jobs:
+      - job: E2EResult
+        displayName: E2E result
+        variables:
+          e2eResult: $[ stageDependencies.E2E.E2ETests.result ]
+        steps:
+          - checkout: none
+          - bash: |
+              echo "E2E tests: ${E2E_RESULT:-not run}"
+              case "${E2E_RESULT:-}" in
+                Succeeded|SucceededWithIssues) ;;
+                *) exit 1 ;;
+              esac
+            env:
+              E2E_RESULT: $(e2eResult)
+            displayName: Check E2E result
