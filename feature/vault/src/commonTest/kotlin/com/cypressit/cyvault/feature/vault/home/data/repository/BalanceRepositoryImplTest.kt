@@ -1,6 +1,7 @@
 package com.cypressit.cyvault.feature.vault.home.data.repository
 
 import com.cypressit.cyvault.feature.vault.home.data.remote.BalanceApiService
+import com.cypressit.cyvault.feature.vault.home.data.remote.CyVaultApiConfig
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import io.ktor.client.HttpClient
@@ -24,6 +25,7 @@ class BalanceRepositoryImplTest {
                 respond(json, status, headersOf(HttpHeaders.ContentType, "application/json"))
             }) { install(ContentNegotiation) { json() } },
             authClient = FakeAuthClient(),
+            config = CyVaultApiConfig.Production,
         )
     )
 

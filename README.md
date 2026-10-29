@@ -231,7 +231,12 @@ tenant (so its own users), app registrations, user flow, Function App and storag
 | `dev` | release builds (production) | `cyvault.onmicrosoft.com` | `CyVault API`, `CyVault Mobile`, user flow `SignUpSignIn` | `rg-cyvault-dev` |
 | `debug` | debug builds | `cyvaultdebug.onmicrosoft.com` | `CyVault API (debug)`, `CyVault Mobile (debug)`, user flow `SignUpSignIn (debug)` | `rg-cyvault-debug` |
 
-All of it is code:
+The Android app picks its environment by build type. Debug builds sign in to the debug tenant
+(`androidApp/src/debug/res/raw/auth_config_native_auth.json`) and call the debug API (the
+`CyVaultApiConfig` that `androidApp/src/debug` provides through Koin); release builds and iOS use
+production (`src/main`'s MSAL config and `CyVaultApiConfig.Production`).
+
+Each environment's backend is all code:
 
 - **Tenant:** [`infra/tenant/tenant.bicep`](azure-backend/infra/tenant/tenant.bicep), one `.bicepparam`
   per tenant. Deployed once, outside azd; azd never deletes a tenant.

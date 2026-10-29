@@ -35,6 +35,7 @@ class BalanceApiServiceTest {
                 install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             },
             authClient = authClient,
+            config = CyVaultApiConfig(baseUrl = "https://api.test/api", appIdUri = "api://test-api"),
         )
 
     private fun MockRequestHandleScope.respondJson(json: String) =
@@ -49,9 +50,9 @@ class BalanceApiServiceTest {
 
         val request = requests.single()
         assertEquals(HttpMethod.Get, request.method)
-        assertEquals(BalanceApiService.BALANCES_URL, request.url.toString())
+        assertEquals("https://api.test/api/me/balances", request.url.toString())
         assertEquals("Bearer test-token", request.headers[HttpHeaders.Authorization])
-        assertEquals(listOf(listOf(BalanceApiService.BALANCE_SCOPE)), authClient.requestedScopes)
+        assertEquals(listOf(listOf("api://test-api/Balance.ReadWrite")), authClient.requestedScopes)
         assertEquals("Main account", balances.single().name)
         assertEquals(1250.5, balances.single().amount)
         assertEquals("2026-10-27T09:30:00+00:00", balances.single().date)
@@ -64,7 +65,7 @@ class BalanceApiServiceTest {
 
         val request = requests.single()
         assertEquals(HttpMethod.Put, request.method)
-        assertEquals("${BalanceApiService.BALANCES_URL}/main", request.url.toString())
+        assertEquals("https://api.test/api/me/balances/main", request.url.toString())
         val body = request.body as TextContent
         assertEquals(ContentType.Application.Json, body.contentType.withoutParameters())
         val json = Json.parseToJsonElement(body.text).jsonObject
@@ -81,7 +82,7 @@ class BalanceApiServiceTest {
 
         val request = requests.single()
         assertEquals(HttpMethod.Delete, request.method)
-        assertEquals("${BalanceApiService.BALANCES_URL}/main", request.url.toString())
+        assertEquals("https://api.test/api/me/balances/main", request.url.toString())
         assertEquals("Bearer test-token", request.headers[HttpHeaders.Authorization])
     }
 
@@ -89,7 +90,7 @@ class BalanceApiServiceTest {
     fun deleteBalance_encodesTheIdInThePath() = runTest {
         api { respond("", HttpStatusCode.NoContent) }.deleteBalance("a b")
 
-        assertEquals("${BalanceApiService.BALANCES_URL}/a%20b", requests.single().url.toString())
+        assertEquals("https://api.test/api/me/balances/a%20b", requests.single().url.toString())
     }
 
     @Test
