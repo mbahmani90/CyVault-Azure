@@ -116,6 +116,9 @@ stages:
                     sonar.test.inclusions=**/src/*Test/**/*.kt
                     sonar.exclusions=**/build/**,iosApp/**,azure-backend/**,amplify-backend/**
                     sonar.coverage.jacoco.xmlReportPaths=build/reports/kover/report.xml
+                    # Wait for the Quality Gate: a failed gate fails the analysis step, this job and CI result
+                    sonar.qualitygate.wait=true
+                    sonar.qualitygate.timeout=300
               - bash: ./gradlew koverXmlReport
                 displayName: Run tests with coverage
               - task: SonarCloudAnalyze@3

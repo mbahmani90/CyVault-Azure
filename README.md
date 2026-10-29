@@ -355,7 +355,7 @@ Build ─┬─► Unit tests · Android Lint · Code style (· SonarQube) ─�
 | Unit tests | `testDebugUnitTest testAndroidHostTest` |
 | Android Lint | `:androidApp:lintDebug` (also lints the library modules) |
 | Code style | `ktlintCheck` (rules in `.editorconfig`; fix with `./gradlew ktlintFormat`) |
-| SonarQube | `koverXmlReport`, then SonarQube Cloud analysis |
+| SonarQube | `koverXmlReport`, then SonarQube Cloud analysis; fails if the Quality Gate fails |
 | CI result | Fails if any job above failed |
 | E2E tests | `:e2e:e2eTest` through `e2e/run-e2e.sh`: Appium drives the debug APK on an emulator |
 | E2E result | Fails if E2E tests failed; **CI result** doesn't depend on it |
@@ -378,6 +378,11 @@ To set it up:
    - Azure Pipelines: install the SonarQube Cloud extension and add a service connection named `SonarCloud`;
      the organization and project keys are in `azure-pipelines.yml`. `sonarEnabled: false` leaves the
      SonarQube job out of the run.
+   - Quality Gate: both scans wait for SonarQube Cloud's verdict (`sonar.qualitygate.wait=true`, up to 5 minutes).
+     When the gate fails, the SonarQube job fails and so does **CI result**, which blocks the PR. What the gate
+     checks is set in SonarQube Cloud (Project → Quality Gate); the default "Sonar way" looks at new code only:
+     no new bugs or vulnerabilities, all new security hotspots reviewed, ≥ 80% coverage and ≤ 3% duplication.
+     The failing conditions are on the project's page in SonarQube Cloud.
 
 To run the E2E tests locally, start an emulator or connect a phone, start `appium` (with `ANDROID_HOME`
 and `JAVA_HOME` set), put the test account in the git-ignored `e2e/.env`, then run `./e2e/run-e2e.sh`.

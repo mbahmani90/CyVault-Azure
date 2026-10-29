@@ -129,7 +129,8 @@ jobs:
           retention-days: 7
 
   # The same analysis as the SonarQube job in azure-pipelines.yml; turn off Automatic Analysis in
-  # SonarQube Cloud first, or the scan fails.
+  # SonarQube Cloud first, or the scan fails. The scan waits for the Quality Gate, so a failed
+  # gate fails this job and CI result.
   sonarqube:
     name: SonarQube
     needs: build
@@ -159,6 +160,8 @@ jobs:
             -Dsonar.test.inclusions=**/src/*Test/**/*.kt
             -Dsonar.exclusions=**/build/**,iosApp/**,azure-backend/**,amplify-backend/**
             -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/kover/report.xml
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
 
   e2e-tests:
     name: E2E tests
