@@ -1,14 +1,11 @@
 # E2E tests on an Android emulator, alongside the Azure Pipelines CI:
 #   Changes ─► Build ─► E2E tests ─► E2E result
-# Every PR, every push to main and manual runs from the Actions tab.
+# Manual runs only: Actions tab → E2E tests → Run workflow.
 # Needs the repository secrets E2E_EMAIL and E2E_PASSWORD (a test account in the debug Entra tenant;
 # the tests delete every balance on it).
 name: E2E tests
 
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 # A new push to the same branch cancels the run in progress.
