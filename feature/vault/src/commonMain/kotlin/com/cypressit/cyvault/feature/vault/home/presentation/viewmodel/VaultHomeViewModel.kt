@@ -8,6 +8,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
@@ -37,6 +38,7 @@ class VaultHomeViewModel(
     private val getBalances: GetBalancesUseCase,
     private val saveBalance: SaveBalanceUseCase,
     private val deleteBalance: DeleteBalanceUseCase,
+    private val deleteBalances: DeleteBalancesUseCase,
     /** Null unless :feature:vault-debug is loaded, which only debug builds do. */
     private val sampleBalancesSeeder: SampleBalancesSeeder? = null,
 ) : ViewModel() {
@@ -74,9 +76,22 @@ class VaultHomeViewModel(
                 _state.update { it.copy(isAddItemDialogVisible = false, editingBalance = null) }
             is VaultHomeIntent.SaveItem ->
                 saveItem(intent.title, intent.description, intent.value, intent.currency, intent.date)
-            is VaultHomeIntent.EditBalance ->
-                _state.update { it.copy(isAddItemDialogVisible = true, editingBalance = intent.balance) }
-            is VaultHomeIntent.DeleteBalance -> deleteExistingBalance(intent.id)
+            is VaultHomeIntent.ClickBalance -> clickBalance(intent.balance)
+            is VaultHomeIntent.LongClickBalance -> toggleBalanceSelection(intent.balance.id)
+            VaultHomeIntent.RequestDeleteEditingBalance -> _state.update {
+                // The confirmation replaces the edit dialog.
+                it.copy(pendingDeleteBalance = it.editingBalance, isAddItemDialogVisible = false, editingBalance = null)
+            }
+            VaultHomeIntent.ConfirmDeleteBalance -> confirmDeleteBalance()
+            VaultHomeIntent.DismissDeleteBalance -> _state.update { it.copy(pendingDeleteBalance = null) }
+            VaultHomeIntent.SelectAllBalances -> selectAllBalances()
+            VaultHomeIntent.ClearBalanceSelection -> _state.update { it.copy(selectedBalanceIds = emptySet()) }
+            VaultHomeIntent.RequestDeleteSelectedBalances -> _state.update {
+                it.copy(isDeleteSelectedConfirmVisible = it.isSelectionMode)
+            }
+            VaultHomeIntent.ConfirmDeleteSelectedBalances -> deleteSelectedBalances()
+            VaultHomeIntent.DismissDeleteSelectedBalances ->
+                _state.update { it.copy(isDeleteSelectedConfirmVisible = false) }
             VaultHomeIntent.AddSampleBalances -> addSamples()
         }
     }
@@ -86,7 +101,15 @@ class VaultHomeViewModel(
             _state.update { it.copy(isLoadingBalances = true) }
             getBalances()
                 .onSuccess { balances ->
-                    _state.update { it.copy(balances = balances.newestFirst(), isLoadingBalances = false) }
+                    _state.update { state ->
+                        val ids = balances.mapTo(mutableSetOf()) { it.id }
+                        state.copy(
+                            balances = balances.newestFirst(),
+                            isLoadingBalances = false,
+                            // A selected balance that's gone can't stay selected.
+                            selectedBalanceIds = state.selectedBalanceIds intersect ids,
+                        )
+                    }
                 }
                 .onFailure {
                     _state.update { it.copy(isLoadingBalances = false) }
@@ -134,10 +157,60 @@ class VaultHomeViewModel(
         viewModelScope.launch {
             deleteBalance(id)
                 .onSuccess {
-                    _state.update { state -> state.copy(balances = state.balances.filterNot { it.id == id }) }
+                    _state.update { state ->
+                        state.copy(
+                            balances = state.balances.filterNot { it.id == id },
+                            selectedBalanceIds = state.selectedBalanceIds - id,
+                        )
+                    }
                     _effect.send(VaultHomeEffect.BalanceDeleted)
                 }
                 .onFailure { _effect.send(VaultHomeEffect.BalanceRequestFailed) }
+        }
+    }
+
+    private fun clickBalance(balance: Balance) {
+        if (_state.value.isSelectionMode) {
+            toggleBalanceSelection(balance.id)
+        } else {
+            _state.update { it.copy(isAddItemDialogVisible = true, editingBalance = balance) }
+        }
+    }
+
+    private fun confirmDeleteBalance() {
+        val balance = _state.value.pendingDeleteBalance ?: return
+        _state.update { it.copy(pendingDeleteBalance = null) }
+        deleteExistingBalance(balance.id)
+    }
+
+    private fun toggleBalanceSelection(id: String) {
+        _state.update { state ->
+            val selected = state.selectedBalanceIds
+            state.copy(selectedBalanceIds = if (id in selected) selected - id else selected + id)
+        }
+    }
+
+    private fun selectAllBalances() {
+        _state.update { state -> state.copy(selectedBalanceIds = state.balances.mapTo(mutableSetOf()) { it.id }) }
+    }
+
+    private fun deleteSelectedBalances() {
+        val ids = _state.value.selectedBalanceIds
+        _state.update { it.copy(isDeleteSelectedConfirmVisible = false) }
+        if (ids.isEmpty() || _state.value.isDeletingBalances) return
+        viewModelScope.launch {
+            _state.update { it.copy(isDeletingBalances = true) }
+            val deleted = deleteBalances(ids)
+            // The ones that failed stay in the list and stay selected, so the user can retry.
+            _state.update { state ->
+                state.copy(
+                    balances = state.balances.filterNot { it.id in deleted },
+                    selectedBalanceIds = state.selectedBalanceIds - deleted,
+                    isDeletingBalances = false,
+                )
+            }
+            if (deleted.isNotEmpty()) _effect.send(VaultHomeEffect.BalancesDeleted(deleted.size))
+            if (deleted.size < ids.size) _effect.send(VaultHomeEffect.BalanceRequestFailed)
         }
     }
 

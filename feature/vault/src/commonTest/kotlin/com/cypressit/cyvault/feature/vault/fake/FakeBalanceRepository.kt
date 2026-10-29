@@ -13,6 +13,9 @@ class FakeBalanceRepository(var balances: List<Balance> = emptyList()) : Balance
 
     var failure: Exception? = null
 
+    /** Deleting one of these fails, while the others succeed. */
+    var failingDeleteIds: Set<String> = emptySet()
+
     /** When set, getBalances waits for it, so a test can see the loading state. */
     var gate: CompletableDeferred<Unit>? = null
     val saved = mutableListOf<Balance>()
@@ -38,6 +41,7 @@ class FakeBalanceRepository(var balances: List<Balance> = emptyList()) : Balance
 
     override suspend fun deleteBalance(id: String): Result<Unit> {
         failure?.let { return Result.failure(it) }
+        if (id in failingDeleteIds) return Result.failure(Exception("delete failed"))
         deletedIds += id
         return Result.success(Unit)
     }

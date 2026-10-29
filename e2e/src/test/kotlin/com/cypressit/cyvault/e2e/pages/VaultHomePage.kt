@@ -17,14 +17,21 @@ class VaultHomePage(driver: AppiumDriver) : BasePage(driver) {
 
     fun isBalanceGone(title: String): Boolean = waitUntil { balanceRow(title) == null }
 
-    fun longPressBalance(title: String): DeleteBalanceDialogPage {
+    /** A long press starts selection mode with this balance selected. */
+    fun longPressBalance(title: String) = apply {
         val row = checkNotNull(balanceRow(title)) { "No balance \"$title\" on the home screen" }
         longPress(row)
+    }
+
+    fun isInSelectionMode(): Boolean = waitUntil { isShown(VaultHomeTags.SELECTION_DELETE_BUTTON) }
+
+    fun tapDeleteSelected(): DeleteBalanceDialogPage {
+        find(VaultHomeTags.SELECTION_DELETE_BUTTON).click()
         return DeleteBalanceDialogPage(driver)
     }
 
-    /** Deletes the balance through the UI: long press, then confirm. */
-    fun deleteBalance(title: String): VaultHomePage = longPressBalance(title).tapConfirm()
+    /** Deletes the balance through the UI: select it, delete, then confirm. */
+    fun deleteBalance(title: String): VaultHomePage = longPressBalance(title).tapDeleteSelected().tapConfirm()
 
     // The row's own text is empty: the title is on a text element inside it.
     private fun balanceRow(title: String): WebElement? =

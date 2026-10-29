@@ -10,6 +10,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
@@ -65,6 +66,7 @@ class VaultHomeViewModelProfilePhotoTest {
         getBalances = GetBalancesUseCase(balances),
         saveBalance = SaveBalanceUseCase(balances),
         deleteBalance = DeleteBalanceUseCase(balances),
+        deleteBalances = DeleteBalancesUseCase(balances),
     )
 
     @Test

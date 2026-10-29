@@ -23,7 +23,24 @@ data class VaultHomeState(
     /** True in debug builds, where :feature:vault-debug can add sample balances. */
     val canAddSampleBalances: Boolean = false,
     val isAddingSampleBalances: Boolean = false,
+    /** The balance waiting for the user to confirm its deletion, or null when nothing is asked. */
+    val pendingDeleteBalance: Balance? = null,
+    /** IDs of the balances selected in selection mode; empty outside it. */
+    val selectedBalanceIds: Set<String> = emptySet(),
+    val isDeleteSelectedConfirmVisible: Boolean = false,
+    val isDeletingBalances: Boolean = false,
 ) {
+    val isSelectionMode: Boolean
+        get() = selectedBalanceIds.isNotEmpty()
+
+    val selectedBalanceCount: Int
+        get() = selectedBalanceIds.size
+
+    fun isBalanceSelected(id: String): Boolean = id in selectedBalanceIds
+
+    val areAllBalancesSelected: Boolean
+        get() = balances.isNotEmpty() && balances.all { it.id in selectedBalanceIds }
+
     /**
      * The balances added up per currency, since euros and pounds can't be summed together.
      * Each currency appears once, in the order it first appears in [balances].
