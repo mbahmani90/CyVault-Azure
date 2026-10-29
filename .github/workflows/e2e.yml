@@ -1,4 +1,4 @@
-# E2E tests on an Android emulator, alongside the Azure Pipelines CI:
+# E2E tests on an Android emulator (only here, not in Azure Pipelines):
 #   Changes ─► Build ─► E2E tests ─► E2E result
 # Manual runs only: Actions tab → E2E tests → Run workflow.
 # Needs the repository secrets E2E_EMAIL and E2E_PASSWORD (a test account in the debug Entra tenant;
