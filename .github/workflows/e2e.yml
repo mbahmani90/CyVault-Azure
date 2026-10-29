@@ -2,12 +2,23 @@
 # Needs the repository secrets E2E_EMAIL and E2E_PASSWORD (a test account in the debug Entra tenant).
 name: E2E tests
 
-# Manual only for now (Actions tab → E2E tests → Run workflow). To run on every change, add:
-#   push:
-#     branches: [ main ]
-#   pull_request:
-#     branches: [ main ]
 on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - iosApp/**
+      - azure-backend/**
+      - amplify-backend/**
+      - docs/**
+      - "*.md"
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - iosApp/**
+      - azure-backend/**
+      - amplify-backend/**
+      - docs/**
+      - "*.md"
   workflow_dispatch:
 
 # A newer push to the same branch makes the older run pointless
