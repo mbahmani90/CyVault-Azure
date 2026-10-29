@@ -23,10 +23,14 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCard
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -51,9 +56,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,18 +85,25 @@ import cyvault.vault.generated.resources.vault_home_add_sample_balances
 import cyvault.vault.generated.resources.vault_home_balance_delete_confirm
 import cyvault.vault.generated.resources.vault_home_balance_delete_message
 import cyvault.vault.generated.resources.vault_home_balance_delete_title
+import cyvault.vault.generated.resources.vault_home_balances_delete_message
+import cyvault.vault.generated.resources.vault_home_balances_delete_title
 import cyvault.vault.generated.resources.vault_home_balances_empty
 import cyvault.vault.generated.resources.vault_home_change_photo_description
-import cyvault.vault.generated.resources.vault_home_delete_balance_description
 import cyvault.vault.generated.resources.vault_home_edit_item_title
 import cyvault.vault.generated.resources.vault_home_logo_description
 import cyvault.vault.generated.resources.vault_home_open_menu_description
+import cyvault.vault.generated.resources.vault_home_select_balance_description
+import cyvault.vault.generated.resources.vault_home_selection_close_description
+import cyvault.vault.generated.resources.vault_home_selection_count
+import cyvault.vault.generated.resources.vault_home_selection_delete_description
+import cyvault.vault.generated.resources.vault_home_selection_select_all_description
 import cyvault.vault.generated.resources.vault_home_sign_out
 import cyvault.vault.generated.resources.vault_home_sign_out_description
 import cyvault.vault.generated.resources.vault_home_title
 import cyvault.vault.generated.resources.vault_home_total_since
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -151,9 +161,10 @@ internal fun VaultHomeScreen(
         onAddCard = onAddCardClick,
     )
 
-    // Deleting money data takes a confirmation, from a long press or the edit dialog's Delete.
-    // The confirmation is pure UI state.
-    var pendingDelete by remember { mutableStateOf<Balance?>(null) }
+    // Back leaves selection mode before it leaves the screen.
+    SystemBackHandler(enabled = state.isSelectionMode) {
+        viewModel.onIntent(VaultHomeIntent.ClearBalanceSelection)
+    }
 
     if (state.isAddItemDialogVisible) {
         AddItemDialog(
@@ -163,39 +174,29 @@ internal fun VaultHomeScreen(
             onSave = { title, description, value, currency, date ->
                 viewModel.onIntent(VaultHomeIntent.SaveItem(title, description, value, currency, date))
             },
-            onDelete = {
-                pendingDelete = state.editingBalance
-                viewModel.onIntent(VaultHomeIntent.DismissAddItemDialog)
-            },
+            onDelete = { viewModel.onIntent(VaultHomeIntent.RequestDeleteEditingBalance) },
         )
     }
 
-    pendingDelete?.let { balance ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            // A dialog is its own window, so it needs exposeTestTags as well as the app root.
-            modifier = Modifier.exposeTestTags().testTag(DeleteBalanceDialogTags.DIALOG),
-            title = { Text(stringResource(Res.string.vault_home_balance_delete_title)) },
-            text = { Text(stringResource(Res.string.vault_home_balance_delete_message, balance.name)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        pendingDelete = null
-                        viewModel.onIntent(VaultHomeIntent.DeleteBalance(balance.id))
-                    },
-                    modifier = Modifier.testTag(DeleteBalanceDialogTags.CONFIRM_BUTTON),
-                ) {
-                    Text(stringResource(Res.string.vault_home_balance_delete_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { pendingDelete = null },
-                    modifier = Modifier.testTag(DeleteBalanceDialogTags.CANCEL_BUTTON),
-                ) {
-                    Text(stringResource(Res.string.vault_home_add_item_cancel))
-                }
-            },
+    state.pendingDeleteBalance?.let { balance ->
+        DeleteBalancesDialog(
+            title = stringResource(Res.string.vault_home_balance_delete_title),
+            message = stringResource(Res.string.vault_home_balance_delete_message, balance.name),
+            onConfirm = { viewModel.onIntent(VaultHomeIntent.ConfirmDeleteBalance) },
+            onDismiss = { viewModel.onIntent(VaultHomeIntent.DismissDeleteBalance) },
+        )
+    }
+
+    if (state.isDeleteSelectedConfirmVisible) {
+        DeleteBalancesDialog(
+            title = pluralStringResource(
+                Res.plurals.vault_home_balances_delete_title,
+                state.selectedBalanceCount,
+                state.selectedBalanceCount,
+            ),
+            message = stringResource(Res.string.vault_home_balances_delete_message),
+            onConfirm = { viewModel.onIntent(VaultHomeIntent.ConfirmDeleteSelectedBalances) },
+            onDismiss = { viewModel.onIntent(VaultHomeIntent.DismissDeleteSelectedBalances) },
         )
     }
 
@@ -262,7 +263,18 @@ internal fun VaultHomeScreen(
     ) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackBarHostState) },
-            topBar = {
+            topBar = topBar@{
+                if (state.isSelectionMode) {
+                    SelectionTopBar(
+                        selectedCount = state.selectedBalanceCount,
+                        areAllSelected = state.areAllBalancesSelected,
+                        isDeleting = state.isDeletingBalances,
+                        onClose = { viewModel.onIntent(VaultHomeIntent.ClearBalanceSelection) },
+                        onSelectAll = { viewModel.onIntent(VaultHomeIntent.SelectAllBalances) },
+                        onDelete = { viewModel.onIntent(VaultHomeIntent.RequestDeleteSelectedBalances) },
+                    )
+                    return@topBar
+                }
                 TopAppBar(
                     title = {
                         Text(
@@ -300,12 +312,104 @@ internal fun VaultHomeScreen(
             HomeContent(
                 state = state,
                 onAddItem = { viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog) },
-                onEditBalance = { viewModel.onIntent(VaultHomeIntent.EditBalance(it)) },
-                onLongPressBalance = { pendingDelete = it },
+                onClickBalance = { viewModel.onIntent(VaultHomeIntent.ClickBalance(it)) },
+                onLongClickBalance = { viewModel.onIntent(VaultHomeIntent.LongClickBalance(it)) },
                 modifier = Modifier.padding(paddingValues),
             )
         }
     }
+}
+
+/** Replaces the brand top bar while balances are selected: close, count, select all, delete. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectionTopBar(
+    selectedCount: Int,
+    areAllSelected: Boolean,
+    isDeleting: Boolean,
+    onClose: () -> Unit,
+    onSelectAll: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    TopAppBar(
+        title = {
+            Text(
+                text = stringResource(Res.string.vault_home_selection_count, selectedCount),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.testTag(VaultHomeTags.SELECTION_COUNT_TEXT),
+            )
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = CyTheme.brandColors.topBar,
+            titleContentColor = CyTheme.brandColors.onTopBar,
+            navigationIconContentColor = CyTheme.brandColors.onTopBar,
+            actionIconContentColor = CyTheme.brandColors.onTopBar,
+        ),
+        navigationIcon = {
+            IconButton(onClick = onClose, modifier = Modifier.testTag(VaultHomeTags.SELECTION_CLOSE_BUTTON)) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(Res.string.vault_home_selection_close_description),
+                )
+            }
+        },
+        actions = {
+            IconButton(
+                onClick = onSelectAll,
+                enabled = !areAllSelected && !isDeleting,
+                modifier = Modifier.testTag(VaultHomeTags.SELECTION_SELECT_ALL_BUTTON),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SelectAll,
+                    contentDescription = stringResource(Res.string.vault_home_selection_select_all_description),
+                )
+            }
+            if (isDeleting) {
+                // Same size as the icon button it replaces, so the bar doesn't shift.
+                Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = CyTheme.brandColors.onTopBar,
+                    )
+                }
+            } else {
+                IconButton(onClick = onDelete, modifier = Modifier.testTag(VaultHomeTags.SELECTION_DELETE_BUTTON)) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(Res.string.vault_home_selection_delete_description),
+                    )
+                }
+            }
+        },
+    )
+}
+
+/** Asks before deleting one balance or the selected ones. */
+@Composable
+private fun DeleteBalancesDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        // A dialog is its own window, so it needs exposeTestTags as well as the app root.
+        modifier = Modifier.exposeTestTags().testTag(DeleteBalanceDialogTags.DIALOG),
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = {
+            TextButton(onClick = onConfirm, modifier = Modifier.testTag(DeleteBalanceDialogTags.CONFIRM_BUTTON)) {
+                Text(stringResource(Res.string.vault_home_balance_delete_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag(DeleteBalanceDialogTags.CANCEL_BUTTON)) {
+                Text(stringResource(Res.string.vault_home_add_item_cancel))
+            }
+        },
+    )
 }
 
 /**
@@ -393,8 +497,8 @@ private fun BalanceDivider() {
 private fun HomeContent(
     state: VaultHomeState,
     onAddItem: () -> Unit,
-    onEditBalance: (Balance) -> Unit,
-    onLongPressBalance: (Balance) -> Unit,
+    onClickBalance: (Balance) -> Unit,
+    onLongClickBalance: (Balance) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when {
@@ -483,7 +587,22 @@ private fun HomeContent(
                     if (index > 0) BalanceDivider()
                     // Purchases are negative and income positive; the sign leads the symbol.
                     val isIncome = balance.amount >= 0
+                    val isSelected = state.isBalanceSelected(balance.id)
                     ListItem(
+                        // A check box only in selection mode, so normal rows keep their full width.
+                        leadingContent = if (state.isSelectionMode) {
+                            { Checkbox(checked = isSelected, onCheckedChange = null) }
+                        } else {
+                            null
+                        },
+                        colors = ListItemDefaults.colors(
+                            // Neutral gray: the brand purple would compete with the amounts' colors.
+                            containerColor = if (isSelected) {
+                                MaterialTheme.colorScheme.surfaceContainerHighest
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            },
+                        ),
                         headlineContent = { Text(balance.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         // Every row gets a second line, so rows without a description line up too.
                         supportingContent = {
@@ -514,15 +633,21 @@ private fun HomeContent(
                                 }
                             }
                         },
-                        // Tap edits; a long press asks to delete.
+                        // Tap edits, or selects in selection mode; a long press starts selection mode.
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag(VaultHomeTags.BALANCE_ROW)
                             .combinedClickable(
-                                onClickLabel = stringResource(Res.string.vault_home_edit_item_title),
-                                onLongClickLabel = stringResource(Res.string.vault_home_delete_balance_description),
-                                onLongClick = { onLongPressBalance(balance) },
-                                onClick = { onEditBalance(balance) },
+                                onClickLabel = stringResource(
+                                    if (state.isSelectionMode) {
+                                        Res.string.vault_home_select_balance_description
+                                    } else {
+                                        Res.string.vault_home_edit_item_title
+                                    },
+                                ),
+                                onLongClickLabel = stringResource(Res.string.vault_home_select_balance_description),
+                                onLongClick = { onLongClickBalance(balance) },
+                                onClick = { onClickBalance(balance) },
                             ),
                     )
                 }

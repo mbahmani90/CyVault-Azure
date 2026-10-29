@@ -25,9 +25,26 @@ sealed class VaultHomeIntent {
         val date: String,
     ) : VaultHomeIntent()
 
-    /** Opens the add-item dialog on an existing balance. */
-    data class EditBalance(val balance: Balance) : VaultHomeIntent()
-    data class DeleteBalance(val id: String) : VaultHomeIntent()
+    /** A tap on a balance row: opens it for editing, or in selection mode selects or deselects it. */
+    data class ClickBalance(val balance: Balance) : VaultHomeIntent()
+
+    /** A long press on a balance row: selects or deselects it; the first one starts selection mode. */
+    data class LongClickBalance(val balance: Balance) : VaultHomeIntent()
+
+    /** The edit dialog's Delete: asks to confirm deleting the balance being edited. */
+    data object RequestDeleteEditingBalance : VaultHomeIntent()
+    data object ConfirmDeleteBalance : VaultHomeIntent()
+    data object DismissDeleteBalance : VaultHomeIntent()
+
+    data object SelectAllBalances : VaultHomeIntent()
+
+    /** The selection bar's close button or system back: leaves selection mode. */
+    data object ClearBalanceSelection : VaultHomeIntent()
+
+    /** The selection bar's delete: asks to confirm deleting the selected balances. */
+    data object RequestDeleteSelectedBalances : VaultHomeIntent()
+    data object ConfirmDeleteSelectedBalances : VaultHomeIntent()
+    data object DismissDeleteSelectedBalances : VaultHomeIntent()
 
     /** Debug builds only: saves a batch of random balances. */
     data object AddSampleBalances : VaultHomeIntent()

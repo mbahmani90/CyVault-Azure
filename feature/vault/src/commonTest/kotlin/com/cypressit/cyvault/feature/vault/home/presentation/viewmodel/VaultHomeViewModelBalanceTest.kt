@@ -10,6 +10,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
@@ -65,6 +66,7 @@ class VaultHomeViewModelBalanceTest {
             getBalances = GetBalancesUseCase(balances),
             saveBalance = SaveBalanceUseCase(balances),
             deleteBalance = DeleteBalanceUseCase(balances),
+            deleteBalances = DeleteBalancesUseCase(balances),
             sampleBalancesSeeder = sampleBalancesSeeder,
         )
     }
@@ -154,7 +156,7 @@ class VaultHomeViewModelBalanceTest {
         val viewModel = viewModel()
         advanceUntilIdle()
 
-        viewModel.onIntent(VaultHomeIntent.EditBalance(main))
+        viewModel.onIntent(VaultHomeIntent.ClickBalance(main))
         viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "", 99.0, "EUR", "2026-10-20T00:00:00Z"))
         advanceUntilIdle()
 
@@ -179,17 +181,52 @@ class VaultHomeViewModelBalanceTest {
     }
 
     @Test
-    fun deleteBalance_removesTheRow() = runTest(dispatcher) {
+    fun requestDeleteEditingBalance_closesTheEditorAndAsksToConfirm() = runTest(dispatcher) {
         balances.balances = listOf(main, savings)
         val viewModel = viewModel()
         advanceUntilIdle()
 
-        viewModel.onIntent(VaultHomeIntent.DeleteBalance("main"))
+        viewModel.onIntent(VaultHomeIntent.ClickBalance(main))
+        viewModel.onIntent(VaultHomeIntent.RequestDeleteEditingBalance)
+
+        val state = viewModel.state.value
+        assertEquals(main, state.pendingDeleteBalance)
+        assertFalse(state.isAddItemDialogVisible)
+        assertNull(state.editingBalance)
+        assertEquals(emptyList(), balances.deletedIds)
+    }
+
+    @Test
+    fun confirmDeleteBalance_removesTheRow() = runTest(dispatcher) {
+        balances.balances = listOf(main, savings)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.ClickBalance(main))
+        viewModel.onIntent(VaultHomeIntent.RequestDeleteEditingBalance)
+        viewModel.onIntent(VaultHomeIntent.ConfirmDeleteBalance)
         advanceUntilIdle()
 
         assertEquals(listOf("main"), balances.deletedIds)
         assertEquals(listOf(savings), viewModel.state.value.balances)
+        assertNull(viewModel.state.value.pendingDeleteBalance)
         assertEquals(VaultHomeEffect.BalanceDeleted, viewModel.effect.first())
+    }
+
+    @Test
+    fun dismissDeleteBalance_keepsTheBalance() = runTest(dispatcher) {
+        balances.balances = listOf(main)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.ClickBalance(main))
+        viewModel.onIntent(VaultHomeIntent.RequestDeleteEditingBalance)
+        viewModel.onIntent(VaultHomeIntent.DismissDeleteBalance)
+        advanceUntilIdle()
+
+        assertNull(viewModel.state.value.pendingDeleteBalance)
+        assertEquals(emptyList(), balances.deletedIds)
+        assertEquals(listOf(main), viewModel.state.value.balances)
     }
 
     @Test

@@ -13,6 +13,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.repository.ProfilePhotoRe
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
@@ -56,6 +57,7 @@ internal val homeModule = module {
     factory { GetBalancesUseCase(get()) }
     factory { SaveBalanceUseCase(get()) }
     factory { DeleteBalanceUseCase(get()) }
+    factory { DeleteBalancesUseCase(get()) }
 
     // ViewModel
     // Written out because the sample-balances seeder is optional: only debug builds load
@@ -72,6 +74,7 @@ internal val homeModule = module {
             getBalances = get(),
             saveBalance = get(),
             deleteBalance = get(),
+            deleteBalances = get(),
             sampleBalancesSeeder = getOrNull(),
         )
     }
