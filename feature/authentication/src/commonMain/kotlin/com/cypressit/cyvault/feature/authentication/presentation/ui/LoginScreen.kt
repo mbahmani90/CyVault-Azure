@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthIntent
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthState
+import com.cypressit.cyvault.testtags.LoginTags
 import cyvault.authentication.generated.resources.Res
 import cyvault.authentication.generated.resources.cyvault_logo
 import cyvault.authentication.generated.resources.login_email_label
@@ -109,7 +111,7 @@ private fun LoginForm(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag(LoginTags.EMAIL_FIELD),
         )
 
         Spacer(Modifier.height(12.dp))
@@ -137,7 +139,7 @@ private fun LoginForm(
                 onIntent(AuthIntent.SubmitLogin)
             }),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag(LoginTags.PASSWORD_FIELD),
         )
 
         Spacer(Modifier.height(24.dp))
@@ -147,7 +149,7 @@ private fun LoginForm(
         } else {
             Button(
                 onClick = { onIntent(AuthIntent.SubmitLogin) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().testTag(LoginTags.SIGN_IN_BUTTON),
             ) {
                 Text(stringResource(Res.string.login_sign_in_button))
             }

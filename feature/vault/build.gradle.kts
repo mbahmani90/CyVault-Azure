@@ -36,6 +36,7 @@ kotlin {
             implementation(projects.core)
             implementation(projects.auth)
             implementation(projects.systemdesign)
+            implementation(projects.testtags)
 
             // Compose Multiplatform
             implementation(libs.compose.runtime)

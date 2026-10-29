@@ -20,3 +20,6 @@ node_modules/
 
 # Personal notes / playbook
 /docs/new/
+
+# E2E test account
+e2e/.env
