@@ -72,11 +72,10 @@ loads each feature's public Koin module.
 
 Each feature module has its own layers. A single-flow feature (authentication) keeps them at
 the module root; a multi-screen feature (vault) has one package per screen, each with its
-own layers and Koin module, plus a small shared package:
+own layers and Koin module:
 
 ```
 feature/vault/…/feature/vault/
-├── card/           shared by the screens: Card model, CardRepository, card API
 ├── home/           balances + totals per currency, drawer with sign-out and the profile photo
                     (Azure photo API client, on-device cache, photo picker)
 ├── addcard/        add a card
