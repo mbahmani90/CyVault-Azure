@@ -51,8 +51,9 @@ From `src/CyVault.Api`:
 cp local.settings.sample.json local.settings.json
 ```
 
-Put the API's client ID in `AzureAd__ClientId` in `local.settings.json`, which is git-ignored. Start
-Azurite (the local Blob Storage emulator) in one terminal and the Function in another:
+Put the API's client ID in `AzureAd__ClientId` in `local.settings.json`, which is git-ignored. To try
+sign-out locally, create a client secret in the CyVault API registration (**Certificates & secrets**) and
+put it in `Graph__ClientSecret`. Start Azurite (the local Blob Storage emulator) in one terminal and the Function in another:
 
 ```bash
 azurite --silent --location ../../.azurite
@@ -124,3 +125,26 @@ Function App, two storage accounts with shared keys disabled, Application Insigh
 Managed Identity and its role assignments) and deploys the code. It prints `API_BASE_URL` at the end.
 The signed-in developer also gets blob access to the `avatars` container, so the Function can run
 locally against the real storage through `az login`.
+
+## Server-side sign-out
+
+`POST /me/signout` revokes the user's Entra refresh tokens on **all** devices through Microsoft Graph's
+`revokeSignInSessions`. Access tokens already issued stay valid until they expire (about an hour). The
+Function calls Graph as the CyVault API app; the mobile app gets no Graph permission. How the flow works,
+with a diagram, is in the [main README](../README.md#server-side-sign-out-revoking-the-users-entra-sessions).
+These steps are manual for now, once per environment, in its tenant:
+
+1. In the **CyVault API** registration: **API permissions → Add a permission → Microsoft Graph →
+   Application permissions → `User.RevokeSessions.All`**, then grant admin consent.
+   `Set-EntraApps.ps1` doesn't know about this permission yet, so after it runs the portal may list it
+   under "Other permissions granted"; the consent, which is what counts, stays.
+2. After the first `azd up`, let the Function call Graph without a secret: in the same registration,
+   **Certificates & secrets → Federated credentials → Add credential → Other issuer**:
+
+   - Issuer: `https://login.microsoftonline.com/<AZURE_TENANT_ID>/v2.0`
+   - Subject identifier: `<FUNCTION_PRINCIPAL_ID>`
+   - Audience: `api://AzureADTokenExchange`
+
+   Both values are in `azd env get-values`. The Function's Managed Identity then signs in as the
+   CyVault API app. If the tenant doesn't accept the federated credential, set the
+   `Graph__ClientSecret` app setting on the Function App instead.

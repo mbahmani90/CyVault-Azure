@@ -4,6 +4,7 @@ import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
+import com.cypressit.cyvault.feature.vault.fake.succeedingSessionApi
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
@@ -54,7 +55,8 @@ class VaultHomeViewModelBalanceTest {
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel(sampleBalancesSeeder: SampleBalancesSeeder? = null): VaultHomeViewModel {
-        val accounts = AccountRepositoryImpl(FakeAuthClient())
+        val authClient = FakeAuthClient()
+        val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient))
         return VaultHomeViewModel(
             getCards = GetCardsUseCase(cards),
             deleteCard = DeleteCardUseCase(cards),

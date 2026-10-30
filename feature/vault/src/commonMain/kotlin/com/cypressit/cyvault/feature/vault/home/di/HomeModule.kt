@@ -4,6 +4,7 @@ import com.cypressit.cyvault.core.di.IO_DISPATCHER
 import com.cypressit.cyvault.feature.vault.home.data.remote.BalanceApiService
 import com.cypressit.cyvault.feature.vault.home.data.remote.CyVaultApiConfig
 import com.cypressit.cyvault.feature.vault.home.data.remote.ProfilePhotoApiService
+import com.cypressit.cyvault.feature.vault.home.data.remote.SessionApiService
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.data.repository.BalanceRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.data.repository.ProfilePhotoRepositoryImpl
@@ -33,9 +34,10 @@ internal val homeModule = module {
     // Remote
     single { ProfilePhotoApiService(get(), get(), apiConfig()) }
     single { BalanceApiService(get(), get(), apiConfig()) }
+    single { SessionApiService(get(), get(), apiConfig()) }
 
     // Repository (AuthClient comes from :auth's authClientModule)
-    single<AccountRepository> { AccountRepositoryImpl(get()) }
+    single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
     single<BalanceRepository> { BalanceRepositoryImpl(get()) }
     single<ProfilePhotoRepository> {
         ProfilePhotoRepositoryImpl(

@@ -1,7 +1,9 @@
+using Azure.Core;
 using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Storage.Blobs;
+using CyVault.Api.Session;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Azure.Functions.Worker.OpenTelemetry;
@@ -37,7 +39,33 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddSingleton(_ => CreateAvatarContainer(builder.Configuration.GetSection("AvatarStorage")));
 builder.Services.AddSingleton(_ => CreateBalanceTable(builder.Configuration.GetSection("BalanceStorage")));
 
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton(sp => new SignInSessions(
+    sp.GetRequiredService<IHttpClientFactory>(),
+    CreateGraphCredential(builder.Configuration.GetSection("AzureAd"), builder.Configuration.GetSection("Graph"))));
+
 builder.Build().Run();
+
+// Graph is called as the CyVault API app registration in the External ID tenant.
+static TokenCredential CreateGraphCredential(IConfigurationSection azureAd, IConfigurationSection graph)
+{
+    var tenantId = azureAd["TenantId"] ?? throw new InvalidOperationException("Set AzureAd:TenantId.");
+    var clientId = azureAd["ClientId"] ?? throw new InvalidOperationException("Set AzureAd:ClientId.");
+
+    // Local development: a client secret of the app registration, kept in local.settings.json.
+    var clientSecret = graph["ClientSecret"];
+    if (!string.IsNullOrEmpty(clientSecret))
+    {
+        return new ClientSecretCredential(tenantId, clientId, clientSecret);
+    }
+
+    // In Azure there is no secret: the app registration trusts the Function App's Managed
+    // Identity through a federated credential, and the identity's token is the client assertion.
+    var managedIdentity = new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned);
+    return new ClientAssertionCredential(tenantId, clientId, async cancellationToken =>
+        (await managedIdentity.GetTokenAsync(
+            new TokenRequestContext(["api://AzureADTokenExchange/.default"]), cancellationToken)).Token);
+}
 
 static TableClient CreateBalanceTable(IConfigurationSection config)
 {

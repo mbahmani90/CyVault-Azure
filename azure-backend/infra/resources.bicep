@@ -255,6 +255,9 @@ resource developerBalancesContributor 'Microsoft.Authorization/roleAssignments@2
   }
 }
 
+// For the federated credential that lets the Function call Graph as the CyVault API app.
+output functionPrincipalId string = functionApp.identity.principalId
+
 output functionAppName string = functionApp.name
 output apiBaseUrl string = 'https://${functionApp.properties.defaultHostName}/api'
 output avatarBlobServiceUri string = avatarStorage.properties.primaryEndpoints.blob

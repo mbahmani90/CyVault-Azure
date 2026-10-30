@@ -5,6 +5,7 @@ import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient.Companion.USER_ID
 import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
+import com.cypressit.cyvault.feature.vault.fake.succeedingSessionApi
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
@@ -44,7 +45,7 @@ class VaultHomeViewModelProfilePhotoTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val authClient = FakeAuthClient()
-    private val accounts = AccountRepositoryImpl(authClient)
+    private val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient))
     private val photos = FakeProfilePhotoRepository()
     private val cards = FakeCardRepository()
     private val balances = FakeBalanceRepository()
@@ -146,13 +147,13 @@ class VaultHomeViewModelProfilePhotoTest {
         advanceUntilIdle()
 
         viewModel.onIntent(VaultHomeIntent.SignOut)
-        advanceUntilIdle()
 
-        assertEquals(1, authClient.signOutCount)
-        assertEquals(1, photos.clearCount)
+        // The sign-out request runs on the HTTP engine's own thread, so wait for the navigation.
         assertEquals(
             listOf(VaultHomeEffect.CloseDrawer, VaultHomeEffect.NavigateToLogin),
             viewModel.effect.take(2).toList(),
         )
+        assertEquals(1, authClient.signOutCount)
+        assertEquals(1, photos.clearCount)
     }
 }
