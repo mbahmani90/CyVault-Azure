@@ -1,43 +1,39 @@
-<p align="center">
-  <img src="cyvault_icon.png" width="96" alt="CyVault icon" />
-</p>
-
-<h1 align="center">CyVault</h1>
-
-<p align="center">
-  A Kotlin Multiplatform (Android + iOS) wallet app for managing bank cards, with open-banking account linking.
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Kotlin-2.4-7F52FF?logo=kotlin&logoColor=white" />
-  <img src="https://img.shields.io/badge/Compose%20Multiplatform-1.11-4285F4?logo=jetpackcompose&logoColor=white" />
-  <img src="https://img.shields.io/badge/platforms-Android%20%7C%20iOS-3DDC84" />
-  <img src="https://img.shields.io/badge/status-work%20in%20progress-orange" />
-</p>
-
----
+<h1 align="center">
+  <img src="cyvault_icon.png" width="96" alt="CyVault icon" /><br />
+  CyVault
+</h1>
 
 ## Overview
 
-CyVault lets a user sign in, link a bank account through **open banking** (via the [Yapily](https://www.yapily.com/) API), and store and manage their cards in a vault.
+CyVault lets a user sign in and manage their balances: record purchases and income, see the total per currency, and edit or delete entries. The balances are stored per user in the Azure backend.
 
-The app is built with **Kotlin Multiplatform** and **Compose Multiplatform**. UI, ViewModels, business logic and networking are shared between Android and iOS. Only a small set of platform-specific pieces use `expect`/`actual` or native bridges.
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/sign-in.webp" width="200" alt="Sign-in screen" />
+  <img src="docs/screenshots/home.webp" width="200" alt="Home: total balance and the list of purchases and income" />
+  <img src="docs/screenshots/add-item.webp" width="200" alt="Add Item dialog" />
+  <img src="docs/screenshots/drawer.webp" width="200" alt="Drawer with the profile, Add Card and Sign Out" />
+</p>
+
+<p align="center">
+  <sub>Sign in · Home · Add a balance · Drawer</sub>
+</p>
 
 ## Features
 
 - **Authentication**
-  - **Android:** Microsoft Entra External ID with MSAL native authentication: the app's own Compose screens, no browser page
-  - **iOS:** AWS Cognito via Amplify (not migrated to Entra yet)
+  - Microsoft Entra External ID with MSAL native authentication: the app's own Compose screens, no browser page
   - Email/password sign-up with email verification code
   - Sign-in, sign-out, forgot password (sends the reset code; entering the code and a new password isn't built yet)
-  - **Sign in with Google:** on Android through Entra External ID with Google as an identity provider (MSAL browser flow in a browser tab); on iOS through the Amplify hosted UI (deep-link callback `cyvault://callback`)
-- **Add card via open banking** (multi-step flow)
-  1. Pick a country and search for your bank (Yapily institutions API)
-  2. Authorise access in the bank's page (Chrome Custom Tabs on Android, `SFSafariViewController` on iOS)
-  3. Return through a deep link, then choose one of the linked accounts
-  4. Enter card details and save
-- **Vault**: list and delete saved cards; the drawer shows the signed-in user (avatar, name, email) and sign-out
-- **Profile photo** (Android): tap the drawer avatar to pick a photo with the system Photo Picker. It's uploaded to the Azure backend with the user's Entra access token, cached in app-private storage, and removed from the device on sign-out
+  - **Sign in with Google:** through Entra External ID with Google as an identity provider (MSAL browser flow in a browser tab)
+- **Balances**
+  - Add a purchase or income with a title, description, amount, currency, and date and time
+  - Home shows the total per currency and every balance, newest first; tap one to edit it
+  - Long press to select several balances, then select all or delete them together
+  - Saved per user through the Azure balances API
+- **Drawer**: the signed-in user (avatar, name, email) and sign-out
+- **Profile photo**: tap the drawer avatar to pick a photo with the system Photo Picker. It's uploaded to the Azure backend with the user's Entra access token, cached in app-private storage, and removed from the device on sign-out
 
 ## Architecture
 
@@ -46,16 +42,14 @@ The project uses **Clean Architecture** with **MVI**, split into feature modules
 ```
 CyVault
 ├── androidApp       Android entry point (Application, MainActivity, the app's MSAL config)
-├── iosApp           iOS entry point (SwiftUI host + Amplify Swift auth bridge)
-├── app              Composition root: root Compose App, NavHost, Koin setup, the only iOS framework
+├── app              Composition root: root Compose App, NavHost, Koin setup
 ├── core             Shared non-UI code: Ktor client, platform DI, I/O dispatcher
-├── auth             Sign-in and session library: AuthClient (MSAL native auth / iOS bridge), reusable
+├── auth             Sign-in and session library: AuthClient (MSAL native auth), reusable
 ├── systemdesign     Design system: theme, colors, typography, shapes, reusable components
 ├── feature
 │   ├── authentication   Feature: sign-in / sign-up / Google / password reset
-│   └── vault            Feature: vault home, card list, add-card (open banking)
-├── azure-backend    Azure Functions API (.NET 10) + Bicep infrastructure, deployed with azd
-└── amplify-backend  AWS Amplify Gen 2 backend (Cognito + Google IdP), TypeScript
+│   └── vault            Feature: vault home with the balances, add-card
+└── azure-backend    Azure Functions API (.NET 10) + Bicep infrastructure, deployed with azd
 ```
 
 `:auth` is a library, not a feature: it has no screens and no CyVault types or IDs, and it doesn't
@@ -64,7 +58,7 @@ Google, password reset, current user, access tokens, sign-out) and `AuthUser`. T
 from their data layer and map `AuthUser` to their own models: `feature:authentication` in
 `AuthRepositoryImpl`, the vault in `home/data/AccountRepositoryImpl` and `ProfilePhotoApiService`.
 The app supplies the Entra registration: `androidApp` passes `MsalConfig(R.raw.auth_config_native_auth)`
-to Koin, and on iOS Swift sets `IosAuthBridgeHolder.bridge`.
+to Koin.
 
 Features never depend on each other and know nothing about navigation: they don't depend on
 Navigation Compose and have no routes. Each feature exposes plain screen composables
@@ -75,14 +69,13 @@ loads each feature's public Koin module.
 
 Each feature module has its own layers. A single-flow feature (authentication) keeps them at
 the module root; a multi-screen feature (vault) has one package per screen, each with its
-own layers and Koin module, plus a small shared package:
+own layers and Koin module:
 
 ```
 feature/vault/…/feature/vault/
-├── card/           shared by the screens: Card model, CardRepository, card API
-├── home/           card list + total assets, drawer with sign-out and the profile photo
+├── home/           balances + totals per currency, drawer with sign-out and the profile photo
                     (Azure photo API client, on-device cache, photo picker)
-├── addcard/        add a card via open banking (Yapily)
+├── addcard/        add a card
 │   ├── data/           remote services + DTOs, mappers, repository implementations
 │   ├── domain/         models, repository interfaces, use cases
 │   ├── presentation/   Compose screens + ViewModel (State / Intent / Effect)
@@ -133,12 +126,11 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 
 ### Platform-specific code
 
-| Concern | Shared API | Android | iOS |
-|---|---|---|---|
-| Authentication (`:auth`) | `AuthClient` interface, bound in `authClientModule` | `MsalAuthClient`: MSAL native auth (Entra External ID); `ActivityProvider` gives MSAL's browser sign-in the on-screen activity | `BridgeAuthClient`: Amplify Swift (Cognito), through the `IosAuthBridge` callback interface implemented in Swift |
-| Open bank authorisation page | `BankAppLauncher` (`expect`/`actual`) | Chrome Custom Tabs | `SFSafariViewController` |
-| Profile photo | `rememberProfilePhotoPicker` (`expect`/`actual`); `PickedPhotoReader` and `AvatarFileStore` interfaces bound in `homePlatformModule` | Photo Picker; `AndroidPickedPhotoReader` turns the photo upright from EXIF and scales it to 1024 px; `AndroidAvatarFileStore` caches it in `filesDir` | Not implemented yet (iOS can't reach the Azure API without Entra sign-in) |
-| DI | `platformModule` | Ktor OkHttp engine | Ktor Darwin engine |
+| Concern | Shared API | Android |
+|---|---|---|
+| Authentication (`:auth`) | `AuthClient` interface, bound in `authClientModule` | `MsalAuthClient`: MSAL native auth (Entra External ID); `ActivityProvider` gives MSAL's browser sign-in the on-screen activity |
+| Profile photo | `rememberProfilePhotoPicker` (`expect`/`actual`); `PickedPhotoReader` and `AvatarFileStore` interfaces bound in `homePlatformModule` | Photo Picker; `AndroidPickedPhotoReader` turns the photo upright from EXIF and scales it to 1024 px; `AndroidAvatarFileStore` caches it in `filesDir` |
+| DI | `platformModule` | Ktor OkHttp engine |
 
 ## Tech stack
 
@@ -149,25 +141,22 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 | Navigation | Navigation Compose (KMP), type-safe `@Serializable` routes |
 | Async | Kotlin Coroutines & Flow |
 | DI | Koin 4 |
-| Networking | Ktor 3 (OkHttp / Darwin), kotlinx.serialization |
-| Auth | Android: Microsoft Entra External ID + MSAL 8 (native auth) · iOS: AWS Amplify (Cognito) + Google federated sign-in |
-| Open banking | Yapily REST API |
-| Backend | Azure Functions (.NET 10 isolated, Flex Consumption), Microsoft.Identity.Web, Blob Storage, SkiaSharp, Bicep + Azure Developer CLI · AWS Amplify Gen 2 (TypeScript), for the iOS auth backend |
+| Networking | Ktor 3 (OkHttp), kotlinx.serialization |
+| Auth | Microsoft Entra External ID + MSAL 8 (native auth) |
+| Backend | Azure Functions (.NET 10 isolated, Flex Consumption), Microsoft.Identity.Web, Blob Storage, SkiaSharp, Bicep + Azure Developer CLI |
 
 ## Getting started
 
 ### Requirements
 
 - Android Studio (latest) with the Kotlin Multiplatform plugin
-- Xcode (for iOS)
 - JDK 17+
-- An Azure account (only needed to use your own Entra tenant for Android)
-- Node.js 18+ and an AWS account (only needed to deploy your own iOS auth backend)
-- For the Azure backend: .NET 10 SDK, Azure Functions Core Tools 4, Azure CLI, Azure Developer CLI (`azd`) and Azurite (`npm install -g azurite`)
+- An Azure account (only needed to use your own Entra tenant)
+- For the Azure backend: see [`azure-backend/README.md`](azure-backend/README.md#requirements)
 
 ### 1. Authentication
 
-**Android: Microsoft Entra External ID (optional: use your own tenant)**
+**Microsoft Entra External ID (optional: use your own tenant)**
 
 1. In the [Entra admin center](https://entra.microsoft.com), create an **external** tenant.
 2. In that tenant, register an app (single tenant) and add the **Android** platform with the package
@@ -204,148 +193,24 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
      Google client ID and secret, then tick **Google** under the user flow's **Identity providers**.
      The secret stays in Entra; the app never needs it.
 
-**iOS: AWS Amplify (optional: deploy your own backend)**
+### 2. Azure backend (profile photo and balances API)
 
-```bash
-cd amplify-backend
-npm install
-npx ampx sandbox secret set GOOGLE_CLIENT_ID
-npx ampx sandbox secret set GOOGLE_CLIENT_SECRET
-npx ampx sandbox
-```
+The backend's requirements, environments, local run and deployment are in
+[`azure-backend/README.md`](azure-backend/README.md).
 
-Copy the generated `amplify_outputs.json` to `iosApp/iosApp/amplify_outputs.json`.
+### 3. Run
 
-### 2. Open banking
-
-Create a Yapily sandbox application and put your credentials in
-`feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/addcard/data/remote/YapilyConfig.kt`.
-
-### 3. Azure backend (profile photo and balances API)
-
-**Environments.** Each azd environment is a full copy of the backend: its own Entra External ID
-tenant (so its own users), app registrations, user flow, Function App and storage.
-
-| azd environment | Used by | Tenant (users) | Entra apps | Azure resources |
-|---|---|---|---|---|
-| `dev` | release builds (production) | `cyvault.onmicrosoft.com` | `CyVault API`, `CyVault Mobile`, user flow `SignUpSignIn` | `rg-cyvault-dev` |
-| `debug` | debug builds | `cyvaultdebug.onmicrosoft.com` | `CyVault API (debug)`, `CyVault Mobile (debug)`, user flow `SignUpSignIn (debug)` | `rg-cyvault-debug` |
-
-The Android app picks its environment by build type. Debug builds sign in to the debug tenant
-(`androidApp/src/debug/res/raw/auth_config_native_auth.json`) and call the debug API (the
-`CyVaultApiConfig` that `androidApp/src/debug` provides through Koin); release builds and iOS use
-production (`src/main`'s MSAL config and `CyVaultApiConfig.Production`).
-
-Each environment's backend is all code:
-
-- **Tenant:** [`infra/tenant/tenant.bicep`](azure-backend/infra/tenant/tenant.bicep), one `.bicepparam`
-  per tenant. Deployed once, outside azd; azd never deletes a tenant.
-- **Google sign-in in the tenant:** [`Set-GoogleProvider.ps1`](azure-backend/infra/entra/Set-GoogleProvider.ps1),
-  once per tenant. It asks for the Google client secret and sends it only to Entra.
-- **App registrations, consent and user flow:** [`entra.json`](azure-backend/infra/entra/entra.json),
-  applied by [`Set-EntraApps.ps1`](azure-backend/infra/entra/Set-EntraApps.ps1), which azd runs before
-  every `azd provision` and `azd up`. It creates what's missing, updates what differs, and saves the app
-  IDs for Bicep. `-WhatIf` shows what it would change without changing anything.
-- **Function App and storage:** `infra/main.bicep`, wired to the environment's tenant through the
-  Function App's `AzureAd__*` settings.
-
-**Run locally** (from `azure-backend/src/CyVault.Api`):
-
-```bash
-cp local.settings.sample.json local.settings.json
-```
-
-Put the API's client ID in `AzureAd__ClientId` in `local.settings.json`, which is git-ignored. Start
-Azurite (the local Blob Storage emulator) in one terminal and the Function in another:
-
-```bash
-azurite --silent --location ../../.azurite
-```
-
-```bash
-func start
-```
-
-On Windows PowerShell, use `azurite.cmd` if script execution is disabled. The API listens on
-`http://localhost:7158/api/me/avatar` and answers `401` without a valid access token.
-
-**Deploy to Azure** (from `azure-backend/`):
-
-Needs PowerShell 7 (`pwsh`) for the Entra hooks, and for Google sign-in the Microsoft Graph module
-(`Install-Module Microsoft.Graph.Authentication -Scope CurrentUser`).
-
-To create the **debug** environment from nothing:
-
-1. Create its tenant (prints `tenantId` and `instance`):
-
-   ```bash
-   az deployment group create -g cyvault-rg -f infra/tenant/tenant.bicep -p infra/tenant/debug.bicepparam
-   ```
-
-2. Sign the Azure CLI in to the new tenant, and tell azd about it:
-
-   ```bash
-   az login --tenant <tenantId> --allow-no-subscriptions
-   ```
-
-   ```bash
-   azd env new debug
-   ```
-
-   ```bash
-   azd env set ENTRA_TENANT_ID <tenantId>
-   ```
-
-   ```bash
-   azd env set ENTRA_INSTANCE https://cyvaultdebug.ciamlogin.com/
-   ```
-
-3. Add Google sign-in with your Google OAuth client ID. It asks for the secret, then prints the
-   redirect URIs to add to that client in the Google Cloud console:
-
-   ```bash
-   pwsh ./infra/entra/Set-GoogleProvider.ps1 -EnvironmentName debug -ClientId <Google client ID>
-   ```
-
-4. Set the region (some, like West Europe, refuse new resources), create the Entra apps once on their
-   own (on a new environment `azd up` asks for `entraApiClientId` before it runs hooks), then deploy:
-
-   ```bash
-   azd env set AZURE_LOCATION northeurope
-   ```
-
-   ```bash
-   azd hooks run preprovision
-   ```
-
-   ```bash
-   azd up
-   ```
-
-An environment whose Entra apps already exist (like `dev`) has their IDs saved in the azd environment
-(`ENTRA_API_CLIENT_ID`, `ENTRA_MOBILE_CLIENT_ID`), so the hook updates them instead of creating new
-ones; without `ENTRA_TENANT_ID` it uses the production tenant.
-
-`azd up` asks for a subscription and region, creates the resources in `infra/` (Flex Consumption
-Function App, two storage accounts with shared keys disabled, Application Insights, the Function's
-Managed Identity and its role assignments) and deploys the code. It prints `API_BASE_URL` at the end.
-The signed-in developer also gets blob access to the `avatars` container, so the Function can run
-locally against the real storage through `az login`.
-
-### 4. Run
-
-- **Android:** `./gradlew :androidApp:assembleDebug`, or use the run configuration in Android Studio
-- **iOS:** open `iosApp/` in Xcode and run
+`./gradlew :androidApp:assembleDebug`, or use the run configuration in Android Studio.
 
 ## Continuous integration
 
 The same flow runs in two places, on every pull request and push to `main`:
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) in GitHub Actions and
-[`azure-pipelines.yml`](azure-pipelines.yml) in Azure Pipelines. Changes that only touch `iosApp/`, the
-backends, `docs/` or Markdown skip it.
+[`azure-pipelines.yml`](azure-pipelines.yml) in Azure Pipelines. Changes that only touch the backends,
+`docs/` or Markdown skip it.
 
 ```
-Build ─┬─► Unit tests · Android Lint · Code style (· SonarQube) ─► CI result
+Build ─┬─► Unit tests · Android Lint · Code style · SonarQube ─► CI result
        └─► E2E tests ─► E2E result
 ```
 
@@ -391,12 +256,10 @@ and `JAVA_HOME` set), put the test account in the git-ignored `e2e/.env`, then r
 
 CyVault is a portfolio / learning project and **not production-ready**. The known gaps and the planned fixes are:
 
-- **Yapily app secret** is currently read on the client for simplicity. In production, all Yapily calls should go through a backend proxy (for example an AWS Lambda) so the secret never ships in the app.
 - **Card data**: the demo model holds a card number and CVV. A real app must never store the CVV and should keep only a **tokenised** card reference from a PCI DSS-compliant provider.
 - **Card API**: `CardApiService` points to a placeholder endpoint. Planned: move it to the Azure Functions API, with every card keyed by the caller's `oid`.
-- **Profile photo on iOS**: needs the move to Entra first; then a `PHPicker` picker and an Application Support cache.
-- **Local storage**: planned: SQLDelight for offline caching, with platform keystore/keychain encryption for sensitive data.
-- **Auth**: move iOS from Amplify/Cognito to MSAL and Entra External ID, and finish the forgot-password flow (code + new password).
+- **Local storage**: planned: SQLDelight for offline caching, with Android Keystore encryption for sensitive data.
+- **Auth**: finish the forgot-password flow (code + new password).
 - More unit and UI tests for use cases and ViewModels.
 
 ## Author
