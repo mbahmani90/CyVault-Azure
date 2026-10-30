@@ -135,15 +135,15 @@
   <text x="561" y="494" class="t-chip">presentation</text>
   <text x="561" y="509" class="t-chipsub">AddCardScreen (own top bar)</text>
   <text x="561" y="522" class="t-chipsub">AddCardViewModel</text>
-  <text x="561" y="535" class="t-chipsub">BankAppLauncher</text>
+  <text x="561" y="535" class="t-chipsub">AddCardState · Intent · Effect</text>
   <rect x="477" y="557" width="168" height="58" rx="5" class="dom"/>
   <text x="561" y="572" class="t-chip">domain</text>
-  <text x="561" y="587" class="t-chipsub">BankRepository</text>
-  <text x="561" y="600" class="t-chipsub">Institution · BankAccount</text>
+  <text x="561" y="587" class="t-chipsub">CreateCardUseCase</text>
+  <text x="561" y="600" class="t-chipsub">uses card/ CardRepository</text>
   <rect x="477" y="623" width="168" height="58" rx="5" class="dat"/>
   <text x="561" y="638" class="t-chip">data</text>
-  <text x="561" y="653" class="t-chipsub">Bank API service · DTOs</text>
-  <text x="561" y="666" class="t-chipsub">BankRepositoryImpl</text>
+  <text x="561" y="653" class="t-chipsub">saves through card/data</text>
+  <text x="561" y="666" class="t-chipsub">CardApiService</text>
 
   <!-- card/ (shared) -->
   <text x="739" y="519" class="t-empty">used by home/</text>

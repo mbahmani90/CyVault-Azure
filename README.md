@@ -5,7 +5,7 @@
 <h1 align="center">CyVault</h1>
 
 <p align="center">
-  A Kotlin Multiplatform Android wallet app for managing bank cards, with open-banking account linking.
+  A Kotlin Multiplatform Android wallet app for managing bank cards.
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 
 ## Overview
 
-CyVault lets a user sign in, link a bank account through **open banking**, and store and manage their cards in a vault.
+CyVault lets a user sign in and store and manage their cards in a vault.
 
 The app is built with **Kotlin Multiplatform** and **Compose Multiplatform**: UI, ViewModels, business logic and networking live in shared code, and only a small set of platform-specific pieces use `expect`/`actual`.
 
@@ -30,11 +30,6 @@ The app is built with **Kotlin Multiplatform** and **Compose Multiplatform**: UI
   - Email/password sign-up with email verification code
   - Sign-in, sign-out, forgot password (sends the reset code; entering the code and a new password isn't built yet)
   - **Sign in with Google:** through Entra External ID with Google as an identity provider (MSAL browser flow in a browser tab)
-- **Add card via open banking** (multi-step flow)
-  1. Pick a country and search for your bank
-  2. Authorise access in the bank's page (Chrome Custom Tabs)
-  3. Return through a deep link, then choose one of the linked accounts
-  4. Enter card details and save
 - **Vault**: list and delete saved cards; the drawer shows the signed-in user (avatar, name, email) and sign-out
 - **Profile photo**: tap the drawer avatar to pick a photo with the system Photo Picker. It's uploaded to the Azure backend with the user's Entra access token, cached in app-private storage, and removed from the device on sign-out
 
@@ -51,7 +46,7 @@ CyVault
 ├── systemdesign     Design system: theme, colors, typography, shapes, reusable components
 ├── feature
 │   ├── authentication   Feature: sign-in / sign-up / Google / password reset
-│   └── vault            Feature: vault home, card list, add-card (open banking)
+│   └── vault            Feature: vault home, card list, add-card
 └── azure-backend    Azure Functions API (.NET 10) + Bicep infrastructure, deployed with azd
 ```
 
@@ -79,7 +74,7 @@ feature/vault/…/feature/vault/
 ├── card/           shared by the screens: Card model, CardRepository, card API
 ├── home/           card list + total assets, drawer with sign-out and the profile photo
                     (Azure photo API client, on-device cache, photo picker)
-├── addcard/        add a card via open banking
+├── addcard/        add a card
 │   ├── data/           remote services + DTOs, mappers, repository implementations
 │   ├── domain/         models, repository interfaces, use cases
 │   ├── presentation/   Compose screens + ViewModel (State / Intent / Effect)
@@ -133,7 +128,6 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 | Concern | Shared API | Android |
 |---|---|---|
 | Authentication (`:auth`) | `AuthClient` interface, bound in `authClientModule` | `MsalAuthClient`: MSAL native auth (Entra External ID); `ActivityProvider` gives MSAL's browser sign-in the on-screen activity |
-| Open bank authorisation page | `BankAppLauncher` (`expect`/`actual`) | Chrome Custom Tabs |
 | Profile photo | `rememberProfilePhotoPicker` (`expect`/`actual`); `PickedPhotoReader` and `AvatarFileStore` interfaces bound in `homePlatformModule` | Photo Picker; `AndroidPickedPhotoReader` turns the photo upright from EXIF and scales it to 1024 px; `AndroidAvatarFileStore` caches it in `filesDir` |
 | DI | `platformModule` | Ktor OkHttp engine |
 
