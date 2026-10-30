@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Identity.Web;
 using OpenTelemetry;
+using OpenTelemetry.Trace;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
@@ -17,8 +18,13 @@ builder.ConfigureFunctionsWebApplication();
 
 if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING")))
 {
+    // The Azure SDK only emits its traces when this switch is on. With it, every Blob and Table
+    // Storage call shows up as a dependency in Application Insights.
+    AppContext.SetSwitch("Azure.Experimental.EnableActivitySource", true);
+
     builder.Services.AddOpenTelemetry()
         .UseFunctionsWorkerDefaults()
+        .WithTracing(tracing => tracing.AddSource("Azure.*"))
         .UseAzureMonitorExporter();
 }
 
