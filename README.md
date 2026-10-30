@@ -3,11 +3,22 @@
   CyVault
 </h1>
 
----
-
 ## Overview
 
 CyVault lets a user sign in and manage their balances: record purchases and income, see the total per currency, and edit or delete entries. The balances are stored per user in the Azure backend.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/sign-in.webp" width="200" alt="Sign-in screen" />
+  <img src="docs/screenshots/home.webp" width="200" alt="Home: total balance and the list of purchases and income" />
+  <img src="docs/screenshots/add-item.webp" width="200" alt="Add Item dialog" />
+  <img src="docs/screenshots/drawer.webp" width="200" alt="Drawer with the profile, Add Card and Sign Out" />
+</p>
+
+<p align="center">
+  <sub>Sign in · Home · Add a balance · Drawer</sub>
+</p>
 
 ## Features
 
