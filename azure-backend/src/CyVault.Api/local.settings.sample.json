@@ -8,6 +8,8 @@
         "AzureAd__ClientId": "<CyVault API app registration client ID>",
         "AvatarStorage__ConnectionString": "UseDevelopmentStorage=true",
         "AvatarStorage__ContainerName": "avatars",
+        "BalanceStorage__ConnectionString": "UseDevelopmentStorage=true",
+        "BalanceStorage__TableName": "balances",
         "Graph__ClientSecret": "<CyVault API client secret, only for POST /me/signout>"
     }
 }

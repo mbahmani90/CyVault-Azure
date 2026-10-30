@@ -3,9 +3,11 @@ package com.cypressit.cyvault.feature.vault.home.presentation.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,30 +16,40 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCard
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
@@ -49,40 +61,86 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeIntent
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeState
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeViewModel
 import com.cypressit.cyvault.systemdesign.components.CyAvatar
 import com.cypressit.cyvault.systemdesign.components.StatusBarIconsFor
+import com.cypressit.cyvault.systemdesign.components.exposeTestTags
 import com.cypressit.cyvault.systemdesign.theme.CyTheme
+import com.cypressit.cyvault.testtags.DeleteBalanceDialogTags
+import com.cypressit.cyvault.testtags.VaultHomeTags
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.cyvault_logo
 import cyvault.vault.generated.resources.vault_home_add_card
+import cyvault.vault.generated.resources.vault_home_add_item_cancel
 import cyvault.vault.generated.resources.vault_home_add_item_description_fab
+import cyvault.vault.generated.resources.vault_home_add_sample_balances
+import cyvault.vault.generated.resources.vault_home_balance_delete_confirm
+import cyvault.vault.generated.resources.vault_home_balance_delete_message
+import cyvault.vault.generated.resources.vault_home_balance_delete_title
+import cyvault.vault.generated.resources.vault_home_balances_delete_message
+import cyvault.vault.generated.resources.vault_home_balances_delete_title
+import cyvault.vault.generated.resources.vault_home_balances_empty
 import cyvault.vault.generated.resources.vault_home_change_photo_description
+import cyvault.vault.generated.resources.vault_home_edit_item_title
 import cyvault.vault.generated.resources.vault_home_logo_description
 import cyvault.vault.generated.resources.vault_home_open_menu_description
+import cyvault.vault.generated.resources.vault_home_select_balance_description
+import cyvault.vault.generated.resources.vault_home_selection_close_description
+import cyvault.vault.generated.resources.vault_home_selection_count
+import cyvault.vault.generated.resources.vault_home_selection_delete_description
+import cyvault.vault.generated.resources.vault_home_selection_select_all_description
 import cyvault.vault.generated.resources.vault_home_sign_out
 import cyvault.vault.generated.resources.vault_home_sign_out_description
 import cyvault.vault.generated.resources.vault_home_title
+import cyvault.vault.generated.resources.vault_home_total_since
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
+// Readable on both the light and the dark surface.
+private val IncomeGreen = Color(0xFF2E9E5B)
+
+/**
+ * `−€ 25.69`, or `+€ 25.69` / `€ 25.69` for a positive amount depending on [plusSign].
+ * With [symbolAfter], the symbol follows the number: `−25.69 €`.
+ */
+internal fun formatAmount(
+    amount: Double,
+    currency: String,
+    plusSign: Boolean = false,
+    symbolAfter: Boolean = false,
+): String {
+    val sign = when {
+        amount < 0 -> "−"
+        plusSign -> "+"
+        else -> ""
+    }
+    val number = kotlin.math.abs(amount).fmt2dp()
+    val symbol = currencySymbol(currency)
+    return if (symbolAfter) "$sign$number $symbol" else "$sign$symbol $number"
+}
+
 private fun Double.fmt2dp(): String {
-    val scaled = (this * 100).toLong()
+    // Round, not truncate: 25.69 + 5.98 is 31.669999… as a Double and must show as 31.67.
+    val scaled = kotlin.math.round(this * 100).toLong()
     val intPart = scaled / 100
     val decPart = kotlin.math.abs(scaled % 100)
     return "$intPart.${decPart.toString().padStart(2, '0')}"
 }
 
 /**
- * The vault's home: the card list with total assets, a drawer with add-card and sign-out,
- * and an add button that opens the add-item dialog.
+ * The vault's home: total assets, the user's balances and cards, a drawer with add-card and
+ * sign-out, and an add button that opens the add-item dialog.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,12 +161,42 @@ internal fun VaultHomeScreen(
         onAddCard = onAddCardClick,
     )
 
+    // Back leaves selection mode before it leaves the screen.
+    SystemBackHandler(enabled = state.isSelectionMode) {
+        viewModel.onIntent(VaultHomeIntent.ClearBalanceSelection)
+    }
+
     if (state.isAddItemDialogVisible) {
         AddItemDialog(
+            item = state.editingBalance,
+            isSaving = state.isSavingBalance,
             onDismiss = { viewModel.onIntent(VaultHomeIntent.DismissAddItemDialog) },
-            onSave = { title, description, value ->
-                viewModel.onIntent(VaultHomeIntent.SaveItem(title, description, value))
+            onSave = { title, description, value, currency, date ->
+                viewModel.onIntent(VaultHomeIntent.SaveItem(title, description, value, currency, date))
             },
+            onDelete = { viewModel.onIntent(VaultHomeIntent.RequestDeleteEditingBalance) },
+        )
+    }
+
+    state.pendingDeleteBalance?.let { balance ->
+        DeleteBalancesDialog(
+            title = stringResource(Res.string.vault_home_balance_delete_title),
+            message = stringResource(Res.string.vault_home_balance_delete_message, balance.name),
+            onConfirm = { viewModel.onIntent(VaultHomeIntent.ConfirmDeleteBalance) },
+            onDismiss = { viewModel.onIntent(VaultHomeIntent.DismissDeleteBalance) },
+        )
+    }
+
+    if (state.isDeleteSelectedConfirmVisible) {
+        DeleteBalancesDialog(
+            title = pluralStringResource(
+                Res.plurals.vault_home_balances_delete_title,
+                state.selectedBalanceCount,
+                state.selectedBalanceCount,
+            ),
+            message = stringResource(Res.string.vault_home_balances_delete_message),
+            onConfirm = { viewModel.onIntent(VaultHomeIntent.ConfirmDeleteSelectedBalances) },
+            onDismiss = { viewModel.onIntent(VaultHomeIntent.DismissDeleteSelectedBalances) },
         )
     }
 
@@ -143,6 +231,21 @@ internal fun VaultHomeScreen(
                     onClick = { viewModel.onIntent(VaultHomeIntent.AddCardFromDrawer) },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
+                if (state.canAddSampleBalances) {
+                    NavigationDrawerItem(
+                        icon = {
+                            if (state.isAddingSampleBalances) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(imageVector = Icons.Default.BugReport, contentDescription = null)
+                            }
+                        },
+                        label = { Text(stringResource(Res.string.vault_home_add_sample_balances)) },
+                        selected = false,
+                        onClick = { viewModel.onIntent(VaultHomeIntent.AddSampleBalances) },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                }
                 NavigationDrawerItem(
                     icon = {
                         Icon(
@@ -156,11 +259,22 @@ internal fun VaultHomeScreen(
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
             }
-        }
+        },
     ) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackBarHostState) },
-            topBar = {
+            topBar = topBar@{
+                if (state.isSelectionMode) {
+                    SelectionTopBar(
+                        selectedCount = state.selectedBalanceCount,
+                        areAllSelected = state.areAllBalancesSelected,
+                        isDeleting = state.isDeletingBalances,
+                        onClose = { viewModel.onIntent(VaultHomeIntent.ClearBalanceSelection) },
+                        onSelectAll = { viewModel.onIntent(VaultHomeIntent.SelectAllBalances) },
+                        onDelete = { viewModel.onIntent(VaultHomeIntent.RequestDeleteSelectedBalances) },
+                    )
+                    return@topBar
+                }
                 TopAppBar(
                     title = {
                         Text(
@@ -194,21 +308,108 @@ internal fun VaultHomeScreen(
                     },
                 )
             },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog) }) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(Res.string.vault_home_add_item_description_fab),
-                    )
-                }
-            },
         ) { paddingValues ->
-            CardList(
+            HomeContent(
                 state = state,
+                onAddItem = { viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog) },
+                onClickBalance = { viewModel.onIntent(VaultHomeIntent.ClickBalance(it)) },
+                onLongClickBalance = { viewModel.onIntent(VaultHomeIntent.LongClickBalance(it)) },
                 modifier = Modifier.padding(paddingValues),
             )
         }
     }
+}
+
+/** Replaces the brand top bar while balances are selected: close, count, select all, delete. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectionTopBar(
+    selectedCount: Int,
+    areAllSelected: Boolean,
+    isDeleting: Boolean,
+    onClose: () -> Unit,
+    onSelectAll: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    TopAppBar(
+        title = {
+            Text(
+                text = stringResource(Res.string.vault_home_selection_count, selectedCount),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.testTag(VaultHomeTags.SELECTION_COUNT_TEXT),
+            )
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = CyTheme.brandColors.topBar,
+            titleContentColor = CyTheme.brandColors.onTopBar,
+            navigationIconContentColor = CyTheme.brandColors.onTopBar,
+            actionIconContentColor = CyTheme.brandColors.onTopBar,
+        ),
+        navigationIcon = {
+            IconButton(onClick = onClose, modifier = Modifier.testTag(VaultHomeTags.SELECTION_CLOSE_BUTTON)) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(Res.string.vault_home_selection_close_description),
+                )
+            }
+        },
+        actions = {
+            IconButton(
+                onClick = onSelectAll,
+                enabled = !areAllSelected && !isDeleting,
+                modifier = Modifier.testTag(VaultHomeTags.SELECTION_SELECT_ALL_BUTTON),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SelectAll,
+                    contentDescription = stringResource(Res.string.vault_home_selection_select_all_description),
+                )
+            }
+            if (isDeleting) {
+                // Same size as the icon button it replaces, so the bar doesn't shift.
+                Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = CyTheme.brandColors.onTopBar,
+                    )
+                }
+            } else {
+                IconButton(onClick = onDelete, modifier = Modifier.testTag(VaultHomeTags.SELECTION_DELETE_BUTTON)) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(Res.string.vault_home_selection_delete_description),
+                    )
+                }
+            }
+        },
+    )
+}
+
+/** Asks before deleting one balance or the selected ones. */
+@Composable
+private fun DeleteBalancesDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        // A dialog is its own window, so it needs exposeTestTags as well as the app root.
+        modifier = Modifier.exposeTestTags().testTag(DeleteBalanceDialogTags.DIALOG),
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = {
+            TextButton(onClick = onConfirm, modifier = Modifier.testTag(DeleteBalanceDialogTags.CONFIRM_BUTTON)) {
+                Text(stringResource(Res.string.vault_home_balance_delete_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag(DeleteBalanceDialogTags.CANCEL_BUTTON)) {
+                Text(stringResource(Res.string.vault_home_add_item_cancel))
+            }
+        },
+    )
 }
 
 /**
@@ -284,8 +485,20 @@ private fun DrawerHeader(
 }
 
 @Composable
-private fun CardList(
+private fun BalanceDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
+}
+
+/** Total assets, then the user's balances and cards in one scrolling list. */
+@Composable
+private fun HomeContent(
     state: VaultHomeState,
+    onAddItem: () -> Unit,
+    onClickBalance: (Balance) -> Unit,
+    onLongClickBalance: (Balance) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when {
@@ -304,23 +517,145 @@ private fun CardList(
                     .fillMaxWidth()
                     .padding(16.dp),
             ) {
-                Column(
+                Row(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = "Total Assets",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = "€ ${state.totalBalance.fmt2dp()}",
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = "Total Balance",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        // One line per currency; € 0.00 until there are balances.
+                        state.balanceTotals.ifEmpty { listOf("EUR" to 0.0) }.forEach { (currency, total) ->
+                            Text(
+                                text = formatAmount(total, currency, symbolAfter = true),
+                                style = MaterialTheme.typography.headlineMedium,
+                            )
+                        }
+                        oldestBalanceDate(state.balances.map { it.date })?.let { since ->
+                            Text(
+                                text = stringResource(Res.string.vault_home_total_since, since),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    SmallFloatingActionButton(
+                        onClick = onAddItem,
+                        modifier = Modifier.testTag(VaultHomeTags.ADD_ITEM_BUTTON),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(Res.string.vault_home_add_item_description_fab),
+                        )
+                    }
                 }
             }
 
-            LazyColumn {
+            LazyColumn(modifier = Modifier.testTag(VaultHomeTags.BALANCE_LIST)) {
+                if (state.isLoadingBalances && state.balances.isEmpty()) {
+                    item(key = "balances-loading") {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            // Gray instead of the theme's accent: loading shouldn't draw the eye.
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                    }
+                } else if (state.balances.isEmpty()) {
+                    item(key = "balances-empty") {
+                        Text(
+                            text = stringResource(Res.string.vault_home_balances_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .testTag(VaultHomeTags.BALANCES_EMPTY_TEXT),
+                        )
+                    }
+                }
+                // Prefixed keys: a balance ID must never collide with a card ID in this list.
+                itemsIndexed(state.balances, key = { _, balance -> "balance-${balance.id}" }) { index, balance ->
+                    // The same line between rows as after the last one.
+                    if (index > 0) BalanceDivider()
+                    // Purchases are negative and income positive; the sign leads the symbol.
+                    val isIncome = balance.amount >= 0
+                    val isSelected = state.isBalanceSelected(balance.id)
+                    ListItem(
+                        // A check box only in selection mode, so normal rows keep their full width.
+                        leadingContent = if (state.isSelectionMode) {
+                            { Checkbox(checked = isSelected, onCheckedChange = null) }
+                        } else {
+                            null
+                        },
+                        colors = ListItemDefaults.colors(
+                            // Neutral gray: the brand purple would compete with the amounts' colors.
+                            containerColor = if (isSelected) {
+                                MaterialTheme.colorScheme.surfaceContainerHighest
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            },
+                        ),
+                        headlineContent = { Text(balance.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        // Every row gets a second line, so rows without a description line up too.
+                        supportingContent = {
+                            Text(
+                                text = balance.description.ifBlank { "-" },
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        trailingContent = {
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = formatAmount(
+                                        balance.amount,
+                                        balance.currency,
+                                        plusSign = true,
+                                        symbolAfter = true,
+                                    ),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (isIncome) IncomeGreen else MaterialTheme.colorScheme.error,
+                                )
+                                formatBalanceDate(balance.date)?.let { date ->
+                                    Text(
+                                        text = date,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        },
+                        // Tap edits, or selects in selection mode; a long press starts selection mode.
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(VaultHomeTags.BALANCE_ROW)
+                            .combinedClickable(
+                                onClickLabel = stringResource(
+                                    if (state.isSelectionMode) {
+                                        Res.string.vault_home_select_balance_description
+                                    } else {
+                                        Res.string.vault_home_edit_item_title
+                                    },
+                                ),
+                                onLongClickLabel = stringResource(Res.string.vault_home_select_balance_description),
+                                onLongClick = { onLongClickBalance(balance) },
+                                onClick = { onClickBalance(balance) },
+                            ),
+                    )
+                }
+                // Only closes a list of rows; under the progress bar or empty text it's just noise.
+                if (state.balances.isNotEmpty()) {
+                    item(key = "balances-divider") { BalanceDivider() }
+                }
+
                 items(state.cards, key = { it.id }) { card ->
                     ListItem(
                         headlineContent = { Text(card.bankName) },

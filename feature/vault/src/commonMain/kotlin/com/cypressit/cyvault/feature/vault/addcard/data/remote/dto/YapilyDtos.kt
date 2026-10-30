@@ -70,7 +70,8 @@ data class YapilyAccountDto(
     @SerialName("nickname") val nickname: String? = null,
     @SerialName("details") val details: String? = null,
     @SerialName("accountNames") val accountNames: List<YapilyAccountNameDto> = emptyList(),
-    @SerialName("accountIdentifications") val accountIdentifications: List<YapilyAccountIdentificationDto> = emptyList(),
+    @SerialName("accountIdentifications") val accountIdentifications: List<YapilyAccountIdentificationDto> =
+        emptyList(),
 )
 
 @Serializable

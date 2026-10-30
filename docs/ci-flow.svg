@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 710 410" width="710" height="410" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title>CyVault — CI flow</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .t-title { font-size: 18px; font-weight: 700; fill: #0F172A; }
+      .t-sub { font-size: 11.5px; fill: #64748B; }
+      .t-band { font-size: 10.5px; font-weight: 700; letter-spacing: 0.8px; fill: #475569; }
+      .t-box { font-size: 13px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-boxsub { font-size: 10px; fill: #475569; text-anchor: middle; }
+      .box { fill: #FFFFFF; stroke-width: 1.5; }
+      .check { fill: #E0EDFF; stroke: #2563EB; stroke-width: 1.2; }
+      .e2e { fill: #E3F6E8; stroke: #16A34A; stroke-width: 1.2; }
+      .result { fill: #EDE9FE; stroke: #7C3AED; stroke-width: 1.5; }
+      .dep { stroke: #475569; stroke-width: 1.6; fill: none; }
+      .arrow { marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="710" height="410" fill="#F8FAFC"/>
+
+  <!-- Title -->
+  <text x="30" y="36" class="t-title">CI flow</text>
+  <text x="30" y="56" class="t-sub">The same in GitHub Actions (ci.yml) and Azure Pipelines (azure-pipelines.yml) · every pull request and push to main</text>
+
+  <!-- Build -->
+  <rect x="30" y="196" width="130" height="50" rx="8" class="box" stroke="#64748B"/>
+  <text x="95" y="217" class="t-box">Build</text>
+  <text x="95" y="233" class="t-boxsub">assembleDebug</text>
+
+  <!-- Checks line -->
+  <text x="230" y="88" class="t-band">CHECKS</text>
+  <rect x="230" y="96" width="210" height="42" rx="7" class="check"/>
+  <text x="335" y="114" class="t-box">Unit tests</text>
+  <text x="335" y="129" class="t-boxsub">testDebugUnitTest · testAndroidHostTest</text>
+  <rect x="230" y="150" width="210" height="42" rx="7" class="check"/>
+  <text x="335" y="168" class="t-box">Android Lint</text>
+  <text x="335" y="183" class="t-boxsub">lintDebug</text>
+  <rect x="230" y="204" width="210" height="42" rx="7" class="check"/>
+  <text x="335" y="222" class="t-box">Code style</text>
+  <text x="335" y="237" class="t-boxsub">ktlintCheck</text>
+  <rect x="230" y="258" width="210" height="42" rx="7" class="check"/>
+  <text x="335" y="276" class="t-box">SonarQube</text>
+  <text x="335" y="291" class="t-boxsub">coverage · Quality Gate</text>
+
+  <rect x="510" y="176" width="170" height="50" rx="8" class="result"/>
+  <text x="595" y="197" class="t-box">CI result</text>
+  <text x="595" y="213" class="t-boxsub">required check on main</text>
+
+  <!-- E2E line -->
+  <text x="230" y="334" class="t-band">E2E</text>
+  <rect x="230" y="342" width="210" height="42" rx="7" class="e2e"/>
+  <text x="335" y="360" class="t-box">E2E tests</text>
+  <text x="335" y="375" class="t-boxsub">Appium on an emulator</text>
+
+  <rect x="510" y="338" width="170" height="50" rx="8" class="result"/>
+  <text x="595" y="359" class="t-box">E2E result</text>
+  <text x="595" y="375" class="t-boxsub">doesn't block CI result</text>
+
+  <!-- Build fans out to every job -->
+  <path d="M160 221 H195" class="dep"/>
+  <path d="M195 117 V363" class="dep"/>
+  <path d="M195 117 H228" class="dep arrow"/>
+  <path d="M195 171 H228" class="dep arrow"/>
+  <path d="M195 225 H228" class="dep arrow"/>
+  <path d="M195 279 H228" class="dep arrow"/>
+  <path d="M195 363 H228" class="dep arrow"/>
+
+  <!-- The checks join into CI result -->
+  <path d="M440 117 H475" class="dep"/>
+  <path d="M440 171 H475" class="dep"/>
+  <path d="M440 225 H475" class="dep"/>
+  <path d="M440 279 H475" class="dep"/>
+  <path d="M475 117 V279" class="dep"/>
+  <path d="M475 201 H508" class="dep arrow"/>
+
+  <!-- E2E tests into E2E result -->
+  <path d="M440 363 H508" class="dep arrow"/>
+</svg>

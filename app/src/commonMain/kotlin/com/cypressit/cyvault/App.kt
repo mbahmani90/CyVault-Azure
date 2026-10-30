@@ -1,6 +1,7 @@
 package com.cypressit.cyvault
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -10,6 +11,7 @@ import com.cypressit.cyvault.feature.vault.VaultHomeScreen
 import com.cypressit.cyvault.navigation.AddCardRoute
 import com.cypressit.cyvault.navigation.AuthRoute
 import com.cypressit.cyvault.navigation.VaultHomeRoute
+import com.cypressit.cyvault.systemdesign.components.exposeTestTags
 import com.cypressit.cyvault.systemdesign.theme.CyTheme
 
 /**
@@ -24,6 +26,8 @@ fun App() {
         NavHost(
             navController = navController,
             startDestination = AuthRoute,
+            // Lets the :e2e tests find screens' test tags
+            modifier = Modifier.exposeTestTags(),
         ) {
             composable<AuthRoute> {
                 AuthScreen(
@@ -31,7 +35,7 @@ fun App() {
                         navController.navigate(VaultHomeRoute) {
                             popUpTo(AuthRoute) { inclusive = true }
                         }
-                    }
+                    },
                 )
             }
 

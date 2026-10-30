@@ -11,6 +11,7 @@ param entraApiClientId string
 
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, environmentName))
 var avatarContainerName = 'avatars'
+var balanceTableName = 'balances'
 var deploymentContainerName = 'app-package'
 
 // Built-in role definition IDs
@@ -70,7 +71,8 @@ resource runtimeStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
-// User data: profile photos, one blob per user at avatars/{oid}/avatar.jpg.
+// User data: profile photos, one blob per user at avatars/{oid}/avatar.jpg, and the balances
+// table, one partition per user (PartitionKey = oid).
 resource avatarStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'stcyvav${token}'
   location: location
@@ -90,6 +92,14 @@ resource avatarStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     resource avatars 'containers' = {
       name: avatarContainerName
       properties: { publicAccess: 'None' }
+    }
+  }
+
+  resource tableService 'tableServices' = {
+    name: 'default'
+
+    resource balances 'tables' = {
+      name: balanceTableName
     }
   }
 }
@@ -157,6 +167,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       AzureAd__ClientId: entraApiClientId
       AvatarStorage__BlobServiceUri: avatarStorage.properties.primaryEndpoints.blob
       AvatarStorage__ContainerName: avatarContainerName
+      BalanceStorage__TableServiceUri: avatarStorage.properties.primaryEndpoints.table
+      BalanceStorage__TableName: balanceTableName
     }
     dependsOn: [
       runtimeBlobOwner
@@ -216,6 +228,28 @@ resource developerAvatarsContributor 'Microsoft.Authorization/roleAssignments@20
   scope: avatarStorage::blobs::avatars
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageBlobDataContributor)
+    principalId: principalId
+    principalType: 'User'
+  }
+}
+
+// The Function may read and write the balances table only, not the other tables in the account.
+resource balancesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(avatarStorage::tableService::balances.id, functionApp.id, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::balances
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Lets the developer run the Function locally against the real table through `az login`.
+resource developerBalancesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
+  name: guid(avatarStorage::tableService::balances.id, principalId, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::balances
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
     principalId: principalId
     principalType: 'User'
   }

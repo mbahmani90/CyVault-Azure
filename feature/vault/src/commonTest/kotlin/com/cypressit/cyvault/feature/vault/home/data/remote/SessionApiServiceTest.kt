@@ -19,8 +19,14 @@ class SessionApiServiceTest {
     private val authClient = FakeAuthClient()
 
     private fun api(status: HttpStatusCode) = SessionApiService(
-        client = HttpClient(MockEngine { request -> requests += request; respond("", status) }),
+        client = HttpClient(
+            MockEngine { request ->
+                requests += request
+                respond("", status)
+            },
+        ),
         authClient = authClient,
+        config = CyVaultApiConfig(baseUrl = "https://api.test/api", appIdUri = "api://test-api"),
     )
 
     @Test
@@ -29,9 +35,9 @@ class SessionApiServiceTest {
 
         val request = requests.single()
         assertEquals(HttpMethod.Post, request.method)
-        assertEquals(SessionApiService.SIGN_OUT_URL, request.url.toString())
+        assertEquals("https://api.test/api/me/signout", request.url.toString())
         assertEquals("Bearer test-token", request.headers[HttpHeaders.Authorization])
-        assertEquals(listOf(listOf(ProfilePhotoApiService.PROFILE_SCOPE)), authClient.requestedScopes)
+        assertEquals(listOf(listOf("api://test-api/Profile.ReadWrite")), authClient.requestedScopes)
     }
 
     @Test

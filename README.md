@@ -1,43 +1,39 @@
-<p align="center">
-  <img src="cyvault_icon.png" width="96" alt="CyVault icon" />
-</p>
-
-<h1 align="center">CyVault</h1>
-
-<p align="center">
-  A Kotlin Multiplatform (Android + iOS) wallet app for managing bank cards, with open-banking account linking.
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Kotlin-2.4-7F52FF?logo=kotlin&logoColor=white" />
-  <img src="https://img.shields.io/badge/Compose%20Multiplatform-1.11-4285F4?logo=jetpackcompose&logoColor=white" />
-  <img src="https://img.shields.io/badge/platforms-Android%20%7C%20iOS-3DDC84" />
-  <img src="https://img.shields.io/badge/status-work%20in%20progress-orange" />
-</p>
-
----
+<h1 align="center">
+  <img src="cyvault_icon.png" width="96" alt="CyVault icon" /><br />
+  CyVault
+</h1>
 
 ## Overview
 
-CyVault lets a user sign in, link a bank account through **open banking** (via the [Yapily](https://www.yapily.com/) API), and store and manage their cards in a vault.
+CyVault lets a user sign in and manage their balances: record purchases and income, see the total per currency, and edit or delete entries. The balances are stored per user in the Azure backend.
 
-The app is built with **Kotlin Multiplatform** and **Compose Multiplatform**. UI, ViewModels, business logic and networking are shared between Android and iOS. Only a small set of platform-specific pieces use `expect`/`actual` or native bridges.
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/sign-in.webp" width="200" alt="Sign-in screen" />
+  <img src="docs/screenshots/home.webp" width="200" alt="Home: total balance and the list of purchases and income" />
+  <img src="docs/screenshots/add-item.webp" width="200" alt="Add Item dialog" />
+  <img src="docs/screenshots/drawer.webp" width="200" alt="Drawer with the profile, Add Card and Sign Out" />
+</p>
+
+<p align="center">
+  <sub>Sign in · Home · Add a balance · Drawer</sub>
+</p>
 
 ## Features
 
 - **Authentication**
-  - **Android:** Microsoft Entra External ID with MSAL native authentication: the app's own Compose screens, no browser page
-  - **iOS:** AWS Cognito via Amplify (not migrated to Entra yet)
+  - Microsoft Entra External ID with MSAL native authentication: the app's own Compose screens, no browser page
   - Email/password sign-up with email verification code
   - Sign-in, sign-out, forgot password (sends the reset code; entering the code and a new password isn't built yet)
-  - **Sign in with Google:** on Android through Entra External ID with Google as an identity provider (MSAL browser flow in a browser tab); on iOS through the Amplify hosted UI (deep-link callback `cyvault://callback`)
-- **Add card via open banking** (multi-step flow)
-  1. Pick a country and search for your bank (Yapily institutions API)
-  2. Authorise access in the bank's page (Chrome Custom Tabs on Android, `SFSafariViewController` on iOS)
-  3. Return through a deep link, then choose one of the linked accounts
-  4. Enter card details and save
-- **Vault**: list and delete saved cards; the drawer shows the signed-in user (avatar, name, email) and sign-out
-- **Profile photo** (Android): tap the drawer avatar to pick a photo with the system Photo Picker. It's uploaded to the Azure backend with the user's Entra access token, cached in app-private storage, and removed from the device on sign-out
+  - **Sign in with Google:** through Entra External ID with Google as an identity provider (MSAL browser flow in a browser tab)
+- **Balances**
+  - Add a purchase or income with a title, description, amount, currency, and date and time
+  - Home shows the total per currency and every balance, newest first; tap one to edit it
+  - Long press to select several balances, then select all or delete them together
+  - Saved per user through the Azure balances API
+- **Drawer**: the signed-in user (avatar, name, email) and sign-out
+- **Profile photo**: tap the drawer avatar to pick a photo with the system Photo Picker. It's uploaded to the Azure backend with the user's Entra access token, cached in app-private storage, and removed from the device on sign-out
 
 ## Architecture
 
@@ -46,16 +42,14 @@ The project uses **Clean Architecture** with **MVI**, split into feature modules
 ```
 CyVault
 ├── androidApp       Android entry point (Application, MainActivity, the app's MSAL config)
-├── iosApp           iOS entry point (SwiftUI host + Amplify Swift auth bridge)
-├── app              Composition root: root Compose App, NavHost, Koin setup, the only iOS framework
+├── app              Composition root: root Compose App, NavHost, Koin setup
 ├── core             Shared non-UI code: Ktor client, platform DI, I/O dispatcher
-├── auth             Sign-in and session library: AuthClient (MSAL native auth / iOS bridge), reusable
+├── auth             Sign-in and session library: AuthClient (MSAL native auth), reusable
 ├── systemdesign     Design system: theme, colors, typography, shapes, reusable components
 ├── feature
 │   ├── authentication   Feature: sign-in / sign-up / Google / password reset
-│   └── vault            Feature: vault home, card list, add-card (open banking)
-├── azure-backend    Azure Functions API (.NET 10) + Bicep infrastructure, deployed with azd
-└── amplify-backend  AWS Amplify Gen 2 backend (Cognito + Google IdP), TypeScript
+│   └── vault            Feature: vault home with the balances, add-card
+└── azure-backend    Azure Functions API (.NET 10) + Bicep infrastructure, deployed with azd
 ```
 
 `:auth` is a library, not a feature: it has no screens and no CyVault types or IDs, and it doesn't
@@ -64,7 +58,7 @@ Google, password reset, current user, access tokens, sign-out) and `AuthUser`. T
 from their data layer and map `AuthUser` to their own models: `feature:authentication` in
 `AuthRepositoryImpl`, the vault in `home/data/AccountRepositoryImpl` and `ProfilePhotoApiService`.
 The app supplies the Entra registration: `androidApp` passes `MsalConfig(R.raw.auth_config_native_auth)`
-to Koin, and on iOS Swift sets `IosAuthBridgeHolder.bridge`.
+to Koin.
 
 Features never depend on each other and know nothing about navigation: they don't depend on
 Navigation Compose and have no routes. Each feature exposes plain screen composables
@@ -75,14 +69,13 @@ loads each feature's public Koin module.
 
 Each feature module has its own layers. A single-flow feature (authentication) keeps them at
 the module root; a multi-screen feature (vault) has one package per screen, each with its
-own layers and Koin module, plus a small shared package:
+own layers and Koin module:
 
 ```
 feature/vault/…/feature/vault/
-├── card/           shared by the screens: Card model, CardRepository, card API
-├── home/           card list + total assets, drawer with sign-out and the profile photo
+├── home/           balances + totals per currency, drawer with sign-out and the profile photo
                     (Azure photo API client, on-device cache, photo picker)
-├── addcard/        add a card via open banking (Yapily)
+├── addcard/        add a card
 │   ├── data/           remote services + DTOs, mappers, repository implementations
 │   ├── domain/         models, repository interfaces, use cases
 │   ├── presentation/   Compose screens + ViewModel (State / Intent / Effect)
@@ -106,6 +99,8 @@ On Android, Google sign-in goes through Entra External ID, with Google set up as
 ### Profile photo API: Function App access to Blob Storage
 
 Profile photos live in a private Blob Storage container behind the Azure Functions API in `azure-backend/` (`PUT`, `GET` and `DELETE /api/me/avatar`). On Android, the app asks MSAL for an access token with the API's `Profile.ReadWrite` scope and sends it as `Authorization: Bearer`, only on these requests. No route takes a user ID. The Function validates the upload by decoding it, turns it upright, downscales it to at most 512 px and re-encodes it as JPEG, which also drops EXIF metadata such as GPS location. The Function App reaches Storage through its **Managed Identity**, so no storage keys or connection strings exist anywhere. The SDK (`DefaultAzureCredential`) gets a token for that identity from Entra ID and sends it with each blob request. Blob Storage validates the token and checks the identity's **IAM role assignment** (`Storage Blob Data Contributor` on the `avatars` container) before allowing the write. Users get no Storage permissions at all: the Function builds every blob path from the `oid` in the user's validated access token, so each account can only reach its own photo.
+
+Balances use the same pattern with Table Storage (`GET /api/me/balances`, and `GET`, `PUT` and `DELETE /api/me/balances/{id}`), behind the `Balance.ReadWrite` scope. Each row's `PartitionKey` is the caller's `oid` and its `RowKey` the balance ID, and the Function's identity has `Storage Table Data Contributor` on the `balances` table only. A `PUT` body is `{ "name": "Main account", "description": "Daily spending", "amount": 1250.50, "currency": "EUR" }` (description and an ISO 8601 `date` optional; without a date, a new balance is dated now and an edit keeps its date); the amount is kept as a decimal string so money is never rounded.
 
 The app gets the access token from Entra's token endpoint, which MSAL discovers from the tenant's metadata, and the Function checks it against Entra's published signing keys:
 
@@ -131,12 +126,11 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 
 ### Platform-specific code
 
-| Concern | Shared API | Android | iOS |
-|---|---|---|---|
-| Authentication (`:auth`) | `AuthClient` interface, bound in `authClientModule` | `MsalAuthClient`: MSAL native auth (Entra External ID); `ActivityProvider` gives MSAL's browser sign-in the on-screen activity | `BridgeAuthClient`: Amplify Swift (Cognito), through the `IosAuthBridge` callback interface implemented in Swift |
-| Open bank authorisation page | `BankAppLauncher` (`expect`/`actual`) | Chrome Custom Tabs | `SFSafariViewController` |
-| Profile photo | `rememberProfilePhotoPicker` (`expect`/`actual`); `PickedPhotoReader` and `AvatarFileStore` interfaces bound in `homePlatformModule` | Photo Picker; `AndroidPickedPhotoReader` turns the photo upright from EXIF and scales it to 1024 px; `AndroidAvatarFileStore` caches it in `filesDir` | Not implemented yet (iOS can't reach the Azure API without Entra sign-in) |
-| DI | `platformModule` | Ktor OkHttp engine | Ktor Darwin engine |
+| Concern | Shared API | Android |
+|---|---|---|
+| Authentication (`:auth`) | `AuthClient` interface, bound in `authClientModule` | `MsalAuthClient`: MSAL native auth (Entra External ID); `ActivityProvider` gives MSAL's browser sign-in the on-screen activity |
+| Profile photo | `rememberProfilePhotoPicker` (`expect`/`actual`); `PickedPhotoReader` and `AvatarFileStore` interfaces bound in `homePlatformModule` | Photo Picker; `AndroidPickedPhotoReader` turns the photo upright from EXIF and scales it to 1024 px; `AndroidAvatarFileStore` caches it in `filesDir` |
+| DI | `platformModule` | Ktor OkHttp engine |
 
 ## Tech stack
 
@@ -147,25 +141,22 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 | Navigation | Navigation Compose (KMP), type-safe `@Serializable` routes |
 | Async | Kotlin Coroutines & Flow |
 | DI | Koin 4 |
-| Networking | Ktor 3 (OkHttp / Darwin), kotlinx.serialization |
-| Auth | Android: Microsoft Entra External ID + MSAL 8 (native auth) · iOS: AWS Amplify (Cognito) + Google federated sign-in |
-| Open banking | Yapily REST API |
-| Backend | Azure Functions (.NET 10 isolated, Flex Consumption), Microsoft.Identity.Web, Blob Storage, SkiaSharp, Bicep + Azure Developer CLI · AWS Amplify Gen 2 (TypeScript), for the iOS auth backend |
+| Networking | Ktor 3 (OkHttp), kotlinx.serialization |
+| Auth | Microsoft Entra External ID + MSAL 8 (native auth) |
+| Backend | Azure Functions (.NET 10 isolated, Flex Consumption), Microsoft.Identity.Web, Blob Storage, SkiaSharp, Bicep + Azure Developer CLI |
 
 ## Getting started
 
 ### Requirements
 
 - Android Studio (latest) with the Kotlin Multiplatform plugin
-- Xcode (for iOS)
 - JDK 17+
-- An Azure account (only needed to use your own Entra tenant for Android)
-- Node.js 18+ and an AWS account (only needed to deploy your own iOS auth backend)
-- For the Azure backend: .NET 10 SDK, Azure Functions Core Tools 4, Azure CLI, Azure Developer CLI (`azd`) and Azurite (`npm install -g azurite`)
+- An Azure account (only needed to use your own Entra tenant)
+- For the Azure backend: see [`azure-backend/README.md`](azure-backend/README.md#requirements)
 
 ### 1. Authentication
 
-**Android: Microsoft Entra External ID (optional: use your own tenant)**
+**Microsoft Entra External ID (optional: use your own tenant)**
 
 1. In the [Entra admin center](https://entra.microsoft.com), create an **external** tenant.
 2. In that tenant, register an app (single tenant) and add the **Android** platform with the package
@@ -202,103 +193,70 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
      Google client ID and secret, then tick **Google** under the user flow's **Identity providers**.
      The secret stays in Entra; the app never needs it.
 
-**iOS: AWS Amplify (optional: deploy your own backend)**
+### 2. Azure backend (profile photo and balances API)
 
-```bash
-cd amplify-backend
-npm install
-npx ampx sandbox secret set GOOGLE_CLIENT_ID
-npx ampx sandbox secret set GOOGLE_CLIENT_SECRET
-npx ampx sandbox
-```
+The backend's requirements, environments, local run and deployment are in
+[`azure-backend/README.md`](azure-backend/README.md).
 
-Copy the generated `amplify_outputs.json` to `iosApp/iosApp/amplify_outputs.json`.
+### 3. Run
 
-### 2. Open banking
+`./gradlew :androidApp:assembleDebug`, or use the run configuration in Android Studio.
 
-Create a Yapily sandbox application and put your credentials in
-`feature/vault/src/commonMain/kotlin/com/cypressit/cyvault/feature/vault/addcard/data/remote/YapilyConfig.kt`.
+## Continuous integration
 
-### 3. Azure backend (profile photo API)
+The same flow runs in two places, on every pull request and push to `main`:
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) in GitHub Actions and
+[`azure-pipelines.yml`](azure-pipelines.yml) in Azure Pipelines. Changes that only touch the backends,
+`docs/` or Markdown skip it.
 
-**Register the API in Entra External ID** (once, in the same external tenant as the app):
+![CI flow: Build, then Unit tests, Android Lint, Code style and SonarQube into CI result, and E2E tests into E2E result](docs/ci-flow.svg)
 
-1. **App registrations → New registration** → `CyVault API`, single tenant. No platform or redirect URI.
-2. **Manifest**: set `requestedAccessTokenVersion` to `2`.
-3. **Expose an API**: accept the default Application ID URI (`api://<API client ID>`) and add the scope
-   `Profile.ReadWrite`.
-4. In the **mobile app's** registration: **API permissions → Add a permission → My APIs → CyVault API →
-   `Profile.ReadWrite`**, then grant admin consent.
-5. For server-side sign-out (`POST /me/signout`), in the **CyVault API** registration: **API permissions →
-   Add a permission → Microsoft Graph → Application permissions → `User.RevokeSessions.All`**, then grant
-   admin consent. The Function calls Graph as this app; the mobile app gets no Graph permission.
+| Job | Gradle task |
+|---|---|
+| Build | `:androidApp:assembleDebug` |
+| Unit tests | `testDebugUnitTest testAndroidHostTest` |
+| Android Lint | `:androidApp:lintDebug` (also lints the library modules) |
+| Code style | `ktlintCheck` (rules in `.editorconfig`; fix with `./gradlew ktlintFormat`) |
+| SonarQube | `koverXmlReport`, then SonarQube Cloud analysis; fails if the Quality Gate fails |
+| CI result | Fails if any job above failed |
+| E2E tests | `:e2e:e2eTest` through `e2e/run-e2e.sh`: Appium drives the debug APK on an emulator |
+| E2E result | Fails if E2E tests failed; **CI result** doesn't depend on it |
 
-Signing out revokes the user's refresh tokens on **all** devices. Access tokens already issued stay valid
-until they expire (about an hour).
+In GitHub Actions the first job, **Changes**, does the path filtering; Azure does it with its
+`paths.exclude` trigger and groups the checks in a **Verify** stage.
 
-**Run locally** (from `azure-backend/src/CyVault.Api`):
+To set it up:
 
-```bash
-cp local.settings.sample.json local.settings.json
-```
+1. In Azure DevOps, create a pipeline from this GitHub repository and pick the existing `azure-pipelines.yml`.
+2. In GitHub, add a branch protection rule on `main` that requires the **CI result** check.
+3. For E2E, create a test account in the debug Entra tenant (the tests delete every balance on it) and add
+   its credentials as `E2E_EMAIL` and `E2E_PASSWORD`: repository secrets in GitHub, secret pipeline variables
+   in Azure DevOps. The Azure E2E stage needs an agent with KVM for the emulator.
+4. For SonarQube, first turn off Automatic Analysis in the SonarQube Cloud project (Administration →
+   Analysis Method). Both CIs report to the same project, so the latest analysis of a branch is the one shown.
+   - GitHub Actions: add a SonarQube Cloud token as the repository secret `SONAR_TOKEN`, and the
+     repository variables `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY` with your project's values. Until
+     `SONAR_PROJECT_KEY` is set the SonarQube job is skipped.
+   - Azure Pipelines: install the SonarQube Cloud extension and add a service connection named `SonarCloud`;
+     the organization and project keys are in `azure-pipelines.yml`. `sonarEnabled: false` leaves the
+     SonarQube job out of the run.
+   - Quality Gate: both scans wait for SonarQube Cloud's verdict (`sonar.qualitygate.wait=true`, up to 5 minutes).
+     When the gate fails, the SonarQube job fails and so does **CI result**, which blocks the PR. What the gate
+     checks is set in SonarQube Cloud (Project → Quality Gate); the default "Sonar way" looks at new code only:
+     no new bugs or vulnerabilities, all new security hotspots reviewed, ≥ 80% coverage and ≤ 3% duplication.
+     The failing conditions are on the project's page in SonarQube Cloud.
 
-Put the API's client ID in `AzureAd__ClientId` in `local.settings.json`, which is git-ignored. To try
-sign-out locally, create a client secret in the CyVault API registration (**Certificates & secrets**) and
-put it in `Graph__ClientSecret`. Start
-Azurite (the local Blob Storage emulator) in one terminal and the Function in another:
-
-```bash
-azurite --silent --location ../../.azurite
-```
-
-```bash
-func start
-```
-
-On Windows PowerShell, use `azurite.cmd` if script execution is disabled. The API listens on
-`http://localhost:7158/api/me/avatar` and answers `401` without a valid access token.
-
-**Deploy to Azure** (from `azure-backend/`):
-
-```bash
-azd auth login
-azd env new dev
-azd env set ENTRA_API_CLIENT_ID <API client ID>
-azd up
-```
-
-`azd up` asks for a subscription and region, creates the resources in `infra/` (Flex Consumption
-Function App, two storage accounts with shared keys disabled, Application Insights, the Function's
-Managed Identity and its role assignments) and deploys the code. It prints `API_BASE_URL` at the end.
-The signed-in developer also gets blob access to the `avatars` container, so the Function can run
-locally against the real storage through `az login`.
-
-**Let the Function call Graph without a secret** (once, after the first `azd up`): in the **CyVault API**
-registration, **Certificates & secrets → Federated credentials → Add credential → Other issuer**:
-
-- Issuer: `https://login.microsoftonline.com/<AZURE_TENANT_ID>/v2.0`
-- Subject identifier: `<FUNCTION_PRINCIPAL_ID>`
-- Audience: `api://AzureADTokenExchange`
-
-Both values are printed by `azd up` (`azd env get-values`). The Function's Managed Identity then signs
-in as the CyVault API app. If your tenant doesn't accept the federated credential, set the
-`Graph__ClientSecret` app setting on the Function App instead.
-
-### 4. Run
-
-- **Android:** `./gradlew :androidApp:assembleDebug`, or use the run configuration in Android Studio
-- **iOS:** open `iosApp/` in Xcode and run
+To run the E2E tests locally, start an emulator or connect a phone, start `appium` (with `ANDROID_HOME`
+and `JAVA_HOME` set), put the test account in the git-ignored `e2e/.env`, then run `./e2e/run-e2e.sh`.
 
 ## Security notes & roadmap
 
 CyVault is a portfolio / learning project and **not production-ready**. The known gaps and the planned fixes are:
 
-- **Yapily app secret** is currently read on the client for simplicity. In production, all Yapily calls should go through a backend proxy (for example an AWS Lambda) so the secret never ships in the app.
 - **Card data**: the demo model holds a card number and CVV. A real app must never store the CVV and should keep only a **tokenised** card reference from a PCI DSS-compliant provider.
 - **Card API**: `CardApiService` points to a placeholder endpoint. Planned: move it to the Azure Functions API, with every card keyed by the caller's `oid`.
-- **Profile photo on iOS**: needs the move to Entra first; then a `PHPicker` picker and an Application Support cache.
-- **Local storage**: planned: SQLDelight for offline caching, with platform keystore/keychain encryption for sensitive data.
-- **Auth**: move iOS from Amplify/Cognito to MSAL and Entra External ID, and finish the forgot-password flow (code + new password).
+- **Local storage**: planned: SQLDelight for offline caching, with Android Keystore encryption for sensitive data.
+- **Auth**: finish the forgot-password flow (code + new password).
 - More unit and UI tests for use cases and ViewModels.
 
 ## Author

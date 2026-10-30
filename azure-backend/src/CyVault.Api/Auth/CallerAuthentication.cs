@@ -12,6 +12,7 @@ public sealed record CallerResult(string? ObjectId, IActionResult? Failure);
 public static class CallerAuthentication
 {
     public const string ProfileScope = "Profile.ReadWrite";
+    public const string BalanceScope = "Balance.ReadWrite";
 
     /// <summary>
     /// Validates the request's bearer token and returns the user's Entra object ID (oid).

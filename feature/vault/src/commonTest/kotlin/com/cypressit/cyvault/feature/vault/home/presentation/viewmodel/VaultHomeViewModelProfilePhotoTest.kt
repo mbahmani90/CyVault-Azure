@@ -1,23 +1,24 @@
 package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
-import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
-import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient.Companion.USER_ID
-import com.cypressit.cyvault.feature.vault.home.data.remote.SessionApiService
+import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
+import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
+import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
+import com.cypressit.cyvault.feature.vault.fake.succeedingSessionApi
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteCardUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
-import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,16 +45,15 @@ class VaultHomeViewModelProfilePhotoTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val authClient = FakeAuthClient()
-    private val accounts = AccountRepositoryImpl(
-        authClient = authClient,
-        sessionApi = SessionApiService(HttpClient(MockEngine { respond("", HttpStatusCode.NoContent) }), authClient),
-    )
+    private val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient))
     private val photos = FakeProfilePhotoRepository()
     private val cards = FakeCardRepository()
+    private val balances = FakeBalanceRepository()
 
     private val photo = PickedPhoto("content://media/picker/0/1")
 
     @BeforeTest fun setUp() = Dispatchers.setMain(dispatcher)
+
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel() = VaultHomeViewModel(
@@ -64,6 +64,10 @@ class VaultHomeViewModelProfilePhotoTest {
         getProfilePhoto = GetProfilePhotoUseCase(photos),
         changeProfilePhoto = ChangeProfilePhotoUseCase(photos),
         clearProfilePhotoCache = ClearProfilePhotoCacheUseCase(photos),
+        getBalances = GetBalancesUseCase(balances),
+        saveBalance = SaveBalanceUseCase(balances),
+        deleteBalance = DeleteBalanceUseCase(balances),
+        deleteBalances = DeleteBalancesUseCase(balances),
     )
 
     @Test

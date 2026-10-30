@@ -1,4 +1,5 @@
 using Azure.Core;
+using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Storage.Blobs;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Identity.Web;
 using OpenTelemetry;
+using OpenTelemetry.Trace;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
@@ -18,8 +20,13 @@ builder.ConfigureFunctionsWebApplication();
 
 if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING")))
 {
+    // The Azure SDK only emits its traces when this switch is on. With it, every Blob and Table
+    // Storage call shows up as a dependency in Application Insights.
+    AppContext.SetSwitch("Azure.Experimental.EnableActivitySource", true);
+
     builder.Services.AddOpenTelemetry()
         .UseFunctionsWorkerDefaults()
+        .WithTracing(tracing => tracing.AddSource("Azure.*"))
         .UseAzureMonitorExporter();
 }
 
@@ -30,6 +37,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
 
 builder.Services.AddSingleton(_ => CreateAvatarContainer(builder.Configuration.GetSection("AvatarStorage")));
+builder.Services.AddSingleton(_ => CreateBalanceTable(builder.Configuration.GetSection("BalanceStorage")));
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton(sp => new SignInSessions(
@@ -57,6 +65,25 @@ static TokenCredential CreateGraphCredential(IConfigurationSection azureAd, ICon
     return new ClientAssertionCredential(tenantId, clientId, async cancellationToken =>
         (await managedIdentity.GetTokenAsync(
             new TokenRequestContext(["api://AzureADTokenExchange/.default"]), cancellationToken)).Token);
+}
+
+static TableClient CreateBalanceTable(IConfigurationSection config)
+{
+    var tableName = config["TableName"] ?? "balances";
+
+    // Local development against Azurite. In Azure the Managed Identity is used, and Bicep
+    // creates the table.
+    var connectionString = config["ConnectionString"];
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        var local = new TableClient(connectionString, tableName);
+        local.CreateIfNotExists();
+        return local;
+    }
+
+    var serviceUri = config["TableServiceUri"]
+        ?? throw new InvalidOperationException("Set BalanceStorage:TableServiceUri or BalanceStorage:ConnectionString.");
+    return new TableClient(new Uri(serviceUri), tableName, new DefaultAzureCredential());
 }
 
 static BlobContainerClient CreateAvatarContainer(IConfigurationSection config)

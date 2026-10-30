@@ -1,0 +1,247 @@
+# The same checks as azure-pipelines.yml, plus E2E tests on an emulator, on every PR, every push
+# to main and manual runs:
+#   Changes ─► Build ─┬─► Unit tests   ─┐
+#                     ├─► Android Lint ─┼─► CI result
+#                     ├─► Code style   ─┤
+#                     ├─► SonarQube    ─┘
+#                     └─► E2E tests ─────► E2E result
+# E2E needs the repository secrets E2E_EMAIL and E2E_PASSWORD (a test account in the debug Entra
+# tenant; the tests delete every balance on it).
+# SonarQube needs the repository secret SONAR_TOKEN and the repository variables SONAR_ORGANIZATION
+# and SONAR_PROJECT_KEY; until SONAR_PROJECT_KEY is set the job is skipped.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A new push to the same branch cancels the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          # "some-with-excludes": matches at least one pattern and none of the ! patterns.
+          # The same exclusions as azure-pipelines.yml.
+          predicate-quantifier: some-with-excludes
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+              - '!iosApp/**'
+              - '!azure-backend/**'
+              - '!amplify-backend/**'
+
+  build:
+    name: Build
+    needs: changes
+    # A manual run always builds, even if the last change was docs only.
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.code == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      # Launches the wrapper; Gradle then provisions the daemon JDK in gradle/gradle-daemon-jvm.properties
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew :androidApp:assembleDebug :e2e:compileTestKotlin
+      - uses: actions/upload-artifact@v7
+        with:
+          name: debug-apk
+          path: androidApp/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+  unit-tests:
+    name: Unit tests
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v6
+      # testAndroidHostTest covers the KMP modules, testDebugUnitTest the app module
+      - run: ./gradlew testDebugUnitTest testAndroidHostTest --continue
+      - name: Test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          retention-days: 7
+
+  lint:
+    name: Android Lint
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew :androidApp:lintDebug
+      - name: Lint report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: lint-report
+          path: androidApp/build/reports/
+          retention-days: 7
+
+  code-style:
+    name: Code style
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v6
+      # Rules in .editorconfig; fix locally with ./gradlew ktlintFormat
+      - run: ./gradlew ktlintCheck
+      - name: ktlint reports
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ktlint-report
+          path: '**/build/reports/ktlint/'
+          retention-days: 7
+
+  # The same analysis as the SonarQube job in azure-pipelines.yml; turn off Automatic Analysis in
+  # SonarQube Cloud first, or the scan fails. The scan waits for the Quality Gate, so a failed
+  # gate fails this job and CI result.
+  sonarqube:
+    name: SonarQube
+    needs: build
+    if: ${{ vars.SONAR_PROJECT_KEY != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # SonarQube needs history for blame and new-code detection
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 21 }
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Run tests with coverage
+        run: ./gradlew koverXmlReport
+      - uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            -Dsonar.projectName=CyVault
+            -Dsonar.sources=.
+            -Dsonar.inclusions=**/src/*Main/**/*.kt,androidApp/src/main/**/*.kt
+            -Dsonar.tests=.
+            -Dsonar.test.inclusions=**/src/*Test/**/*.kt
+            -Dsonar.exclusions=**/build/**,iosApp/**,azure-backend/**,amplify-backend/**
+            -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/kover/report.xml
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+
+  e2e-tests:
+    name: E2E tests
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: 21 }
+      # Reads the Gradle cache the Build job wrote, so the APK isn't compiled from scratch again.
+      - uses: gradle/actions/setup-gradle@v6
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+
+      - name: Start Appium
+        run: |
+          npm install -g appium
+          appium driver install uiautomator2
+          nohup appium --log "$RUNNER_TEMP/appium.log" > /dev/null 2>&1 &
+          timeout 60 bash -c 'until curl -sf http://127.0.0.1:4723/status > /dev/null; do sleep 2; done'
+
+      # The emulator needs hardware acceleration; let the runner user open /dev/kvm
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run E2E tests
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          script: ./e2e/run-e2e.sh
+
+      - name: Test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-reports
+          path: |
+            e2e/build/test-results/e2eTest/
+            e2e/build/reports/tests/e2eTest/
+            ${{ runner.temp }}/appium.log
+          retention-days: 7
+
+  # The E2E line's own result, so a failing emulator run never blocks CI result. Like CI result,
+  # it passes when E2E tests was skipped because a docs-only change skipped Build.
+  e2e-result:
+    name: E2E result
+    needs: e2e-tests
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          for result in $RESULTS; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then exit 1; fi
+          done
+
+  # One check for branch protection: passes when every job passed or was skipped (docs-only change).
+  ci-result:
+    name: CI result
+    needs: [changes, build, unit-tests, lint, code-style, sonarqube]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          for result in $RESULTS; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then exit 1; fi
+          done

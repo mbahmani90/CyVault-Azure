@@ -1,0 +1,43 @@
+# Headless Android emulator and Appium server for the :e2e tests.
+parameters:
+  - name: apiLevel
+    type: string
+    default: "34"
+
+steps:
+  # The emulator needs hardware acceleration; let the agent user open /dev/kvm
+  - bash: |
+      echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+      sudo udevadm control --reload-rules
+      sudo udevadm trigger --name-match=kvm
+      ls -l /dev/kvm
+    displayName: Enable KVM
+
+  - bash: |
+      set -euo pipefail
+      image="system-images;android-${{ parameters.apiLevel }};google_apis;x86_64"
+      sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+      # `yes` is killed by SIGPIPE once sdkmanager stops reading, which pipefail would count as a failure
+      (yes || true) | "$sdkmanager" --licenses > /dev/null
+      "$sdkmanager" --install emulator platform-tools "$image" > /dev/null
+      echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n e2e -k "$image" --force
+      nohup "$ANDROID_HOME/emulator/emulator" -avd e2e -no-window -no-audio -no-boot-anim -no-snapshot \
+        -gpu swiftshader_indirect > "$(Agent.TempDirectory)/emulator.log" 2>&1 &
+    displayName: Start emulator
+
+  - bash: |
+      npm install -g appium
+      appium driver install uiautomator2
+      nohup appium --log "$(Agent.TempDirectory)/appium.log" > /dev/null 2>&1 &
+      timeout 60 bash -c 'until curl -sf http://127.0.0.1:4723/status > /dev/null; do sleep 2; done'
+    displayName: Start Appium
+
+  - bash: |
+      adb="$ANDROID_HOME/platform-tools/adb"
+      timeout 300 "$adb" wait-for-device
+      timeout 300 bash -c "until [ \"\$('$adb' shell getprop sys.boot_completed | tr -d '\r')\" = 1 ]; do sleep 5; done"
+      # Animations make UI waits flaky
+      "$adb" shell settings put global window_animation_scale 0
+      "$adb" shell settings put global transition_animation_scale 0
+      "$adb" shell settings put global animator_duration_scale 0
+    displayName: Wait for emulator boot

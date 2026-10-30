@@ -10,3 +10,15 @@ services:
     project: ./src/CyVault.Api
     language: dotnet
     host: function
+hooks:
+  # Creates or updates this environment's Entra app registrations, consent and user flow
+  # (infra/entra/entra.json) and saves their IDs for Bicep. Needs `az login` to the tenant.
+  preprovision:
+    windows:
+      shell: pwsh
+      run: ./infra/entra/Set-EntraApps.ps1
+      continueOnError: false
+    posix:
+      shell: pwsh
+      run: ./infra/entra/Set-EntraApps.ps1
+      continueOnError: false

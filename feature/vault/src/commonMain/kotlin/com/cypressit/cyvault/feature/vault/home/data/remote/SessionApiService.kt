@@ -13,16 +13,18 @@ import io.ktor.http.isSuccess
 class SessionApiService(
     private val client: HttpClient,
     private val authClient: AuthClient,
+    config: CyVaultApiConfig,
 ) {
 
-    companion object {
-        const val SIGN_OUT_URL = "https://func-cyvault-24xpnyg5tfwui.azurewebsites.net/api/me/signout"
-    }
+    private val signOutUrl = "${config.baseUrl}/me/signout"
+
+    /** Any CyVault API scope will do: the API only needs the token's user. */
+    private val profileScope = "${config.appIdUri}/Profile.ReadWrite"
 
     /** Must run before the local sign-out: it needs a token for the API. */
     suspend fun revokeSessions() {
-        val response = client.post(SIGN_OUT_URL) {
-            bearerAuth(authClient.accessToken(listOf(ProfilePhotoApiService.PROFILE_SCOPE)))
+        val response = client.post(signOutUrl) {
+            bearerAuth(authClient.accessToken(listOf(profileScope)))
         }
         if (!response.status.isSuccess()) throw Exception("Sign-out request failed (${response.status.value})")
     }
