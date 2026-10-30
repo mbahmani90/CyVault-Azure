@@ -1,27 +1,13 @@
-<p align="center">
-  <img src="cyvault_icon.png" width="96" alt="CyVault icon" />
-</p>
-
-<h1 align="center">CyVault</h1>
-
-<p align="center">
-  A Kotlin Multiplatform Android app for tracking your balances: purchases and income, totalled per currency.
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Kotlin-2.4-7F52FF?logo=kotlin&logoColor=white" />
-  <img src="https://img.shields.io/badge/Compose%20Multiplatform-1.11-4285F4?logo=jetpackcompose&logoColor=white" />
-  <img src="https://img.shields.io/badge/platform-Android-3DDC84" />
-  <img src="https://img.shields.io/badge/status-work%20in%20progress-orange" />
-</p>
+<h1 align="center">
+  <img src="cyvault_icon.png" width="96" alt="CyVault icon" /><br />
+  CyVault
+</h1>
 
 ---
 
 ## Overview
 
 CyVault lets a user sign in and manage their balances: record purchases and income, see the total per currency, and edit or delete entries. The balances are stored per user in the Azure backend.
-
-The app is built with **Kotlin Multiplatform** and **Compose Multiplatform**: UI, ViewModels, business logic and networking live in shared code, and only a small set of platform-specific pieces use `expect`/`actual`.
 
 ## Features
 
