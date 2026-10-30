@@ -30,8 +30,25 @@ class VaultHomePage(driver: AppiumDriver) : BasePage(driver) {
         return DeleteBalanceDialogPage(driver)
     }
 
+    fun tapSelectAll() = apply { find(VaultHomeTags.SELECTION_SELECT_ALL_BUTTON).click() }
+
     /** Deletes the balance through the UI: select it, delete, then confirm. */
     fun deleteBalance(title: String): VaultHomePage = longPressBalance(title).tapDeleteSelected().tapConfirm()
+
+    fun isEmpty(): Boolean = waitUntil { isShown(VaultHomeTags.BALANCES_EMPTY_TEXT) }
+
+    /**
+     * Deletes every balance through the UI: long press the first row, select all, delete, confirm.
+     * Returns true once the list is empty.
+     */
+    fun deleteAllBalances(): Boolean {
+        // Rows load from the backend: wait until they, or the empty text, show.
+        waitUntil { findAll(VaultHomeTags.BALANCE_ROW).isNotEmpty() || isShown(VaultHomeTags.BALANCES_EMPTY_TEXT) }
+        val firstRow = findAll(VaultHomeTags.BALANCE_ROW).firstOrNull() ?: return isEmpty()
+        longPress(firstRow)
+        tapSelectAll().tapDeleteSelected().tapConfirm()
+        return isEmpty()
+    }
 
     // The row's own text is empty: the title is on a text element inside it.
     private fun balanceRow(title: String): WebElement? =

@@ -22,11 +22,6 @@ class AddBalanceTest {
         assertTrue(dialog.isShown(), "Add Item dialog did not open")
 
         dialog.enterTitle(title).enterDescription("Added by AddBalanceTest").enterValue("12.50").tapSave()
-        // Registered before the checks, so the balance is removed even if one of them fails.
-        // Waits for the row to go, so the app isn't stopped before the delete reaches the backend.
-        session.cleanup {
-            if (home.isBalanceShown(title)) check(home.deleteBalance(title).isBalanceGone(title)) { "Not deleted" }
-        }
 
         assertTrue(dialog.isClosed(), "Add Item dialog did not close after Save")
         assertTrue(home.isBalanceShown(title), "New balance \"$title\" is not on the home screen")

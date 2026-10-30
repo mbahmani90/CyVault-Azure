@@ -339,25 +339,53 @@ locally against the real storage through `az login`.
 
 ## Continuous integration
 
-[`azure-pipelines.yml`](azure-pipelines.yml) runs the Android checks in Azure Pipelines on every pull
-request to `main`. Changes that only touch `iosApp/`, the backends, `docs/` or Markdown don't start it.
+The same flow runs in two places, on every pull request and push to `main`:
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) in GitHub Actions and
+[`azure-pipelines.yml`](azure-pipelines.yml) in Azure Pipelines. Changes that only touch `iosApp/`, the
+backends, `docs/` or Markdown skip it.
 
-| Stage | Job | Gradle task |
-|---|---|---|
-| Build | Build | `:androidApp:assembleDebug` |
-| Verify | Unit tests | `testDebugUnitTest testAndroidHostTest` |
-| Verify | Android Lint | `:androidApp:lintDebug` (also lints the library modules) |
-| Verify | Code style | `ktlintCheck` (rules in `.editorconfig`; fix with `./gradlew ktlintFormat`) |
-| Verify | SonarQube | `koverXmlReport`, then SonarQube Cloud analysis |
-| CI result | CI result | Fails if any job above failed |
+```
+Build ─┬─► Unit tests · Android Lint · Code style (· SonarQube) ─► CI result
+       └─► E2E tests ─► E2E result
+```
+
+| Job | Gradle task |
+|---|---|
+| Build | `:androidApp:assembleDebug` |
+| Unit tests | `testDebugUnitTest testAndroidHostTest` |
+| Android Lint | `:androidApp:lintDebug` (also lints the library modules) |
+| Code style | `ktlintCheck` (rules in `.editorconfig`; fix with `./gradlew ktlintFormat`) |
+| SonarQube | `koverXmlReport`, then SonarQube Cloud analysis; fails if the Quality Gate fails |
+| CI result | Fails if any job above failed |
+| E2E tests | `:e2e:e2eTest` through `e2e/run-e2e.sh`: Appium drives the debug APK on an emulator |
+| E2E result | Fails if E2E tests failed; **CI result** doesn't depend on it |
+
+In GitHub Actions the first job, **Changes**, does the path filtering; Azure does it with its
+`paths.exclude` trigger and groups the checks in a **Verify** stage.
 
 To set it up:
 
 1. In Azure DevOps, create a pipeline from this GitHub repository and pick the existing `azure-pipelines.yml`.
 2. In GitHub, add a branch protection rule on `main` that requires the **CI result** check.
-3. For SonarQube, install the SonarQube Cloud extension, add a service connection named `SonarCloud`,
-   set `sonarOrganization` and `sonarProjectKey` in `azure-pipelines.yml` to your project's values, and set
-   `sonarEnabled: true`. Until then the SonarQube job is left out of the run.
+3. For E2E, create a test account in the debug Entra tenant (the tests delete every balance on it) and add
+   its credentials as `E2E_EMAIL` and `E2E_PASSWORD`: repository secrets in GitHub, secret pipeline variables
+   in Azure DevOps. The Azure E2E stage needs an agent with KVM for the emulator.
+4. For SonarQube, first turn off Automatic Analysis in the SonarQube Cloud project (Administration →
+   Analysis Method). Both CIs report to the same project, so the latest analysis of a branch is the one shown.
+   - GitHub Actions: add a SonarQube Cloud token as the repository secret `SONAR_TOKEN`, and the
+     repository variables `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY` with your project's values. Until
+     `SONAR_PROJECT_KEY` is set the SonarQube job is skipped.
+   - Azure Pipelines: install the SonarQube Cloud extension and add a service connection named `SonarCloud`;
+     the organization and project keys are in `azure-pipelines.yml`. `sonarEnabled: false` leaves the
+     SonarQube job out of the run.
+   - Quality Gate: both scans wait for SonarQube Cloud's verdict (`sonar.qualitygate.wait=true`, up to 5 minutes).
+     When the gate fails, the SonarQube job fails and so does **CI result**, which blocks the PR. What the gate
+     checks is set in SonarQube Cloud (Project → Quality Gate); the default "Sonar way" looks at new code only:
+     no new bugs or vulnerabilities, all new security hotspots reviewed, ≥ 80% coverage and ≤ 3% duplication.
+     The failing conditions are on the project's page in SonarQube Cloud.
+
+To run the E2E tests locally, start an emulator or connect a phone, start `appium` (with `ANDROID_HOME`
+and `JAVA_HOME` set), put the test account in the git-ignored `e2e/.env`, then run `./e2e/run-e2e.sh`.
 
 ## Security notes & roadmap
 

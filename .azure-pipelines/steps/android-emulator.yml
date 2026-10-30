@@ -17,7 +17,8 @@ steps:
       set -euo pipefail
       image="system-images;android-${{ parameters.apiLevel }};google_apis;x86_64"
       sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-      yes | "$sdkmanager" --licenses > /dev/null
+      # `yes` is killed by SIGPIPE once sdkmanager stops reading, which pipefail would count as a failure
+      (yes || true) | "$sdkmanager" --licenses > /dev/null
       "$sdkmanager" --install emulator platform-tools "$image" > /dev/null
       echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n e2e -k "$image" --force
       nohup "$ANDROID_HOME/emulator/emulator" -avd e2e -no-window -no-audio -no-boot-anim -no-snapshot \

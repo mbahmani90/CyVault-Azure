@@ -1,5 +1,8 @@
-# Android CI: Build, then Unit tests, Android Lint, Code style, E2E tests and SonarQube in parallel,
-# then CI result. Make "CI result" the one required check on main.
+# Android CI, the same as .github/workflows/ci.yml:
+#   Build ─┬─► Verify: Unit tests, Android Lint, Code style, SonarQube ─► CI result
+#          └─► E2E tests ─► E2E result
+# Make "CI result" the one required check on main. E2E signs in with the secret pipeline
+# variables E2E_EMAIL and E2E_PASSWORD (a test account; the tests delete every balance on it).
 
 trigger:
   branches:
@@ -29,13 +32,11 @@ pool:
 variables:
   GRADLE_USER_HOME: $(Pipeline.Workspace)/.gradle
   GRADLE_OPTS: -Dorg.gradle.daemon=false
-  # Set to 'true' once the SonarQube Cloud service connection and project exist (see README)
-  sonarEnabled: false
+  # Needs the SonarQube Cloud service connection below (see README); 'false' leaves the job out
+  sonarEnabled: true
   sonarServiceConnection: SonarCloud
-  sonarOrganization: cyvault
-  sonarProjectKey: cyvault-android
-  # The E2E job signs in with the secret pipeline variables E2E_EMAIL and E2E_PASSWORD (see README)
-  e2eEnabled: false
+  sonarOrganization: mbahmani90
+  sonarProjectKey: mbahmani90_CyVault-Azure
 
 stages:
   - stage: Build
@@ -95,33 +96,6 @@ stages:
             displayName: Publish ktlint report
             condition: failed()
 
-      - ${{ if eq(variables.e2eEnabled, 'true') }}:
-          - job: E2ETests
-            displayName: E2E tests
-            timeoutInMinutes: 45
-            steps:
-              - template: .azure-pipelines/steps/gradle-setup.yml
-              - template: .azure-pipelines/steps/android-emulator.yml
-              - bash: |
-                  chmod +x e2e/run-e2e.sh
-                  ./e2e/run-e2e.sh
-                displayName: Run E2E tests
-                env:
-                  # Secret variables reach scripts only when mapped explicitly
-                  E2E_EMAIL: $(E2E_EMAIL)
-                  E2E_PASSWORD: $(E2E_PASSWORD)
-              - task: PublishTestResults@2
-                displayName: Publish E2E test results
-                condition: succeededOrFailed()
-                inputs:
-                  testResultsFormat: JUnit
-                  testResultsFiles: "e2e/build/test-results/e2eTest/TEST-*.xml"
-                  testRunTitle: E2E tests
-              - publish: $(Agent.TempDirectory)
-                artifact: e2e-logs
-                displayName: Publish emulator and Appium logs
-                condition: failed()
-
       - ${{ if eq(variables.sonarEnabled, 'true') }}:
           - job: SonarQube
             displayName: SonarQube
@@ -134,7 +108,7 @@ stages:
                   scannerMode: cli
                   configMode: manual
                   cliProjectKey: $(sonarProjectKey)
-                  cliProjectName: CyVault Android
+                  cliProjectName: CyVault
                   cliSources: .
                   extraProperties: |
                     sonar.inclusions=**/src/*Main/**/*.kt,androidApp/src/main/**/*.kt
@@ -142,6 +116,9 @@ stages:
                     sonar.test.inclusions=**/src/*Test/**/*.kt
                     sonar.exclusions=**/build/**,iosApp/**,azure-backend/**,amplify-backend/**
                     sonar.coverage.jacoco.xmlReportPaths=build/reports/kover/report.xml
+                    # Wait for the Quality Gate: a failed gate fails the analysis step, this job and CI result
+                    sonar.qualitygate.wait=true
+                    sonar.qualitygate.timeout=300
               - bash: ./gradlew koverXmlReport
                 displayName: Run tests with coverage
               - task: SonarCloudAnalyze@3
@@ -161,7 +138,6 @@ stages:
           unitTestsResult: $[ stageDependencies.Verify.UnitTests.result ]
           lintResult: $[ stageDependencies.Verify.AndroidLint.result ]
           codeStyleResult: $[ stageDependencies.Verify.CodeStyle.result ]
-          e2eResult: $[ stageDependencies.Verify.E2ETests.result ]
           sonarResult: $[ stageDependencies.Verify.SonarQube.result ]
         steps:
           - checkout: none
@@ -170,7 +146,7 @@ stages:
               check() {
                 echo "$1: ${2:-not run}"
                 # Empty or an unexpanded "$(...)" means the job is not in this run
-                # (SonarQube while sonarEnabled is false, E2E tests while e2eEnabled is false)
+                # (SonarQube while sonarEnabled is false)
                 case "$2" in
                   Succeeded|SucceededWithIssues|Skipped|""|'$('*) ;;
                   *) failed=1 ;;
@@ -180,7 +156,6 @@ stages:
               check "Unit tests" "${UNIT_TESTS_RESULT:-}"
               check "Android Lint" "${LINT_RESULT:-}"
               check "Code style" "${CODE_STYLE_RESULT:-}"
-              check "E2E tests" "${E2E_RESULT:-}"
               check "SonarQube" "${SONAR_RESULT:-}"
               # Build must have run: if it failed or was cancelled, nothing else ran
               [ "${BUILD_RESULT:-}" = "Succeeded" ] || failed=1
@@ -190,6 +165,58 @@ stages:
               UNIT_TESTS_RESULT: $(unitTestsResult)
               LINT_RESULT: $(lintResult)
               CODE_STYLE_RESULT: $(codeStyleResult)
-              E2E_RESULT: $(e2eResult)
               SONAR_RESULT: $(sonarResult)
             displayName: Check job results
+
+  # The E2E line runs next to Verify, like in .github/workflows/ci.yml; CI result doesn't depend on it.
+  - stage: E2E
+    displayName: E2E tests
+    dependsOn: Build
+    jobs:
+      - job: E2ETests
+        displayName: E2E tests
+        timeoutInMinutes: 45
+        steps:
+          - template: .azure-pipelines/steps/gradle-setup.yml
+          - template: .azure-pipelines/steps/android-emulator.yml
+          - bash: |
+              chmod +x e2e/run-e2e.sh
+              ./e2e/run-e2e.sh
+            displayName: Run E2E tests
+            env:
+              # Secret variables reach scripts only when mapped explicitly
+              E2E_EMAIL: $(E2E_EMAIL)
+              E2E_PASSWORD: $(E2E_PASSWORD)
+          - task: PublishTestResults@2
+            displayName: Publish E2E test results
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: "e2e/build/test-results/e2eTest/TEST-*.xml"
+              testRunTitle: E2E tests
+          - publish: $(Agent.TempDirectory)
+            # One artifact per attempt, so re-running the stage doesn't clash with the last upload
+            artifact: e2e-logs-$(System.JobAttempt)
+            displayName: Publish emulator and Appium logs
+            condition: failed()
+
+  - stage: E2EResult
+    displayName: E2E result
+    dependsOn: E2E
+    condition: always()
+    jobs:
+      - job: E2EResult
+        displayName: E2E result
+        variables:
+          e2eResult: $[ stageDependencies.E2E.E2ETests.result ]
+        steps:
+          - checkout: none
+          - bash: |
+              echo "E2E tests: ${E2E_RESULT:-not run}"
+              case "${E2E_RESULT:-}" in
+                Succeeded|SucceededWithIssues) ;;
+                *) exit 1 ;;
+              esac
+            env:
+              E2E_RESULT: $(e2eResult)
+            displayName: Check E2E result
