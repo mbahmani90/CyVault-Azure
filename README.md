@@ -5,7 +5,7 @@
 <h1 align="center">CyVault</h1>
 
 <p align="center">
-  A Kotlin Multiplatform Android wallet app for managing bank cards.
+  A Kotlin Multiplatform Android app for tracking your balances: purchases and income, totalled per currency.
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@
 
 ## Overview
 
-CyVault lets a user sign in and store and manage their cards in a vault.
+CyVault lets a user sign in and manage their balances: record purchases and income, see the total per currency, and edit or delete entries. The balances are stored per user in the Azure backend.
 
 The app is built with **Kotlin Multiplatform** and **Compose Multiplatform**: UI, ViewModels, business logic and networking live in shared code, and only a small set of platform-specific pieces use `expect`/`actual`.
 
@@ -30,7 +30,12 @@ The app is built with **Kotlin Multiplatform** and **Compose Multiplatform**: UI
   - Email/password sign-up with email verification code
   - Sign-in, sign-out, forgot password (sends the reset code; entering the code and a new password isn't built yet)
   - **Sign in with Google:** through Entra External ID with Google as an identity provider (MSAL browser flow in a browser tab)
-- **Vault**: list and delete saved cards; the drawer shows the signed-in user (avatar, name, email) and sign-out
+- **Balances**
+  - Add a purchase or income with a title, description, amount, currency, and date and time
+  - Home shows the total per currency and every balance, newest first; tap one to edit it
+  - Long press to select several balances, then select all or delete them together
+  - Saved per user through the Azure balances API
+- **Drawer**: the signed-in user (avatar, name, email) and sign-out
 - **Profile photo**: tap the drawer avatar to pick a photo with the system Photo Picker. It's uploaded to the Azure backend with the user's Entra access token, cached in app-private storage, and removed from the device on sign-out
 
 ## Architecture
@@ -46,7 +51,7 @@ CyVault
 ├── systemdesign     Design system: theme, colors, typography, shapes, reusable components
 ├── feature
 │   ├── authentication   Feature: sign-in / sign-up / Google / password reset
-│   └── vault            Feature: vault home, card list, add-card
+│   └── vault            Feature: vault home with the balances, add-card
 └── azure-backend    Azure Functions API (.NET 10) + Bicep infrastructure, deployed with azd
 ```
 
@@ -72,7 +77,7 @@ own layers and Koin module, plus a small shared package:
 ```
 feature/vault/…/feature/vault/
 ├── card/           shared by the screens: Card model, CardRepository, card API
-├── home/           card list + total assets, drawer with sign-out and the profile photo
+├── home/           balances + totals per currency, drawer with sign-out and the profile photo
                     (Azure photo API client, on-device cache, photo picker)
 ├── addcard/        add a card
 │   ├── data/           remote services + DTOs, mappers, repository implementations
