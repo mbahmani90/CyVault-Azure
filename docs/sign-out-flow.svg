@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1020" width="1200" height="1020" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title>CyVault — Server-side sign-out revokes the user's Entra sessions through Microsoft Graph</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .t-title { font-size: 20px; font-weight: 700; fill: #0F172A; }
+      .t-sub { font-size: 12.5px; fill: #64748B; }
+      .t-band { font-size: 11px; font-weight: 700; fill: #64748B; letter-spacing: 0.04em; }
+      .t-box { font-size: 14px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-boxsub { font-size: 11px; fill: #475569; text-anchor: middle; }
+      .t-step { font-size: 12.5px; fill: #1E293B; text-anchor: middle; }
+      .t-code { font-size: 12px; fill: #1E293B; text-anchor: middle; font-family: Consolas, 'SF Mono', Menlo, monospace; }
+      .t-note { font-size: 11px; fill: #64748B; text-anchor: middle; }
+      .t-foot { font-size: 12px; fill: #475569; }
+      .halo { paint-order: stroke; stroke: #F8FAFC; stroke-width: 5px; stroke-linejoin: round; }
+      .band { fill: none; stroke: #CBD5E1; stroke-width: 1.2; stroke-dasharray: 5 4; }
+      .life { stroke: #94A3B8; stroke-width: 1.2; stroke-dasharray: 4 4; }
+      .msg { stroke: #475569; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .reply { stroke: #475569; stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="1020" fill="#F8FAFC"/>
+
+  <text x="40" y="38" class="t-title">Server-side sign-out: revoking the user's Entra sessions</text>
+  <text x="40" y="60" class="t-sub">Solid arrows: requests · Dashed arrows: responses · The phone holds no Graph permission: the Function calls Graph as the CyVault API app</text>
+
+  <!-- Tenants -->
+  <rect x="258" y="74" width="464" height="88" rx="10" class="band"/>
+  <text x="270" y="90" class="t-band">AZURE SUBSCRIPTION TENANT</text>
+  <rect x="738" y="74" width="444" height="88" rx="10" class="band"/>
+  <text x="750" y="90" class="t-band">ENTRA EXTERNAL ID TENANT (USERS)</text>
+
+  <!-- Participants -->
+  <rect x="30" y="98" width="200" height="56" rx="8" fill="#DBEAFE" stroke="#1D4ED8" stroke-width="1.5"/>
+  <text x="130" y="122" class="t-box">Android app</text>
+  <text x="130" y="140" class="t-boxsub">SessionApiService · MSAL</text>
+
+  <rect x="270" y="98" width="200" height="56" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="370" y="122" class="t-box">CyVault Function</text>
+  <text x="370" y="140" class="t-boxsub">SignOut · SignInSessions</text>
+
+  <rect x="510" y="98" width="200" height="56" rx="8" fill="#E2E8F0" stroke="#475569" stroke-width="1.5"/>
+  <text x="610" y="122" class="t-box">Managed Identity</text>
+  <text x="610" y="140" class="t-boxsub">the Function App's own identity</text>
+
+  <rect x="750" y="98" width="200" height="56" rx="8" fill="#DCFCE7" stroke="#0F766E" stroke-width="1.5"/>
+  <text x="850" y="122" class="t-box">Entra External ID</text>
+  <text x="850" y="140" class="t-boxsub">CyVault API app registration</text>
+
+  <rect x="970" y="98" width="200" height="56" rx="8" fill="#FFEDD5" stroke="#C2410C" stroke-width="1.5"/>
+  <text x="1070" y="122" class="t-box">Microsoft Graph</text>
+  <text x="1070" y="140" class="t-boxsub">acts on the user tenant</text>
+
+  <!-- Lifelines, broken where a participant works on its own -->
+  <line x1="130" y1="154" x2="130" y2="880" class="life"/>
+  <line x1="370" y1="154" x2="370" y2="250" class="life"/>
+  <line x1="370" y1="306" x2="370" y2="900" class="life"/>
+  <line x1="610" y1="154" x2="610" y2="900" class="life"/>
+  <line x1="850" y1="154" x2="850" y2="500" class="life"/>
+  <line x1="850" y1="570" x2="850" y2="900" class="life"/>
+  <line x1="1070" y1="154" x2="1070" y2="690" class="life"/>
+  <line x1="1070" y1="760" x2="1070" y2="900" class="life"/>
+
+  <!-- 1 -->
+  <text x="250" y="198" class="t-code halo">1. POST /api/me/signout</text>
+  <line x1="132" y1="210" x2="366" y2="210" class="msg"/>
+  <text x="250" y="228" class="t-note halo">Bearer &lt;CyVault API access token&gt;</text>
+
+  <!-- 2 -->
+  <rect x="280" y="250" width="180" height="56" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="370" y="273" class="t-step">2. Validate the token</text>
+  <text x="370" y="292" class="t-boxsub">take the user's oid from it</text>
+
+  <!-- 3 -->
+  <text x="490" y="338" class="t-step">3. Request a token</text>
+  <line x1="372" y1="350" x2="606" y2="350" class="msg"/>
+  <text x="490" y="368" class="t-note">audience: api://AzureADTokenExchange</text>
+
+  <!-- 4 -->
+  <text x="490" y="404" class="t-step">4. Managed Identity token</text>
+  <line x1="608" y1="416" x2="374" y2="416" class="reply"/>
+
+  <!-- 5 -->
+  <text x="610" y="452" class="t-step halo">5. Request a Graph token as the CyVault API app</text>
+  <line x1="372" y1="464" x2="846" y2="464" class="msg"/>
+  <text x="610" y="482" class="t-note halo">client_assertion = Managed Identity token · scope https://graph.microsoft.com/.default</text>
+
+  <!-- 6 -->
+  <rect x="750" y="500" width="200" height="70" rx="8" fill="#DCFCE7" stroke="#0F766E" stroke-width="1.5"/>
+  <text x="850" y="524" class="t-step">6. Check federated credential</text>
+  <text x="850" y="543" class="t-boxsub">it trusts this Managed Identity;</text>
+  <text x="850" y="558" class="t-boxsub">app role: User.RevokeSessions.All</text>
+
+  <!-- 7 -->
+  <text x="610" y="602" class="t-step halo">7. Graph token (as the CyVault API app)</text>
+  <line x1="848" y1="614" x2="374" y2="614" class="reply"/>
+
+  <!-- 8 -->
+  <text x="720" y="660" class="t-code halo">8. POST /v1.0/users/{oid}/revokeSignInSessions</text>
+  <line x1="372" y1="672" x2="1066" y2="672" class="msg"/>
+
+  <!-- 9 -->
+  <rect x="970" y="690" width="200" height="70" rx="8" fill="#FFEDD5" stroke="#C2410C" stroke-width="1.5"/>
+  <text x="1070" y="714" class="t-step">9. Revoke in Entra</text>
+  <text x="1070" y="733" class="t-boxsub">every refresh token and sign-in</text>
+  <text x="1070" y="748" class="t-boxsub">session of {oid}, on all devices</text>
+
+  <!-- 10 -->
+  <text x="720" y="796" class="t-step halo">10. 200 OK</text>
+  <line x1="1068" y1="808" x2="374" y2="808" class="reply"/>
+
+  <!-- 11 -->
+  <text x="250" y="842" class="t-step halo">11. 204 No Content</text>
+  <line x1="368" y1="854" x2="134" y2="854" class="reply"/>
+  <text x="250" y="872" class="t-note halo">502 if Graph failed</text>
+
+  <!-- 12 -->
+  <rect x="40" y="880" width="180" height="56" rx="8" fill="#DBEAFE" stroke="#1D4ED8" stroke-width="1.5"/>
+  <text x="130" y="903" class="t-step">12. Clear the MSAL cache</text>
+  <text x="130" y="922" class="t-boxsub">even if the revoke failed</text>
+
+  <!-- Notes -->
+  <text x="40" y="964" class="t-foot">• Access tokens already issued stay valid until they expire (about an hour): the API checks only their signature and expiry.</text>
+  <text x="40" y="984" class="t-foot">• Run locally, the Function uses the Graph__ClientSecret setting instead of steps 3–4.</text>
+  <text x="40" y="1004" class="t-foot">• Storage access (avatars, balances) uses Azure IAM roles instead; users and sessions are not Azure resources.</text>
+</svg>

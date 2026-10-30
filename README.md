@@ -114,6 +114,14 @@ The sequence below shows the outgoing step, from the Function to Blob Storage, i
 
 ![Function App writes to Blob Storage with its Managed Identity](docs/managed-identity-blob-flow.svg)
 
+### Server-side sign-out: revoking the user's Entra sessions
+
+Signing out on Android also ends the user's sessions in Entra, not just on the phone. Before clearing the MSAL cache, the app calls `POST /api/me/signout` with its CyVault API token. The Function takes the `oid` from the validated token and calls Microsoft Graph's `revokeSignInSessions` for that user, which makes Entra reject every refresh token the user holds, on all devices. Access tokens already issued stay valid until they expire (about an hour), because the API checks only their signature and expiry. The revoke is best effort: offline, or if Graph fails, the user is still signed out on the phone.
+
+Users and their sessions aren't Azure resources, so this access isn't an IAM role like Storage's. It's the Graph application permission `User.RevokeSessions.All`, granted to the **CyVault API app registration** in the External ID tenant. The mobile app has no Graph permission. The Function's Managed Identity lives in the Azure subscription's tenant, so it can't hold that permission itself. Instead, a **federated credential** on the CyVault API registration trusts the Managed Identity, and the Function trades its Managed Identity token for a Graph token as the CyVault API app. The setup steps are in [`azure-backend/README.md`](azure-backend/README.md#server-side-sign-out).
+
+![Server-side sign-out revokes the user's Entra sessions through Microsoft Graph](docs/sign-out-flow.svg)
+
 ### MVI
 
 Every screen has three types:
