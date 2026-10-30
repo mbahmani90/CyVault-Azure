@@ -209,10 +209,7 @@ The same flow runs in two places, on every pull request and push to `main`:
 [`azure-pipelines.yml`](azure-pipelines.yml) in Azure Pipelines. Changes that only touch the backends,
 `docs/` or Markdown skip it.
 
-```
-Build ─┬─► Unit tests · Android Lint · Code style · SonarQube ─► CI result
-       └─► E2E tests ─► E2E result
-```
+![CI flow: Build, then Unit tests, Android Lint, Code style and SonarQube into CI result, and E2E tests into E2E result](docs/ci-flow.svg)
 
 | Job | Gradle task |
 |---|---|
