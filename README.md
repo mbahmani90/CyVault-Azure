@@ -210,7 +210,7 @@ The same flow runs in two places, on every pull request and push to `main`:
 `docs/` or Markdown skip it.
 
 ```
-Build ─┬─► Unit tests · Android Lint · Code style (· SonarQube) ─► CI result
+Build ─┬─► Unit tests · Android Lint · Code style · SonarQube ─► CI result
        └─► E2E tests ─► E2E result
 ```
 
