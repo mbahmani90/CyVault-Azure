@@ -210,6 +210,10 @@ The backend's requirements, environments, local run and deployment are in
 
 `./gradlew :androidApp:assembleDebug`, or use the run configuration in Android Studio.
 
+### 4. Publish
+
+Publishing to Google Play is described in [`docs/google-play.md`](docs/google-play.md).
+
 ## Continuous integration
 
 The same flow runs in two places, on every pull request and push to `main`:
