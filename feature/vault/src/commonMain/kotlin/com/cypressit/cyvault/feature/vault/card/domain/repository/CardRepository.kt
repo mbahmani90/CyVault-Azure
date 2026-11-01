@@ -10,7 +10,7 @@ interface CardRepository {
      * the same card instead of adding a second one. Fails with [PhoneNumberAlreadyLinkedException]
      * when another card already has the phone number.
      */
-    suspend fun createCard(id: String, cardNumber: String, phoneNumber: String): Result<Card>
+    suspend fun createCard(id: String, cardNumber: String, phoneNumber: String, bankName: String): Result<Card>
 
     suspend fun deleteCard(id: String): Result<Unit>
 }

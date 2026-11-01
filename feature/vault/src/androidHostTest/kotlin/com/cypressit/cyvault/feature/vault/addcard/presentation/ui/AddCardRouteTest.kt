@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.cypressit.cyvault.feature.vault.addcard.domain.usecase.CreateCardUseCase
+import com.cypressit.cyvault.feature.vault.addcard.domain.usecase.DeleteCardsUseCase
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardViewModel
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.repository.CardRepository
@@ -30,7 +31,11 @@ class AddCardRouteTest {
 
     private fun ComposeUiTest.showRoute(repository: CardRepository) {
         // Built outside setContent: a ViewModel constructed in a composable is a lint error.
-        val viewModel = AddCardViewModel(GetCardsUseCase(repository), CreateCardUseCase(repository))
+        val viewModel = AddCardViewModel(
+            GetCardsUseCase(repository),
+            CreateCardUseCase(repository),
+            DeleteCardsUseCase(repository),
+        )
         setContent {
             CyTheme(darkTheme = false) {
                 AddCardRoute(

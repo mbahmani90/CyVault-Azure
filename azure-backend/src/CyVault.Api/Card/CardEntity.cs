@@ -17,6 +17,15 @@ public sealed class CardEntity : ITableEntity
 
     public string Last4 { get; set; } = "";
 
+    /// <summary>
+    /// Visa, Mastercard, Maestro or Other, worked out from the card number when it's added. Empty
+    /// on cards stored before this column existed.
+    /// </summary>
+    public string Brand { get; set; } = "";
+
+    /// <summary>The bank the user named for the card; empty when they didn't name one.</summary>
+    public string BankName { get; set; } = "";
+
     /// <summary>E.164, such as +351912345678: the same number always has the same form.</summary>
     public string PhoneNumber { get; set; } = "";
 
@@ -45,7 +54,13 @@ public sealed class PhoneEntity : ITableEntity
 public sealed record CardTables(TableClient Cards, TableClient Phones);
 
 /// <summary>What the client sends to add a card or change its phone number.</summary>
-public sealed record CardRequest(string? CardNumber, string? PhoneNumber);
+public sealed record CardRequest(string? CardNumber, string? PhoneNumber, string? BankName);
 
 /// <summary>What the API returns for a card.</summary>
-public sealed record CardResponse(string Id, string Last4, string PhoneNumber, DateTimeOffset CreatedAt);
+public sealed record CardResponse(
+    string Id,
+    string Last4,
+    string Brand,
+    string BankName,
+    string PhoneNumber,
+    DateTimeOffset CreatedAt);

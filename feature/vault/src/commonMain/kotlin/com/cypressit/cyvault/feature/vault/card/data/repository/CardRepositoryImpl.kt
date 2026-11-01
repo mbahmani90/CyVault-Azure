@@ -14,10 +14,17 @@ class CardRepositoryImpl(
     override suspend fun getCards(): Result<List<Card>> =
         runSuspendCatching { apiService.getCards().map { it.toDomain() } }
 
-    override suspend fun createCard(id: String, cardNumber: String, phoneNumber: String): Result<Card> =
-        runSuspendCatching {
-            apiService.putCard(id, CardRequestDto(cardNumber = cardNumber, phoneNumber = phoneNumber)).toDomain()
-        }
+    override suspend fun createCard(
+        id: String,
+        cardNumber: String,
+        phoneNumber: String,
+        bankName: String,
+    ): Result<Card> = runSuspendCatching {
+        apiService.putCard(
+            id,
+            CardRequestDto(cardNumber = cardNumber, phoneNumber = phoneNumber, bankName = bankName),
+        ).toDomain()
+    }
 
     override suspend fun deleteCard(id: String): Result<Unit> =
         runSuspendCatching { apiService.deleteCard(id) }
