@@ -16,6 +16,8 @@ namespace CyVault.Api.Card;
 /// </summary>
 public sealed partial class CardFunctions(CardTables tables, ILogger<CardFunctions> logger)
 {
+    private const int MaxBankNameLength = 50;
+
     [Function("ListCards")]
     public async Task<IActionResult> List(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "me/cards")] HttpRequest req,
@@ -59,15 +61,18 @@ public sealed partial class CardFunctions(CardTables tables, ILogger<CardFunctio
         }
         catch (JsonException)
         {
-            return new BadRequestObjectResult("The body must be JSON: { \"cardNumber\", \"phoneNumber\" }.");
+            return new BadRequestObjectResult("The body must be JSON: { \"cardNumber\", \"phoneNumber\", \"bankName\" }.");
         }
 
         var cardNumber = Digits(body?.CardNumber);
         if (!IsValidCardNumber(cardNumber))
-            return new BadRequestObjectResult("cardNumber must be 16 to 19 digits and pass the Luhn check.");
+            return new BadRequestObjectResult("cardNumber must be 16 to 19 digits.");
         var phoneNumber = NormalizePhoneNumber(body?.PhoneNumber);
         if (phoneNumber is null)
             return new BadRequestObjectResult("phoneNumber must be a Portuguese mobile number or an E.164 number, such as +351912345678.");
+        var bankName = body?.BankName?.Trim() ?? "";
+        if (bankName.Length > MaxBankNameLength)
+            return new BadRequestObjectResult($"bankName must be at most {MaxBankNameLength} characters.");
 
         var existing = await tables.Cards.GetEntityIfExistsAsync<CardEntity>(
             caller.ObjectId!, id, cancellationToken: cancellationToken);
@@ -94,6 +99,8 @@ public sealed partial class CardFunctions(CardTables tables, ILogger<CardFunctio
             PartitionKey = caller.ObjectId!,
             RowKey = id,
             Last4 = cardNumber[^4..],
+            Brand = BrandOf(cardNumber),
+            BankName = bankName,
             PhoneNumber = phoneNumber,
             CreatedAt = existing.HasValue ? existing.Value!.CreatedAt : DateTimeOffset.UtcNow,
         };
@@ -148,29 +155,29 @@ public sealed partial class CardFunctions(CardTables tables, ILogger<CardFunctio
     }
 
     private static CardResponse ToResponse(CardEntity entity) =>
-        new(entity.RowKey, entity.Last4, entity.PhoneNumber, entity.CreatedAt);
+        new(entity.RowKey, entity.Last4, entity.Brand, entity.BankName, entity.PhoneNumber, entity.CreatedAt);
+
+    /// <summary>
+    /// The card network, from the number's first digits (its IIN range). Amex is missing because
+    /// its 15-digit numbers don't pass the 16-19 digit check.
+    /// </summary>
+    internal static string BrandOf(string digits)
+    {
+        if (digits.StartsWith('4')) return "Visa";
+
+        var firstTwo = int.Parse(digits[..2]);
+        var firstFour = int.Parse(digits[..4]);
+        if (firstTwo is >= 51 and <= 55 || firstFour is >= 2221 and <= 2720) return "Mastercard";
+        if (firstTwo is 50 or (>= 56 and <= 58) or 63 or 67) return "Maestro";
+        return "Other";
+    }
 
     private static string Digits(string? value) =>
         new((value ?? "").Where(c => c is not (' ' or '-')).ToArray());
 
-    internal static bool IsValidCardNumber(string digits)
-    {
-        if (!CardNumberPattern().IsMatch(digits)) return false;
-
-        // Luhn: from the right, double every second digit (subtracting 9 above 9); the sum must end in 0.
-        var sum = 0;
-        for (var i = 0; i < digits.Length; i++)
-        {
-            var digit = digits[digits.Length - 1 - i] - '0';
-            if (i % 2 == 1)
-            {
-                digit *= 2;
-                if (digit > 9) digit -= 9;
-            }
-            sum += digit;
-        }
-        return sum % 10 == 0;
-    }
+    // Digits only, so the last four and the brand can be read from it. No Luhn check: any 16-19
+    // digit number is accepted, so made-up numbers work for testing.
+    internal static bool IsValidCardNumber(string digits) => CardNumberPattern().IsMatch(digits);
 
     /// <summary>
     /// The number in E.164, or null when it isn't valid. A 9-digit Portuguese mobile number
