@@ -2,6 +2,7 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cypressit.cyvault.core.presentation.MviViewModel
 import com.cypressit.cyvault.feature.vault.home.domain.debug.AddCardPreview
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
@@ -18,6 +19,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUs
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,7 +46,7 @@ class VaultHomeViewModel(
     private val sampleBalancesSeeder: SampleBalancesSeeder? = null,
     /** Null unless :feature:vault-debug is loaded: Add Card isn't ready for release builds. */
     addCardPreview: AddCardPreview? = null,
-) : ViewModel() {
+) : ViewModel(), MviViewModel<VaultHomeState, VaultHomeIntent, VaultHomeEffect> {
 
     private val _state = MutableStateFlow(
         VaultHomeState(
@@ -52,10 +54,10 @@ class VaultHomeViewModel(
             canAddCard = addCardPreview != null,
         ),
     )
-    val state: StateFlow<VaultHomeState> = _state.asStateFlow()
+    override val state: StateFlow<VaultHomeState> = _state.asStateFlow()
 
     private val _effect = Channel<VaultHomeEffect>(Channel.BUFFERED)
-    val effect = _effect.receiveAsFlow()
+    override val effect: Flow<VaultHomeEffect> = _effect.receiveAsFlow()
 
     // The signed-in user's Entra object ID: names their cached photo on the device.
     private var userId: String? = null
@@ -67,7 +69,7 @@ class VaultHomeViewModel(
         loadBalances()
     }
 
-    fun onIntent(intent: VaultHomeIntent) {
+    override fun onIntent(intent: VaultHomeIntent) {
         when (intent) {
             VaultHomeIntent.LoadCards -> loadCards()
             is VaultHomeIntent.DeleteCard -> deleteExistingCard(intent.id)

@@ -26,7 +26,8 @@ kotlin {
             enable = true
         }
 
-        withHostTest {}
+        // Android resources on the classpath: Robolectric runs the Compose UI tests against them.
+        withHostTest { isIncludeAndroidResources = true }
         withDeviceTest {}
     }
 
@@ -81,6 +82,14 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.ktor.client.mock)
+        }
+
+        // Compose UI tests: they run on the JVM under Robolectric, so Kover measures them.
+        getByName("androidHostTest").dependencies {
+            implementation(libs.compose.uiTest)
+            implementation(libs.androidx.compose.uiTestManifest)
+            implementation(libs.robolectric)
+            implementation(libs.junit)
         }
     }
 }

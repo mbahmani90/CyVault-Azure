@@ -1,36 +1,29 @@
 package com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel
 
-import com.cypressit.cyvault.feature.vault.addcard.domain.model.BankAccount
-import com.cypressit.cyvault.feature.vault.addcard.domain.model.Institution
-import com.cypressit.cyvault.feature.vault.card.domain.model.CardType
-
-enum class AddCardStep { SelectBank, Authenticating, SelectAccount, EnterCardDetails }
+import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 
 data class AddCardState(
-    val step: AddCardStep = AddCardStep.SelectBank,
-
-    // SelectBank step
-    val country: String = "PT",
-    val bankSearchQuery: String = "",
-    val institutions: List<Institution> = emptyList(),
-    val isInstitutionsLoading: Boolean = false,
-    val selectedInstitution: Institution? = null,
-
-    // Authenticating step
-    val consentToken: String? = null,
-
-    // SelectAccount step
-    val accounts: List<BankAccount> = emptyList(),
-    val selectedAccount: BankAccount? = null,
-
-    // EnterCardDetails step
-    val bankName: String = "",
-    val balance: String = "",
-    val currency: String = "EUR",
+    val cards: List<Card> = emptyList(),
+    val isCardsLoading: Boolean = false,
+    val isAddCardDialogVisible: Boolean = false,
     val cardNumber: String = "",
-    val cardHolderName: String = "",
-    val cvv2: String = "",
-    val expiryDate: String = "",
-    val cardType: CardType = CardType.OTHER,
-    val isLoading: Boolean = false,
-)
+    val phoneNumber: String = "",
+) {
+    // Digits only, so spaces or a "+351" prefix typed by the user don't break the count.
+    val isCardNumberValid: Boolean
+        get() = cardNumber.count { it.isDigit() } >= MIN_CARD_NUMBER_DIGITS
+
+    val isPhoneNumberValid: Boolean
+        get() = phoneNumber.count { it.isDigit() } >= MIN_PHONE_NUMBER_DIGITS
+
+    val isAddEnabled: Boolean
+        get() = isCardNumberValid && isPhoneNumberValid
+
+    val isEmpty: Boolean
+        get() = cards.isEmpty() && !isCardsLoading
+
+    private companion object {
+        const val MIN_CARD_NUMBER_DIGITS = 16
+        const val MIN_PHONE_NUMBER_DIGITS = 9
+    }
+}

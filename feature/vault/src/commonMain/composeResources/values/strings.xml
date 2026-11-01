@@ -8,7 +8,7 @@
     <string name="vault_home_logo_description">CyVault logo</string>
     <string name="vault_home_change_photo_description">Change profile photo</string>
     <string name="vault_home_photo_updated">Profile photo updated</string>
-    <string name="vault_home_add_card">Add Card</string>
+    <string name="vault_home_cards">Cards</string>
     <string name="vault_home_add_item_description_fab">Add item</string>
     <string name="vault_home_edit_item_title">Edit Item</string>
     <string name="vault_home_add_item_currency_description">Currency</string>
@@ -48,4 +48,19 @@
     <string name="vault_home_balance_request_failed">Couldn't update your balances. Please try again.</string>
     <string name="vault_home_add_sample_balances">Add 50 sample items (debug)</string>
     <string name="vault_home_sample_balances_added">Added %1$d sample items</string>
+
+    <!-- Cards Screen -->
+    <string name="cards_title">Cards</string>
+    <string name="cards_add_description">Add card</string>
+    <string name="cards_empty">No cards yet. Tap + to add one.</string>
+    <string name="cards_masked_number">**** **** **** %1$s</string>
+    <string name="cards_load_failed">Couldn't load your cards. Please try again.</string>
+
+    <!-- Add Card Dialog -->
+    <string name="add_card_title">Add card</string>
+    <string name="add_card_cancel">Cancel</string>
+    <string name="add_card_card_number">Card Number</string>
+    <string name="add_card_phone_number">Phone Number</string>
+    <string name="add_card_phone_number_placeholder">+351 9XX XXX XXX</string>
+    <string name="add_card_submit">Add card</string>
 </resources>

@@ -78,7 +78,6 @@ import com.cypressit.cyvault.testtags.DeleteBalanceDialogTags
 import com.cypressit.cyvault.testtags.VaultHomeTags
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.cyvault_logo
-import cyvault.vault.generated.resources.vault_home_add_card
 import cyvault.vault.generated.resources.vault_home_add_item_cancel
 import cyvault.vault.generated.resources.vault_home_add_item_description_fab
 import cyvault.vault.generated.resources.vault_home_add_sample_balances
@@ -88,6 +87,7 @@ import cyvault.vault.generated.resources.vault_home_balance_delete_title
 import cyvault.vault.generated.resources.vault_home_balances_delete_message
 import cyvault.vault.generated.resources.vault_home_balances_delete_title
 import cyvault.vault.generated.resources.vault_home_balances_empty
+import cyvault.vault.generated.resources.vault_home_cards
 import cyvault.vault.generated.resources.vault_home_change_photo_description
 import cyvault.vault.generated.resources.vault_home_edit_item_title
 import cyvault.vault.generated.resources.vault_home_logo_description
@@ -227,7 +227,7 @@ internal fun VaultHomeScreen(
                 if (state.canAddCard) {
                     NavigationDrawerItem(
                         icon = { Icon(imageVector = Icons.Default.AddCard, contentDescription = null) },
-                        label = { Text(stringResource(Res.string.vault_home_add_card)) },
+                        label = { Text(stringResource(Res.string.vault_home_cards)) },
                         selected = false,
                         onClick = { viewModel.onIntent(VaultHomeIntent.AddCardFromDrawer) },
                         modifier = Modifier.padding(horizontal = 12.dp),

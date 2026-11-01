@@ -33,6 +33,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             // Sign-in and session (Entra External ID)
+            implementation(projects.core)
             implementation(projects.auth)
             implementation(projects.testtags)
 
