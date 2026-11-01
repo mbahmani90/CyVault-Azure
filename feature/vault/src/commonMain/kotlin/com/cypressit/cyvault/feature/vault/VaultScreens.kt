@@ -1,7 +1,7 @@
 package com.cypressit.cyvault.feature.vault
 
 import androidx.compose.runtime.Composable
-import com.cypressit.cyvault.feature.vault.addcard.presentation.ui.AddCardScreen as AddCardContent
+import com.cypressit.cyvault.feature.vault.addcard.presentation.ui.AddCardRoute
 import com.cypressit.cyvault.feature.vault.home.presentation.ui.VaultHomeScreen as VaultHomeContent
 
 /*
@@ -21,13 +21,13 @@ fun VaultHomeScreen(
     )
 }
 
-/** Add a card through open banking; it has its own top bar with a back arrow. */
+/** The user's cards, with a top-bar button that adds one; it has its own back arrow. */
 @Composable
 fun AddCardScreen(
     onBack: () -> Unit,
     onCardSaved: () -> Unit,
 ) {
-    AddCardContent(
+    AddCardRoute(
         onNavigateBack = onBack,
         onCardSaved = onCardSaved,
     )

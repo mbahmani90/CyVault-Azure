@@ -25,6 +25,9 @@ kotlin {
             // Koin
             implementation(libs.koin.core)
 
+            // Coroutines: MviViewModel exposes StateFlow and Flow
+            api(libs.kotlinx.coroutines.core)
+
             // Ktor
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)

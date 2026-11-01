@@ -1,6 +1,5 @@
 package com.cypressit.cyvault.systemdesign.components
 
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -21,9 +20,7 @@ fun CyButton(
     Button(
         onClick = onClick,
         enabled = enabled && !isLoading,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(52.dp),
+        modifier = modifier.height(52.dp),
     ) {
         if (isLoading) {
             CircularProgressIndicator(

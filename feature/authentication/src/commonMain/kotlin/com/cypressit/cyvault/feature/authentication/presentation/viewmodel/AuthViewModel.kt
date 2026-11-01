@@ -2,6 +2,7 @@ package com.cypressit.cyvault.feature.authentication.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cypressit.cyvault.core.presentation.MviViewModel
 import com.cypressit.cyvault.feature.authentication.domain.debug.ForgotPasswordPreview
 import com.cypressit.cyvault.feature.authentication.domain.usecase.ConfirmSignUpUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.ForgotPasswordUseCase
@@ -11,6 +12,7 @@ import com.cypressit.cyvault.feature.authentication.domain.usecase.RegisterUseCa
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SignInWithGoogleUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,13 +30,13 @@ class AuthViewModel(
     private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
     /** Null except in debug builds: Forgot Password isn't finished. */
     forgotPasswordPreview: ForgotPasswordPreview? = null,
-) : ViewModel() {
+) : ViewModel(), MviViewModel<AuthState, AuthIntent, AuthEffect> {
 
     private val _state = MutableStateFlow(AuthState(canResetPassword = forgotPasswordPreview != null))
-    val state: StateFlow<AuthState> = _state.asStateFlow()
+    override val state: StateFlow<AuthState> = _state.asStateFlow()
 
     private val _effect = Channel<AuthEffect>(Channel.BUFFERED)
-    val effect = _effect.receiveAsFlow()
+    override val effect: Flow<AuthEffect> = _effect.receiveAsFlow()
 
     init {
         checkCurrentSession()
@@ -49,7 +51,7 @@ class AuthViewModel(
         }
     }
 
-    fun onIntent(intent: AuthIntent) {
+    override fun onIntent(intent: AuthIntent) {
         when (intent) {
             is AuthIntent.NameChanged ->
                 _state.update { it.copy(name = intent.name, nameError = null) }

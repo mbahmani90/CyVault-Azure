@@ -8,7 +8,7 @@ In this codebase's MVI setup, each feature has three viewmodel artifacts:
 - **Intent** — user actions sent into the ViewModel.
 - **Effect** — a one-off event emitted by the ViewModel that the screen consumes exactly once (as opposed to `State`, which is observed continuously).
 
-Effects are modeled as a `sealed class` and exposed from the ViewModel as a `Flow<XxxEffect>` backed by a `Channel`:
+Effects are modeled as a `sealed interface` and exposed from the ViewModel as a `Flow<XxxEffect>` backed by a `Channel`:
 
 ```kotlin
 private val _effect = Channel<XxxEffect>(Channel.BUFFERED)
@@ -44,8 +44,8 @@ Across `AuthEffect`, `VaultHomeEffect`, and `AddCardEffect`, effects fall into t
 Used for transient feedback: errors, confirmations, status messages.
 
 ```kotlin
-data class ShowError(val message: String) : AddCardEffect()
-data object CardDeleted : VaultHomeEffect()
+data class ShowError(val message: String) : AddCardEffect
+data object CardDeleted : VaultHomeEffect
 ```
 
 Consumed via `snackbarHostState.showSnackbar(...)`.
@@ -55,7 +55,7 @@ Consumed via `snackbarHostState.showSnackbar(...)`.
 Used when the app needs to hand off to an external destination (e.g. a bank's web page).
 
 ```kotlin
-data class LaunchBankApp(val bankUrl: String) : AddCardEffect()
+data class LaunchBankApp(val bankUrl: String) : AddCardEffect
 ```
 
 Consumed via a platform launcher abstraction, e.g. `bankAppLauncher.openBankUrl(effect.bankUrl)`.
@@ -65,8 +65,8 @@ Consumed via a platform launcher abstraction, e.g. `bankAppLauncher.openBankUrl(
 Used for one-off navigation triggered by a ViewModel decision (login success, save completion, back navigation).
 
 ```kotlin
-data object NavigateToLogin : VaultHomeEffect() // after sign-out → onSignedOut()
-data object CardSaved : AddCardEffect()          // → onCardSaved()
+data object NavigateToLogin : VaultHomeEffect // after sign-out → onSignedOut()
+data object CardSaved : AddCardEffect          // → onCardSaved()
 ```
 
 Consumed by calling a callback passed into the screen. Features never touch a `NavController`:
@@ -78,8 +78,8 @@ leads (see `App.kt`). Features don't depend on Navigation Compose at all.
 `VaultHomeEffect` also has `OpenDrawer` / `CloseDrawer`, which don't fit snackbar, URL, or screen-navigation — they toggle a `DrawerState` directly:
 
 ```kotlin
-data object OpenDrawer : VaultHomeEffect()
-data object CloseDrawer : VaultHomeEffect()
+data object OpenDrawer : VaultHomeEffect
+data object CloseDrawer : VaultHomeEffect
 ```
 
 ```kotlin

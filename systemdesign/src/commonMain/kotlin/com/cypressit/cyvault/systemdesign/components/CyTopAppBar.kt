@@ -1,5 +1,6 @@
 package com.cypressit.cyvault.systemdesign.components
 
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -17,6 +18,7 @@ import com.cypressit.cyvault.systemdesign.theme.CyTheme
 fun CyTopAppBar(
     title: String,
     onNavigateBack: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
     StatusBarIconsFor(barColor = CyTheme.brandColors.topBar)
 
@@ -38,5 +40,6 @@ fun CyTopAppBar(
                 }
             }
         },
+        actions = actions,
     )
 }
