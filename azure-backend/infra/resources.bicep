@@ -12,6 +12,8 @@ param entraApiClientId string
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, environmentName))
 var avatarContainerName = 'avatars'
 var balanceTableName = 'balances'
+var cardTableName = 'cards'
+var phoneTableName = 'phones'
 var deploymentContainerName = 'app-package'
 
 // Built-in role definition IDs
@@ -71,8 +73,9 @@ resource runtimeStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
-// User data: profile photos, one blob per user at avatars/{oid}/avatar.jpg, and the balances
-// table, one partition per user (PartitionKey = oid).
+// User data: profile photos, one blob per user at avatars/{oid}/avatar.jpg; the balances and
+// cards tables, one partition per user (PartitionKey = oid); and the phones table, which maps a
+// phone number to the card it's linked to (PartitionKey = phone).
 resource avatarStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'stcyvav${token}'
   location: location
@@ -100,6 +103,14 @@ resource avatarStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
 
     resource balances 'tables' = {
       name: balanceTableName
+    }
+
+    resource cards 'tables' = {
+      name: cardTableName
+    }
+
+    resource phones 'tables' = {
+      name: phoneTableName
     }
   }
 }
@@ -169,6 +180,9 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       AvatarStorage__ContainerName: avatarContainerName
       BalanceStorage__TableServiceUri: avatarStorage.properties.primaryEndpoints.table
       BalanceStorage__TableName: balanceTableName
+      CardStorage__TableServiceUri: avatarStorage.properties.primaryEndpoints.table
+      CardStorage__CardsTableName: cardTableName
+      CardStorage__PhonesTableName: phoneTableName
     }
     dependsOn: [
       runtimeBlobOwner
@@ -248,6 +262,48 @@ resource balancesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01
 resource developerBalancesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
   name: guid(avatarStorage::tableService::balances.id, principalId, roles.storageTableDataContributor)
   scope: avatarStorage::tableService::balances
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: principalId
+    principalType: 'User'
+  }
+}
+
+// The Function may read and write the cards and phones tables, each granted on its own.
+resource cardsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(avatarStorage::tableService::cards.id, functionApp.id, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::cards
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource phonesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(avatarStorage::tableService::phones.id, functionApp.id, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::phones
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Lets the developer run the Function locally against the real tables through `az login`.
+resource developerCardsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
+  name: guid(avatarStorage::tableService::cards.id, principalId, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::cards
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: principalId
+    principalType: 'User'
+  }
+}
+
+resource developerPhonesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
+  name: guid(avatarStorage::tableService::phones.id, principalId, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::phones
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
     principalId: principalId
