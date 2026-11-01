@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardEffect
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardIntent
+import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardSaveError
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardState
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardViewModel
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
@@ -47,11 +48,15 @@ import com.cypressit.cyvault.testtags.CardsTags
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.add_card_cancel
 import cyvault.vault.generated.resources.add_card_card_number
+import cyvault.vault.generated.resources.add_card_invalid
+import cyvault.vault.generated.resources.add_card_phone_already_linked
 import cyvault.vault.generated.resources.add_card_phone_number
 import cyvault.vault.generated.resources.add_card_phone_number_placeholder
+import cyvault.vault.generated.resources.add_card_save_failed
 import cyvault.vault.generated.resources.add_card_submit
 import cyvault.vault.generated.resources.add_card_title
 import cyvault.vault.generated.resources.cards_add_description
+import cyvault.vault.generated.resources.cards_added
 import cyvault.vault.generated.resources.cards_empty
 import cyvault.vault.generated.resources.cards_load_failed
 import cyvault.vault.generated.resources.cards_masked_number
@@ -75,6 +80,8 @@ internal fun AddCardRoute(
             when (effect) {
                 AddCardEffect.CardsLoadFailed ->
                     snackbarHostState.showSnackbar(getString(Res.string.cards_load_failed))
+                AddCardEffect.CardAdded ->
+                    snackbarHostState.showSnackbar(getString(Res.string.cards_added))
             }
         }
     }
@@ -122,14 +129,15 @@ internal fun AddCardScreen(
     }
 
     if (state.isAddCardDialogVisible) {
-        // The Add button isn't wired to the ViewModel yet.
         AddCardDialog(
             cardNumber = state.cardNumber,
             phoneNumber = state.phoneNumber,
             isAddEnabled = state.isAddEnabled,
+            isSaving = state.isSavingCard,
+            saveError = state.saveError,
             onCardNumberChange = { onIntent(AddCardIntent.CardNumberChanged(it)) },
             onPhoneNumberChange = { onIntent(AddCardIntent.PhoneNumberChanged(it)) },
-            onAddClick = {},
+            onAddClick = { onIntent(AddCardIntent.AddCardSubmitted) },
             onDismiss = { onIntent(AddCardIntent.AddCardDialogDismissed) },
         )
     }
@@ -172,11 +180,8 @@ private fun CardList(
 @Composable
 private fun CardRow(card: Card) {
     ListItem(
-        overlineContent = { Text(card.cardType.name) },
-        headlineContent = { Text(card.bankName) },
-        supportingContent = {
-            Text(stringResource(Res.string.cards_masked_number, card.cardNumber.takeLast(4)))
-        },
+        headlineContent = { Text(stringResource(Res.string.cards_masked_number, card.last4)) },
+        supportingContent = { Text(card.phoneNumber) },
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -186,6 +191,8 @@ private fun AddCardDialog(
     cardNumber: String,
     phoneNumber: String,
     isAddEnabled: Boolean,
+    isSaving: Boolean,
+    saveError: AddCardSaveError?,
     onCardNumberChange: (String) -> Unit,
     onPhoneNumberChange: (String) -> Unit,
     onAddClick: () -> Unit,
@@ -214,6 +221,22 @@ private fun AddCardDialog(
                     modifier = Modifier.fillMaxWidth().testTag(CardsTags.PHONE_NUMBER_FIELD),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 )
+
+                // In the dialog, not a snackbar: the dialog would cover one.
+                if (saveError != null) {
+                    Text(
+                        text = stringResource(
+                            when (saveError) {
+                                AddCardSaveError.PhoneNumberAlreadyLinked -> Res.string.add_card_phone_already_linked
+                                AddCardSaveError.InvalidCard -> Res.string.add_card_invalid
+                                AddCardSaveError.Failed -> Res.string.add_card_save_failed
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.testTag(CardsTags.SAVE_ERROR_TEXT),
+                    )
+                }
             }
         },
         confirmButton = {
@@ -221,6 +244,7 @@ private fun AddCardDialog(
                 text = stringResource(Res.string.add_card_submit),
                 onClick = onAddClick,
                 enabled = isAddEnabled,
+                isLoading = isSaving,
                 modifier = Modifier.testTag(CardsTags.SUBMIT_BUTTON),
             )
         },

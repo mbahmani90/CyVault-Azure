@@ -55,10 +55,14 @@
     <string name="cards_empty">No cards yet. Tap + to add one.</string>
     <string name="cards_masked_number">**** **** **** %1$s</string>
     <string name="cards_load_failed">Couldn't load your cards. Please try again.</string>
+    <string name="cards_added">Card added</string>
 
     <!-- Add Card Dialog -->
     <string name="add_card_title">Add card</string>
     <string name="add_card_cancel">Cancel</string>
+    <string name="add_card_phone_already_linked">This phone number is already linked to a card.</string>
+    <string name="add_card_save_failed">Couldn't add the card. Please try again.</string>
+    <string name="add_card_invalid">Check the card number and phone number.</string>
     <string name="add_card_card_number">Card Number</string>
     <string name="add_card_phone_number">Phone Number</string>
     <string name="add_card_phone_number_placeholder">+351 9XX XXX XXX</string>
