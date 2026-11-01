@@ -31,3 +31,10 @@ In [Play Console](https://play.google.com/console), **Create app** asks for:
 >
 > Your balances are stored securely in your own account and synced to the cloud, so they're there
 > when you sign in again. Profile photos are stripped of location data before they're saved.
+
+## Step 2: Release straight to production
+
+No testing track is needed. The developer account is **Personal** but was created before
+November 13, 2023, so the rule that new personal accounts must run a closed test (12 testers for
+14 days) before production doesn't apply. Releases go directly to **Test and release → Production
+→ Create new release**.
