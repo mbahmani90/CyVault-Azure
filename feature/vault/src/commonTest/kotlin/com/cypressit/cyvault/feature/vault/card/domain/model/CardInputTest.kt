@@ -10,16 +10,21 @@ import kotlin.test.assertTrue
 class CardInputTest {
 
     @Test
-    fun cardNumber_passingLuhn_isValid() {
+    fun cardNumber_with16To19Digits_isValid() {
         assertTrue(CardInput.isValidCardNumber("4111111111111111"))
         assertTrue(CardInput.isValidCardNumber("4111 1111 1111 1111"))
         assertTrue(CardInput.isValidCardNumber("5555-5555-5555-4444"))
+        assertTrue(CardInput.isValidCardNumber("1234567890123456789"))
     }
 
     @Test
-    fun cardNumber_failingLuhn_isInvalid() {
-        assertFalse(CardInput.isValidCardNumber("4111111111111112"))
-        assertFalse(CardInput.isValidCardNumber("1234567812345678"))
+    fun cardNumber_isNotLuhnChecked() {
+        assertTrue(CardInput.isValidCardNumber("4444111155559999"))
+    }
+
+    @Test
+    fun cardNumber_withLetters_isInvalid() {
+        assertFalse(CardInput.isValidCardNumber("4111 1111 1111 111a"))
     }
 
     @Test

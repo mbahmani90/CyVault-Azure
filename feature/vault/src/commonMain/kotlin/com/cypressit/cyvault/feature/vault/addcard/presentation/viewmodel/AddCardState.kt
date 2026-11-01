@@ -9,10 +9,31 @@ data class AddCardState(
     val isAddCardDialogVisible: Boolean = false,
     val cardNumber: String = "",
     val phoneNumber: String = "",
+    /** Optional, so it doesn't affect whether Add is enabled. */
+    val bankName: String = "",
     val isSavingCard: Boolean = false,
     /** Why the last Add failed, shown in the dialog; null while there's nothing to show. */
     val saveError: AddCardSaveError? = null,
+    /** The card shown in the details dialog, or null when it's closed. */
+    val viewingCard: Card? = null,
+    /** The card waiting for the user to confirm its deletion, or null when nothing is asked. */
+    val pendingDeleteCard: Card? = null,
+    /** IDs of the cards selected in selection mode; empty outside it. */
+    val selectedCardIds: Set<String> = emptySet(),
+    val isDeleteSelectedConfirmVisible: Boolean = false,
+    val isDeletingCards: Boolean = false,
 ) {
+    val isSelectionMode: Boolean
+        get() = selectedCardIds.isNotEmpty()
+
+    val selectedCardCount: Int
+        get() = selectedCardIds.size
+
+    fun isCardSelected(id: String): Boolean = id in selectedCardIds
+
+    val areAllCardsSelected: Boolean
+        get() = cards.isNotEmpty() && cards.all { it.id in selectedCardIds }
+
     // The API's own rules, so Add is only enabled for input it accepts.
     val isCardNumberValid: Boolean
         get() = CardInput.isValidCardNumber(cardNumber)

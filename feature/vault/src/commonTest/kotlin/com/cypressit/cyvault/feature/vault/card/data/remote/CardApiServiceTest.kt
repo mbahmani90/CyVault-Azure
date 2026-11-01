@@ -51,8 +51,12 @@ class CardApiServiceTest {
     private fun MockRequestHandleScope.respondJson(json: String) =
         respond(json, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
 
+    private val request =
+        CardRequestDto(cardNumber = "4111111111111111", phoneNumber = "912345678", bankName = "Millennium")
+
     private val visaJson =
-        """{"id":"visa","last4":"1111","phoneNumber":"+351912345678","createdAt":"2026-11-01T09:30:00+00:00"}"""
+        """{"id":"visa","last4":"1111","brand":"Visa","bankName":"Millennium",""" +
+            """"phoneNumber":"+351912345678","createdAt":"2026-11-01T09:30:00+00:00"}"""
 
     @Test
     fun getCards_sendsACardScopeTokenAndParsesTheList() = runTest {
@@ -65,12 +69,24 @@ class CardApiServiceTest {
         assertEquals(listOf(listOf("api://test-api/Card.ReadWrite")), authClient.requestedScopes)
         assertEquals("1111", cards.single().last4)
         assertEquals("+351912345678", cards.single().phoneNumber)
+        assertEquals("Visa", cards.single().brand)
+        assertEquals("Millennium", cards.single().bankName)
+    }
+
+    @Test
+    fun getCards_withoutBrandOrBankName_defaultsToEmpty() = runTest {
+        val oldCardJson =
+            """{"id":"old","last4":"4444","phoneNumber":"+351954564594","createdAt":"2026-11-01T18:05:01+00:00"}"""
+        val cards = api { respondJson("[$oldCardJson]") }.getCards()
+
+        assertEquals("", cards.single().brand)
+        assertEquals("", cards.single().bankName)
     }
 
     @Test
     fun putCard_sendsTheCardNumberAndPhoneToTheCardUrl() = runTest {
         val saved = api { respondJson(visaJson) }
-            .putCard("visa", CardRequestDto(cardNumber = "4111111111111111", phoneNumber = "912345678"))
+            .putCard("visa", request)
 
         val request = requests.single()
         assertEquals(HttpMethod.Put, request.method)
@@ -80,6 +96,7 @@ class CardApiServiceTest {
         val json = Json.parseToJsonElement(body.text).jsonObject
         assertEquals("4111111111111111", json["cardNumber"]?.jsonPrimitive?.content)
         assertEquals("912345678", json["phoneNumber"]?.jsonPrimitive?.content)
+        assertEquals("Millennium", json["bankName"]?.jsonPrimitive?.content)
         assertEquals("visa", saved.id)
     }
 
@@ -87,7 +104,7 @@ class CardApiServiceTest {
     fun putCard_conflict_throwsPhoneNumberAlreadyLinked() = runTest {
         assertFailsWith<PhoneNumberAlreadyLinkedException> {
             api { respond("", HttpStatusCode.Conflict) }
-                .putCard("visa", CardRequestDto(cardNumber = "4111111111111111", phoneNumber = "912345678"))
+                .putCard("visa", request)
         }
     }
 
@@ -95,7 +112,7 @@ class CardApiServiceTest {
     fun putCard_badRequest_throwsInvalidCard() = runTest {
         assertFailsWith<InvalidCardException> {
             api { respond("", HttpStatusCode.BadRequest) }
-                .putCard("visa", CardRequestDto(cardNumber = "4111111111111111", phoneNumber = "912345678"))
+                .putCard("visa", request)
         }
     }
 
@@ -118,7 +135,7 @@ class CardApiServiceTest {
     @Test
     fun repository_createCard_mapsTheResponse() = runTest {
         val card = CardRepositoryImpl(api { respondJson(visaJson) })
-            .createCard(id = "visa", cardNumber = "4111111111111111", phoneNumber = "912345678")
+            .createCard(id = "visa", cardNumber = "4111111111111111", phoneNumber = "912345678", bankName = "")
             .getOrThrow()
 
         assertEquals("1111", card.last4)
@@ -129,7 +146,7 @@ class CardApiServiceTest {
     @Test
     fun repository_createCard_conflict_failsWithPhoneNumberAlreadyLinked() = runTest {
         val result = CardRepositoryImpl(api { respond("", HttpStatusCode.Conflict) })
-            .createCard(id = "visa", cardNumber = "4111111111111111", phoneNumber = "912345678")
+            .createCard(id = "visa", cardNumber = "4111111111111111", phoneNumber = "912345678", bankName = "")
 
         assertIs<PhoneNumberAlreadyLinkedException>(result.exceptionOrNull())
     }
