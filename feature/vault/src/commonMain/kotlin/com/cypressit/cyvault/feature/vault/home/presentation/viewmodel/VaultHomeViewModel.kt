@@ -281,7 +281,6 @@ class VaultHomeViewModel(
                         it.copy(
                             isLoading = false,
                             cards = cards,
-                            totalBalance = cards.sumOf { card -> card.balance },
                         )
                     }
                 }

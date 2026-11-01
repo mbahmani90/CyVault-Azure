@@ -10,4 +10,5 @@ object CardsTags {
     const val PHONE_NUMBER_FIELD = "add_card_phone_number_field"
     const val SUBMIT_BUTTON = "add_card_submit_button"
     const val CANCEL_BUTTON = "add_card_cancel_button"
+    const val SAVE_ERROR_TEXT = "add_card_save_error_text"
 }

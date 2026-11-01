@@ -77,6 +77,7 @@ import com.cypressit.cyvault.systemdesign.theme.CyTheme
 import com.cypressit.cyvault.testtags.DeleteBalanceDialogTags
 import com.cypressit.cyvault.testtags.VaultHomeTags
 import cyvault.vault.generated.resources.Res
+import cyvault.vault.generated.resources.cards_masked_number
 import cyvault.vault.generated.resources.cyvault_logo
 import cyvault.vault.generated.resources.vault_home_add_item_cancel
 import cyvault.vault.generated.resources.vault_home_add_item_description_fab
@@ -660,17 +661,8 @@ private fun HomeContent(
 
                 items(state.cards, key = { it.id }) { card ->
                     ListItem(
-                        headlineContent = { Text(card.bankName) },
-                        supportingContent = {
-                            Text("**** **** **** ${card.cardNumber.takeLast(4)}")
-                        },
-                        trailingContent = {
-                            Text(
-                                text = "€ ${card.balance.fmt2dp()}",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        },
-                        overlineContent = { Text(card.cardType.name) },
+                        headlineContent = { Text(stringResource(Res.string.cards_masked_number, card.last4)) },
+                        supportingContent = { Text(card.phoneNumber) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
