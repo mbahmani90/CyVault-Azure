@@ -26,13 +26,17 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class AddCardRouteTest {
 
-    private fun ComposeUiTest.showRoute(repository: CardRepository) = setContent {
-        CyTheme(darkTheme = false) {
-            AddCardRoute(
-                onNavigateBack = {},
-                onCardSaved = {},
-                viewModel = AddCardViewModel(GetCardsUseCase(repository)),
-            )
+    private fun ComposeUiTest.showRoute(repository: CardRepository) {
+        // Built outside setContent: a ViewModel constructed in a composable is a lint error.
+        val viewModel = AddCardViewModel(GetCardsUseCase(repository))
+        setContent {
+            CyTheme(darkTheme = false) {
+                AddCardRoute(
+                    onNavigateBack = {},
+                    onCardSaved = {},
+                    viewModel = viewModel,
+                )
+            }
         }
     }
 
