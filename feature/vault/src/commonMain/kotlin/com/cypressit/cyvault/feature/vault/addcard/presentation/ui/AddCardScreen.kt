@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,8 @@ import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.systemdesign.components.CyButton
 import com.cypressit.cyvault.systemdesign.components.CyOutlinedTextField
 import com.cypressit.cyvault.systemdesign.components.CyTopAppBar
+import com.cypressit.cyvault.systemdesign.components.exposeTestTags
+import com.cypressit.cyvault.testtags.CardsTags
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.add_card_cancel
 import cyvault.vault.generated.resources.add_card_card_number
@@ -86,7 +89,7 @@ internal fun AddCardRoute(
 
 /** Stateless: renders [state] and reports every user action as an [AddCardIntent]. */
 @Composable
-private fun AddCardScreen(
+internal fun AddCardScreen(
     state: AddCardState,
     onIntent: (AddCardIntent) -> Unit,
     onNavigateBack: () -> Unit,
@@ -98,7 +101,10 @@ private fun AddCardScreen(
                 title = stringResource(Res.string.cards_title),
                 onNavigateBack = onNavigateBack,
                 actions = {
-                    IconButton(onClick = { onIntent(AddCardIntent.AddCardClicked) }) {
+                    IconButton(
+                        onClick = { onIntent(AddCardIntent.AddCardClicked) },
+                        modifier = Modifier.testTag(CardsTags.ADD_BUTTON),
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = stringResource(Res.string.cards_add_description),
@@ -136,7 +142,11 @@ private fun CardList(
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         when {
-            state.isCardsLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            state.isCardsLoading -> CircularProgressIndicator(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .testTag(CardsTags.LOADING),
+            )
 
             state.isEmpty -> Text(
                 text = stringResource(Res.string.cards_empty),
@@ -145,10 +155,11 @@ private fun CardList(
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .testTag(CardsTags.EMPTY_TEXT),
             )
 
-            else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+            else -> LazyColumn(modifier = Modifier.fillMaxSize().testTag(CardsTags.LIST)) {
                 items(state.cards, key = { it.id }) { card ->
                     CardRow(card)
                     HorizontalDivider()
@@ -182,6 +193,8 @@ private fun AddCardDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        // A dialog is its own window, so it needs exposeTestTags as well as the app root.
+        modifier = Modifier.exposeTestTags().testTag(CardsTags.ADD_CARD_DIALOG),
         title = { Text(stringResource(Res.string.add_card_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -189,7 +202,7 @@ private fun AddCardDialog(
                     value = cardNumber,
                     onValueChange = onCardNumberChange,
                     label = stringResource(Res.string.add_card_card_number),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag(CardsTags.CARD_NUMBER_FIELD),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
 
@@ -198,7 +211,7 @@ private fun AddCardDialog(
                     onValueChange = onPhoneNumberChange,
                     label = stringResource(Res.string.add_card_phone_number),
                     placeholder = stringResource(Res.string.add_card_phone_number_placeholder),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag(CardsTags.PHONE_NUMBER_FIELD),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 )
             }
@@ -208,10 +221,11 @@ private fun AddCardDialog(
                 text = stringResource(Res.string.add_card_submit),
                 onClick = onAddClick,
                 enabled = isAddEnabled,
+                modifier = Modifier.testTag(CardsTags.SUBMIT_BUTTON),
             )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag(CardsTags.CANCEL_BUTTON)) {
                 Text(stringResource(Res.string.add_card_cancel))
             }
         },
