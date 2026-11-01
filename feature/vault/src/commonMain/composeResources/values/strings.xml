@@ -56,6 +56,33 @@
     <string name="cards_masked_number">**** **** **** %1$s</string>
     <string name="cards_load_failed">Couldn't load your cards. Please try again.</string>
     <string name="cards_added">Card added</string>
+    <string name="cards_view_card_description">View card</string>
+    <string name="cards_select_card_description">Select card</string>
+    <string name="cards_selection_count">%1$d selected</string>
+    <string name="cards_selection_close_description">Cancel selection</string>
+    <string name="cards_selection_select_all_description">Select all</string>
+    <string name="cards_selection_delete_description">Delete selected</string>
+    <string name="cards_delete_confirm">Delete</string>
+    <plurals name="cards_delete_title">
+        <item quantity="one">Delete %1$d card?</item>
+        <item quantity="other">Delete %1$d cards?</item>
+    </plurals>
+    <string name="cards_delete_message">The selected cards will be removed, and their phone numbers can be linked again.</string>
+    <plurals name="cards_deleted">
+        <item quantity="one">%1$d card deleted</item>
+        <item quantity="other">%1$d cards deleted</item>
+    </plurals>
+    <string name="cards_delete_failed">Couldn't delete some cards. Please try again.</string>
+
+    <!-- Card Details Dialog -->
+    <string name="card_details_title">Card</string>
+    <string name="card_details_number">Number</string>
+    <string name="card_details_brand">Brand</string>
+    <string name="card_details_bank">Bank</string>
+    <string name="card_details_phone">Phone number</string>
+    <string name="card_details_close">Close</string>
+    <string name="card_delete_title">Delete card?</string>
+    <string name="card_delete_message">The card ending in %1$s will be removed, and its phone number can be linked again.</string>
 
     <!-- Add Card Dialog -->
     <string name="add_card_title">Add card</string>
@@ -66,5 +93,6 @@
     <string name="add_card_card_number">Card Number</string>
     <string name="add_card_phone_number">Phone Number</string>
     <string name="add_card_phone_number_placeholder">+351 9XX XXX XXX</string>
+    <string name="add_card_bank_name">Bank name (optional)</string>
     <string name="add_card_submit">Add card</string>
 </resources>

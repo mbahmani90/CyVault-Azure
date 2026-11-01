@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cypressit.cyvault.core.presentation.MviViewModel
 import com.cypressit.cyvault.feature.vault.addcard.domain.usecase.CreateCardUseCase
+import com.cypressit.cyvault.feature.vault.addcard.domain.usecase.DeleteCardsUseCase
+import com.cypressit.cyvault.feature.vault.card.domain.model.Card
+import com.cypressit.cyvault.feature.vault.card.domain.model.CardInput
 import com.cypressit.cyvault.feature.vault.card.domain.repository.InvalidCardException
 import com.cypressit.cyvault.feature.vault.card.domain.repository.PhoneNumberAlreadyLinkedException
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
@@ -21,6 +24,7 @@ import kotlin.uuid.Uuid
 class AddCardViewModel(
     private val getCards: GetCardsUseCase,
     private val createCard: CreateCardUseCase,
+    private val deleteCards: DeleteCardsUseCase,
 ) : ViewModel(), MviViewModel<AddCardState, AddCardIntent, AddCardEffect> {
 
     private val _state = MutableStateFlow(AddCardState())
@@ -46,7 +50,70 @@ class AddCardViewModel(
                 _state.update { it.copy(cardNumber = intent.value, saveError = null) }
             is AddCardIntent.PhoneNumberChanged ->
                 _state.update { it.copy(phoneNumber = intent.value, saveError = null) }
+            // Capped as typed, so the API's length limit is never the reason a save fails.
+            is AddCardIntent.BankNameChanged -> _state.update {
+                it.copy(bankName = intent.value.take(CardInput.MAX_BANK_NAME_LENGTH), saveError = null)
+            }
             AddCardIntent.AddCardSubmitted -> submit()
+            is AddCardIntent.ClickCard -> clickCard(intent.card)
+            is AddCardIntent.LongClickCard -> toggleCardSelection(intent.card.id)
+            AddCardIntent.CardDetailsDismissed -> _state.update { it.copy(viewingCard = null) }
+            AddCardIntent.RequestDeleteViewingCard -> _state.update {
+                it.copy(pendingDeleteCard = it.viewingCard, viewingCard = null)
+            }
+            AddCardIntent.ConfirmDeleteCard -> confirmDeleteCard()
+            AddCardIntent.DismissDeleteCard -> _state.update { it.copy(pendingDeleteCard = null) }
+            AddCardIntent.ClearCardSelection -> _state.update { it.copy(selectedCardIds = emptySet()) }
+            AddCardIntent.SelectAllCards -> _state.update { state ->
+                state.copy(selectedCardIds = state.cards.mapTo(mutableSetOf()) { it.id })
+            }
+            AddCardIntent.RequestDeleteSelectedCards ->
+                _state.update { it.copy(isDeleteSelectedConfirmVisible = true) }
+            AddCardIntent.ConfirmDeleteSelectedCards -> {
+                _state.update { it.copy(isDeleteSelectedConfirmVisible = false) }
+                delete(_state.value.selectedCardIds)
+            }
+            AddCardIntent.DismissDeleteSelectedCards ->
+                _state.update { it.copy(isDeleteSelectedConfirmVisible = false) }
+        }
+    }
+
+    private fun clickCard(card: Card) {
+        if (_state.value.isSelectionMode) {
+            toggleCardSelection(card.id)
+        } else {
+            _state.update { it.copy(viewingCard = card) }
+        }
+    }
+
+    private fun toggleCardSelection(id: String) {
+        _state.update { state ->
+            val selected = state.selectedCardIds
+            state.copy(selectedCardIds = if (id in selected) selected - id else selected + id)
+        }
+    }
+
+    private fun confirmDeleteCard() {
+        val card = _state.value.pendingDeleteCard ?: return
+        _state.update { it.copy(pendingDeleteCard = null) }
+        delete(setOf(card.id))
+    }
+
+    private fun delete(ids: Set<String>) {
+        if (ids.isEmpty() || _state.value.isDeletingCards) return
+        viewModelScope.launch {
+            _state.update { it.copy(isDeletingCards = true) }
+            val deleted = deleteCards(ids)
+            // The ones that failed stay in the list and stay selected, so the user can retry.
+            _state.update { state ->
+                state.copy(
+                    cards = state.cards.filterNot { it.id in deleted },
+                    selectedCardIds = state.selectedCardIds - deleted,
+                    isDeletingCards = false,
+                )
+            }
+            if (deleted.isNotEmpty()) _effect.send(AddCardEffect.CardsDeleted(deleted.size))
+            if (deleted.size < ids.size) _effect.send(AddCardEffect.CardsDeleteFailed)
         }
     }
 
@@ -56,7 +123,13 @@ class AddCardViewModel(
         if (_state.value.isSavingCard) return
         pendingCardId = null
         _state.update {
-            it.copy(isAddCardDialogVisible = false, cardNumber = "", phoneNumber = "", saveError = null)
+            it.copy(
+                isAddCardDialogVisible = false,
+                cardNumber = "",
+                phoneNumber = "",
+                bankName = "",
+                saveError = null,
+            )
         }
     }
 
@@ -68,7 +141,12 @@ class AddCardViewModel(
 
         viewModelScope.launch {
             _state.update { it.copy(isSavingCard = true, saveError = null) }
-            createCard(id = id, cardNumber = current.cardNumber, phoneNumber = current.phoneNumber)
+            createCard(
+                id = id,
+                cardNumber = current.cardNumber,
+                phoneNumber = current.phoneNumber,
+                bankName = current.bankName.trim(),
+            )
                 .onSuccess { card ->
                     pendingCardId = null
                     _state.update {
@@ -78,6 +156,7 @@ class AddCardViewModel(
                             isAddCardDialogVisible = false,
                             cardNumber = "",
                             phoneNumber = "",
+                            bankName = "",
                         )
                     }
                     _effect.send(AddCardEffect.CardAdded)

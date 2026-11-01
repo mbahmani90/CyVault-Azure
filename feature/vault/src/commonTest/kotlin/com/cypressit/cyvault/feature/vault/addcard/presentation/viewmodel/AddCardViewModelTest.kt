@@ -1,6 +1,7 @@
 package com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel
 
 import com.cypressit.cyvault.feature.vault.addcard.domain.usecase.CreateCardUseCase
+import com.cypressit.cyvault.feature.vault.addcard.domain.usecase.DeleteCardsUseCase
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.repository.CardRepository
 import com.cypressit.cyvault.feature.vault.card.domain.repository.InvalidCardException
@@ -30,6 +31,8 @@ class AddCardViewModelTest {
     private val visa = Card(
         id = "visa",
         last4 = "1111",
+        brand = "Visa",
+        bankName = "Millennium",
         phoneNumber = "+351912345678",
         createdAt = "2026-11-01T09:30:00+00:00",
     )
@@ -39,7 +42,7 @@ class AddCardViewModelTest {
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel(repository: CardRepository = FakeCardRepository()) =
-        AddCardViewModel(GetCardsUseCase(repository), CreateCardUseCase(repository))
+        AddCardViewModel(GetCardsUseCase(repository), CreateCardUseCase(repository), DeleteCardsUseCase(repository))
 
     private fun AddCardViewModel.enter(cardNumber: String, phoneNumber: String) {
         onIntent(AddCardIntent.CardNumberChanged(cardNumber))
@@ -243,13 +246,12 @@ class AddCardViewModelTest {
     }
 
     @Test
-    fun aCardNumberFailingLuhn_disablesAdd() {
+    fun anyCardNumberWith16Digits_enablesAdd() {
         val viewModel = viewModel()
 
-        viewModel.enter(cardNumber = "4111111111111112", phoneNumber = "912345678")
+        viewModel.enter(cardNumber = "4444111155559999", phoneNumber = "958476321")
 
-        assertFalse(viewModel.state.value.isCardNumberValid)
-        assertFalse(viewModel.state.value.isAddEnabled)
+        assertTrue(viewModel.state.value.isAddEnabled)
     }
 
     @Test
@@ -284,5 +286,153 @@ class AddCardViewModelTest {
         }
 
         assertEquals(2, repository.createdIds.toSet().size)
+    }
+
+    @Test
+    fun submit_sendsTheTrimmedBankName() = runTest(dispatcher) {
+        val repository = FakeCardRepository()
+        val viewModel = viewModel(repository)
+        advanceUntilIdle()
+        viewModel.enter(cardNumber = "4111111111111111", phoneNumber = "912345678")
+        viewModel.onIntent(AddCardIntent.BankNameChanged("  Millennium  "))
+
+        viewModel.onIntent(AddCardIntent.AddCardSubmitted)
+        advanceUntilIdle()
+
+        assertEquals(listOf("Millennium"), repository.createdBankNames)
+        assertEquals("", viewModel.state.value.bankName)
+    }
+
+    @Test
+    fun bankName_isOptional() {
+        val viewModel = viewModel()
+
+        viewModel.enter(cardNumber = "4111111111111111", phoneNumber = "912345678")
+
+        assertTrue(viewModel.state.value.isAddEnabled)
+    }
+
+    @Test
+    fun bankName_isCappedAtTheApiLimit() {
+        val viewModel = viewModel()
+
+        viewModel.onIntent(AddCardIntent.BankNameChanged("x".repeat(60)))
+
+        assertEquals(50, viewModel.state.value.bankName.length)
+    }
+
+    private val mastercard = visa.copy(id = "mastercard", last4 = "4444", brand = "Mastercard")
+
+    private suspend fun kotlinx.coroutines.test.TestScope.loaded(repository: FakeCardRepository): AddCardViewModel {
+        val viewModel = viewModel(repository)
+        advanceUntilIdle()
+        return viewModel
+    }
+
+    @Test
+    fun clickingACard_showsItsDetails() = runTest(dispatcher) {
+        val viewModel = loaded(FakeCardRepository(cards = listOf(visa)))
+
+        viewModel.onIntent(AddCardIntent.ClickCard(visa))
+
+        assertEquals(visa, viewModel.state.value.viewingCard)
+    }
+
+    @Test
+    fun deleteFromDetails_asksFirstThenDeletesTheCard() = runTest(dispatcher) {
+        val repository = FakeCardRepository(cards = listOf(visa, mastercard))
+        val viewModel = loaded(repository)
+        viewModel.onIntent(AddCardIntent.ClickCard(visa))
+
+        viewModel.onIntent(AddCardIntent.RequestDeleteViewingCard)
+
+        assertEquals(null, viewModel.state.value.viewingCard)
+        assertEquals(visa, viewModel.state.value.pendingDeleteCard)
+        assertTrue(repository.deletedIds.isEmpty())
+
+        viewModel.onIntent(AddCardIntent.ConfirmDeleteCard)
+        advanceUntilIdle()
+
+        assertEquals(listOf("visa"), repository.deletedIds)
+        assertEquals(listOf(mastercard), viewModel.state.value.cards)
+        assertEquals(AddCardEffect.CardsDeleted(1), viewModel.effect.first())
+    }
+
+    @Test
+    fun dismissingTheDeleteQuestion_keepsTheCard() = runTest(dispatcher) {
+        val repository = FakeCardRepository(cards = listOf(visa))
+        val viewModel = loaded(repository)
+        viewModel.onIntent(AddCardIntent.ClickCard(visa))
+        viewModel.onIntent(AddCardIntent.RequestDeleteViewingCard)
+
+        viewModel.onIntent(AddCardIntent.DismissDeleteCard)
+        advanceUntilIdle()
+
+        assertEquals(null, viewModel.state.value.pendingDeleteCard)
+        assertTrue(repository.deletedIds.isEmpty())
+        assertEquals(listOf(visa), viewModel.state.value.cards)
+    }
+
+    @Test
+    fun longPress_startsSelectionAndClicksToggle() = runTest(dispatcher) {
+        val viewModel = loaded(FakeCardRepository(cards = listOf(visa, mastercard)))
+
+        viewModel.onIntent(AddCardIntent.LongClickCard(visa))
+        assertTrue(viewModel.state.value.isSelectionMode)
+
+        viewModel.onIntent(AddCardIntent.ClickCard(mastercard))
+        assertEquals(setOf("visa", "mastercard"), viewModel.state.value.selectedCardIds)
+        assertEquals(null, viewModel.state.value.viewingCard)
+
+        viewModel.onIntent(AddCardIntent.ClickCard(visa))
+        assertEquals(setOf("mastercard"), viewModel.state.value.selectedCardIds)
+    }
+
+    @Test
+    fun selectAllAndClear() = runTest(dispatcher) {
+        val viewModel = loaded(FakeCardRepository(cards = listOf(visa, mastercard)))
+        viewModel.onIntent(AddCardIntent.LongClickCard(visa))
+
+        viewModel.onIntent(AddCardIntent.SelectAllCards)
+        assertTrue(viewModel.state.value.areAllCardsSelected)
+
+        viewModel.onIntent(AddCardIntent.ClearCardSelection)
+        assertFalse(viewModel.state.value.isSelectionMode)
+    }
+
+    @Test
+    fun deleteSelected_asksFirstThenDeletesThem() = runTest(dispatcher) {
+        val repository = FakeCardRepository(cards = listOf(visa, mastercard))
+        val viewModel = loaded(repository)
+        viewModel.onIntent(AddCardIntent.LongClickCard(visa))
+        viewModel.onIntent(AddCardIntent.ClickCard(mastercard))
+
+        viewModel.onIntent(AddCardIntent.RequestDeleteSelectedCards)
+        assertTrue(viewModel.state.value.isDeleteSelectedConfirmVisible)
+
+        viewModel.onIntent(AddCardIntent.ConfirmDeleteSelectedCards)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.cards.isEmpty())
+        assertFalse(viewModel.state.value.isSelectionMode)
+        assertFalse(viewModel.state.value.isDeleteSelectedConfirmVisible)
+        assertEquals(AddCardEffect.CardsDeleted(2), viewModel.effect.first())
+    }
+
+    @Test
+    fun deleteSelected_keepsTheFailedOnesSelected() = runTest(dispatcher) {
+        val repository = FakeCardRepository(cards = listOf(visa, mastercard)).apply { failingDeleteIds = setOf("visa") }
+        val viewModel = loaded(repository)
+        viewModel.onIntent(AddCardIntent.LongClickCard(visa))
+        viewModel.onIntent(AddCardIntent.ClickCard(mastercard))
+        viewModel.onIntent(AddCardIntent.RequestDeleteSelectedCards)
+
+        viewModel.onIntent(AddCardIntent.ConfirmDeleteSelectedCards)
+        advanceUntilIdle()
+
+        assertEquals(listOf(visa), viewModel.state.value.cards)
+        assertEquals(setOf("visa"), viewModel.state.value.selectedCardIds)
+        assertEquals(AddCardEffect.CardsDeleted(1), viewModel.effect.first())
+        assertEquals(AddCardEffect.CardsDeleteFailed, viewModel.effect.first())
     }
 }

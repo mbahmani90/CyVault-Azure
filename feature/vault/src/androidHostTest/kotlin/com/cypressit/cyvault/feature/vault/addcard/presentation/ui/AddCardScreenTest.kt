@@ -3,13 +3,17 @@ package com.cypressit.cyvault.feature.vault.addcard.presentation.ui
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardIntent
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardSaveError
@@ -30,6 +34,8 @@ class AddCardScreenTest {
     private val visa = Card(
         id = "visa",
         last4 = "1111",
+        brand = "Visa",
+        bankName = "Millennium",
         phoneNumber = "+351912345678",
         createdAt = "2026-11-01T09:30:00+00:00",
     )
@@ -62,12 +68,14 @@ class AddCardScreenTest {
     }
 
     @Test
-    fun cards_showLastFourDigitsAndPhoneNumber() = runComposeUiTest {
+    fun cards_showBrandLastFourDigitsPhoneAndBank() = runComposeUiTest {
         show(AddCardState(cards = listOf(visa)))
 
         onNodeWithTag(CardsTags.LIST).assertIsDisplayed()
+        onNodeWithText("Visa").assertIsDisplayed()
         onNodeWithText("1111", substring = true).assertIsDisplayed()
         onNodeWithText("+351912345678").assertIsDisplayed()
+        onNodeWithText("Millennium").assertIsDisplayed()
     }
 
     @Test
@@ -164,6 +172,64 @@ class AddCardScreenTest {
         )
 
         onNodeWithTag(CardsTags.SAVE_ERROR_TEXT).assertIsDisplayed()
+    }
+
+    @Test
+    fun typingABankName_sendsBankNameChanged() = runComposeUiTest {
+        show(AddCardState(isAddCardDialogVisible = true))
+
+        onNodeWithTag(CardsTags.BANK_NAME_FIELD).performTextInput("Millennium")
+
+        assertEquals(listOf<AddCardIntent>(AddCardIntent.BankNameChanged("Millennium")), intents)
+    }
+
+    @Test
+    fun tappingACard_sendsClickCard() = runComposeUiTest {
+        show(AddCardState(cards = listOf(visa)))
+
+        onNodeWithTag(CardsTags.CARD_ROW).performClick()
+
+        assertEquals(listOf<AddCardIntent>(AddCardIntent.ClickCard(visa)), intents)
+    }
+
+    @Test
+    fun longPressingACard_sendsLongClickCard() = runComposeUiTest {
+        show(AddCardState(cards = listOf(visa)))
+
+        onNodeWithTag(CardsTags.CARD_ROW).performTouchInput { longClick() }
+
+        assertEquals(listOf<AddCardIntent>(AddCardIntent.LongClickCard(visa)), intents)
+    }
+
+    @Test
+    fun selectionMode_showsTheCountAndDeleteSendsTheRequest() = runComposeUiTest {
+        show(AddCardState(cards = listOf(visa), selectedCardIds = setOf("visa")))
+
+        onNodeWithTag(CardsTags.SELECTION_COUNT_TEXT).assertIsDisplayed()
+        onNodeWithTag(CardsTags.ADD_BUTTON).assertDoesNotExist()
+        onNodeWithTag(CardsTags.SELECTION_DELETE_BUTTON).performClick()
+
+        assertEquals(listOf<AddCardIntent>(AddCardIntent.RequestDeleteSelectedCards), intents)
+    }
+
+    @Test
+    fun details_showTheCardAndDeleteSendsTheRequest() = runComposeUiTest {
+        show(AddCardState(cards = listOf(visa), viewingCard = visa))
+
+        onNodeWithTag(CardsTags.DETAILS_DIALOG).assertIsDisplayed()
+        onAllNodesWithText("Millennium").assertCountEquals(2)
+        onNodeWithTag(CardsTags.DETAILS_DELETE_BUTTON).performClick()
+
+        assertEquals(listOf<AddCardIntent>(AddCardIntent.RequestDeleteViewingCard), intents)
+    }
+
+    @Test
+    fun deleteQuestion_confirmSendsConfirmDeleteCard() = runComposeUiTest {
+        show(AddCardState(cards = listOf(visa), pendingDeleteCard = visa))
+
+        onNodeWithTag(CardsTags.DELETE_CONFIRM_BUTTON).performClick()
+
+        assertEquals(listOf<AddCardIntent>(AddCardIntent.ConfirmDeleteCard), intents)
     }
 
     @Test
