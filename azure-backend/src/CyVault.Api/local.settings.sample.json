@@ -10,6 +10,9 @@
         "AvatarStorage__ContainerName": "avatars",
         "BalanceStorage__ConnectionString": "UseDevelopmentStorage=true",
         "BalanceStorage__TableName": "balances",
+        "CardStorage__ConnectionString": "UseDevelopmentStorage=true",
+        "CardStorage__CardsTableName": "cards",
+        "CardStorage__PhonesTableName": "phones",
         "Graph__ClientSecret": "<CyVault API client secret, only for POST /me/signout>"
     }
 }

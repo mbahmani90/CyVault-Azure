@@ -15,6 +15,11 @@
         "adminConsentDescription": "Allows the app to read and write the signed-in user's balances."
       },
       {
+        "value": "Card.ReadWrite",
+        "adminConsentDisplayName": "Read and write cards",
+        "adminConsentDescription": "Allows the app to read and write the signed-in user's cards and the phone numbers linked to them."
+      },
+      {
         "value": "Profile.ReadWrite",
         "adminConsentDisplayName": "Read and write the user's CyVault profile",
         "adminConsentDescription": "Lets the CyVault app manage the user's profile photo."
