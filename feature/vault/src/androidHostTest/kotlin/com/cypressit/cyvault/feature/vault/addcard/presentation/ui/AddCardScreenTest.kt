@@ -12,9 +12,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardIntent
+import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardSaveError
 import com.cypressit.cyvault.feature.vault.addcard.presentation.viewmodel.AddCardState
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
-import com.cypressit.cyvault.feature.vault.card.domain.model.CardType
 import com.cypressit.cyvault.systemdesign.theme.CyTheme
 import com.cypressit.cyvault.testtags.CardsTags
 import org.junit.Test
@@ -29,13 +29,9 @@ class AddCardScreenTest {
 
     private val visa = Card(
         id = "visa",
-        bankName = "Millennium",
-        cardHolderName = "Maria",
-        cardNumber = "4111111111111111",
-        cvv2 = "123",
-        expiryDate = "12/30",
-        balance = 100.0,
-        cardType = CardType.entries.first(),
+        last4 = "1111",
+        phoneNumber = "+351912345678",
+        createdAt = "2026-11-01T09:30:00+00:00",
     )
 
     private val intents = mutableListOf<AddCardIntent>()
@@ -66,12 +62,12 @@ class AddCardScreenTest {
     }
 
     @Test
-    fun cards_showBankAndLastFourDigits() = runComposeUiTest {
+    fun cards_showLastFourDigitsAndPhoneNumber() = runComposeUiTest {
         show(AddCardState(cards = listOf(visa)))
 
         onNodeWithTag(CardsTags.LIST).assertIsDisplayed()
-        onNodeWithText("Millennium").assertIsDisplayed()
         onNodeWithText("1111", substring = true).assertIsDisplayed()
+        onNodeWithText("+351912345678").assertIsDisplayed()
     }
 
     @Test
@@ -127,6 +123,47 @@ class AddCardScreenTest {
         onNodeWithTag(CardsTags.PHONE_NUMBER_FIELD).performTextInput("912")
 
         assertEquals(listOf<AddCardIntent>(AddCardIntent.PhoneNumberChanged("912")), intents)
+    }
+
+    @Test
+    fun add_sendsAddCardSubmitted() = runComposeUiTest {
+        show(
+            AddCardState(
+                isAddCardDialogVisible = true,
+                cardNumber = "4111111111111111",
+                phoneNumber = "912345678",
+            ),
+        )
+
+        onNodeWithTag(CardsTags.SUBMIT_BUTTON).performClick()
+
+        assertEquals(listOf<AddCardIntent>(AddCardIntent.AddCardSubmitted), intents)
+    }
+
+    @Test
+    fun saving_disablesAdd() = runComposeUiTest {
+        show(
+            AddCardState(
+                isAddCardDialogVisible = true,
+                cardNumber = "4111111111111111",
+                phoneNumber = "912345678",
+                isSavingCard = true,
+            ),
+        )
+
+        onNodeWithTag(CardsTags.SUBMIT_BUTTON).assertIsNotEnabled()
+    }
+
+    @Test
+    fun saveError_isShownInTheDialog() = runComposeUiTest {
+        show(
+            AddCardState(
+                isAddCardDialogVisible = true,
+                saveError = AddCardSaveError.PhoneNumberAlreadyLinked,
+            ),
+        )
+
+        onNodeWithTag(CardsTags.SAVE_ERROR_TEXT).assertIsDisplayed()
     }
 
     @Test

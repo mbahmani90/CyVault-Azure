@@ -120,6 +120,40 @@ An environment whose Entra apps already exist (like `dev`) has their IDs saved i
 (`ENTRA_API_CLIENT_ID`, `ENTRA_MOBILE_CLIENT_ID`), so the hook updates them instead of creating new
 ones; without `ENTRA_TENANT_ID` it uses the production tenant.
 
+### Check the tenant before every deploy
+
+The azd environment files (`.azure/<env>/.env`) are git-ignored, so each machine has its own copy,
+and nothing stops a `debug` environment from holding production's Entra values. When it does,
+`azd up -e debug` changes the **production** tenant's app registrations and points the debug Function
+App at the production API, so every request from a debug build fails with `401`. This happened once:
+the debug env file had lost its debug values.
+
+Before `azd up` or `azd provision`, check the environment's Entra values:
+
+```bash
+azd env get-values -e debug | grep ENTRA_
+```
+
+They must match the environment's row in the table above, and the Android build that uses it:
+
+| Value | `debug` | `dev` (production) |
+|---|---|---|
+| `ENTRA_TENANT_ID` | `716c5a4a-3127-449c-8f78-fc715bd7ac06` | `e5cb5788-11bc-499b-82f2-095c6f201b40` |
+| `ENTRA_INSTANCE` | `https://cyvaultdebug.ciamlogin.com/` | `https://cyvault.ciamlogin.com/` |
+| `ENTRA_API_CLIENT_ID` | `7b114a03-…` (debug build's `appIdUri` in `androidApp/src/debug`) | `61a46c01-…` |
+| `ENTRA_MOBILE_CLIENT_ID` | `990b363b-…` (`client_id` in `androidApp/src/debug/res/raw`) | `63b77443-…` (`client_id` in `androidApp/src/main/res/raw`) |
+
+Then dry-run the Entra hook: its first line names the tenant it will change, and it lists every
+change without making it:
+
+```bash
+pwsh ./infra/entra/Set-EntraApps.ps1 -EnvironmentName debug -WhatIf
+```
+
+If a value is wrong, fix it with `azd env set -e <env> <NAME> <value>` before deploying. After a
+deploy, the Function App's `AzureAd__TenantId` and `AzureAd__ClientId` settings show which tenant and
+API it trusts.
+
 `azd up` asks for a subscription and region, creates the resources in `infra/` (Flex Consumption
 Function App, two storage accounts with shared keys disabled, Application Insights, the Function's
 Managed Identity and its role assignments) and deploys the code. It prints `API_BASE_URL` at the end.
