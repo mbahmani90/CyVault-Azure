@@ -25,7 +25,8 @@
   "mobile": {
     "displayName": "CyVault Mobile",
     "redirectUris": [
-      "msauth://com.cypressit.cyvault/%2B6PpzKBqQ%2F0GponbMHq4NRPWiMc%3D"
+      "msauth://com.cypressit.cyvault/%2B6PpzKBqQ%2F0GponbMHq4NRPWiMc%3D",
+      "msauth://com.cypressit.cyvault/vEllEfJ8DIztUlq9ZEKO6kmPMDs%3D"
     ],
     "graphScopes": ["email", "offline_access", "openid", "User.Read"],
     "idTokenOptionalClaims": ["email"]

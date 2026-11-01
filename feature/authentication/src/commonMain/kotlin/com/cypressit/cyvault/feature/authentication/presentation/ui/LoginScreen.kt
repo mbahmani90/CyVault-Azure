@@ -155,8 +155,10 @@ private fun LoginForm(
             }
         }
 
-        TextButton(onClick = { onIntent(AuthIntent.ShowForgotPassword) }) {
-            Text(stringResource(Res.string.login_forgot_password))
+        if (state.canResetPassword) {
+            TextButton(onClick = { onIntent(AuthIntent.ShowForgotPassword) }) {
+                Text(stringResource(Res.string.login_forgot_password))
+            }
         }
 
         Spacer(Modifier.height(8.dp))

@@ -20,18 +20,11 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="cyvault"
-                    android:host="yapily-callback" />
-            </intent-filter>
         </activity>
 
-        <!-- MSAL redirect handler. The path is the signing certificate hash (debug keystore),
-             not URL-encoded; it must match redirect_uri in auth_config_native_auth.json.
+        <!-- MSAL redirect handler. The path is the signing certificate hash per build type
+             (msalSignatureHash in build.gradle.kts), not URL-encoded; it must match redirect_uri
+             in auth_config_native_auth.json.
              MissingClass: MSAL is an implementation dependency of :auth, so lint can't see it from here. -->
         <activity
             android:name="com.microsoft.identity.client.BrowserTabActivity"
@@ -44,7 +37,7 @@
                 <data
                     android:scheme="msauth"
                     android:host="com.cypressit.cyvault"
-                    android:path="/+6PpzKBqQ/0GponbMHq4NRPWiMc=" />
+                    android:path="/${msalSignatureHash}" />
             </intent-filter>
         </activity>
     </application>

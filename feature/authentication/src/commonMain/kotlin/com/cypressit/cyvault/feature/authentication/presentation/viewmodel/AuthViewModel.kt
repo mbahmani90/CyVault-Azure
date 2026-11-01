@@ -2,6 +2,7 @@ package com.cypressit.cyvault.feature.authentication.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cypressit.cyvault.feature.authentication.domain.debug.ForgotPasswordPreview
 import com.cypressit.cyvault.feature.authentication.domain.usecase.ConfirmSignUpUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.ForgotPasswordUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.GetCurrentUserUseCase
@@ -25,9 +26,11 @@ class AuthViewModel(
     private val signOutUseCase: SignOutUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
+    /** Null except in debug builds: Forgot Password isn't finished. */
+    forgotPasswordPreview: ForgotPasswordPreview? = null,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(AuthState())
+    private val _state = MutableStateFlow(AuthState(canResetPassword = forgotPasswordPreview != null))
     val state: StateFlow<AuthState> = _state.asStateFlow()
 
     private val _effect = Channel<AuthEffect>(Channel.BUFFERED)
@@ -66,8 +69,9 @@ class AuthViewModel(
             AuthIntent.ToggleMode ->
                 _state.update { it.copy(isRegisterMode = !it.isRegisterMode, isForgotPasswordMode = false) }
 
-            AuthIntent.ShowForgotPassword ->
+            AuthIntent.ShowForgotPassword -> if (_state.value.canResetPassword) {
                 _state.update { it.copy(isForgotPasswordMode = true, isRegisterMode = false, emailError = null) }
+            }
 
             AuthIntent.BackToLogin ->
                 _state.update {

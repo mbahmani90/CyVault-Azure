@@ -224,13 +224,15 @@ internal fun VaultHomeScreen(
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
-                NavigationDrawerItem(
-                    icon = { Icon(imageVector = Icons.Default.AddCard, contentDescription = null) },
-                    label = { Text(stringResource(Res.string.vault_home_add_card)) },
-                    selected = false,
-                    onClick = { viewModel.onIntent(VaultHomeIntent.AddCardFromDrawer) },
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                )
+                if (state.canAddCard) {
+                    NavigationDrawerItem(
+                        icon = { Icon(imageVector = Icons.Default.AddCard, contentDescription = null) },
+                        label = { Text(stringResource(Res.string.vault_home_add_card)) },
+                        selected = false,
+                        onClick = { viewModel.onIntent(VaultHomeIntent.AddCardFromDrawer) },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                }
                 if (state.canAddSampleBalances) {
                     NavigationDrawerItem(
                         icon = {

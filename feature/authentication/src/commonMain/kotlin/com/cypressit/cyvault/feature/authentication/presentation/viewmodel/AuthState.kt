@@ -9,6 +9,8 @@ data class AuthState(
     val verificationCode: String = "",
     val isRegisterMode: Boolean = false,
     val isForgotPasswordMode: Boolean = false,
+    /** True in debug builds only, until resetting the password with the code is built. */
+    val canResetPassword: Boolean = false,
     val isVerificationMode: Boolean = false,
     val nameError: String? = null,
     val emailError: String? = null,
