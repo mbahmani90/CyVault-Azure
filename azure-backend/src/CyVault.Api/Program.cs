@@ -3,6 +3,7 @@ using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Storage.Blobs;
+using CyVault.Api.Card;
 using CyVault.Api.Session;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Azure.Functions.Worker.Builder;
@@ -38,6 +39,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddSingleton(_ => CreateAvatarContainer(builder.Configuration.GetSection("AvatarStorage")));
 builder.Services.AddSingleton(_ => CreateBalanceTable(builder.Configuration.GetSection("BalanceStorage")));
+builder.Services.AddSingleton(_ => CreateCardTables(builder.Configuration.GetSection("CardStorage")));
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton(sp => new SignInSessions(
@@ -84,6 +86,31 @@ static TableClient CreateBalanceTable(IConfigurationSection config)
     var serviceUri = config["TableServiceUri"]
         ?? throw new InvalidOperationException("Set BalanceStorage:TableServiceUri or BalanceStorage:ConnectionString.");
     return new TableClient(new Uri(serviceUri), tableName, new DefaultAzureCredential());
+}
+
+static CardTables CreateCardTables(IConfigurationSection config)
+{
+    var cardsTableName = config["CardsTableName"] ?? "cards";
+    var phonesTableName = config["PhonesTableName"] ?? "phones";
+
+    // Local development against Azurite. In Azure the Managed Identity is used, and Bicep
+    // creates the tables.
+    var connectionString = config["ConnectionString"];
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        var cards = new TableClient(connectionString, cardsTableName);
+        var phones = new TableClient(connectionString, phonesTableName);
+        cards.CreateIfNotExists();
+        phones.CreateIfNotExists();
+        return new CardTables(cards, phones);
+    }
+
+    var serviceUri = new Uri(config["TableServiceUri"]
+        ?? throw new InvalidOperationException("Set CardStorage:TableServiceUri or CardStorage:ConnectionString."));
+    var credential = new DefaultAzureCredential();
+    return new CardTables(
+        new TableClient(serviceUri, cardsTableName, credential),
+        new TableClient(serviceUri, phonesTableName, credential));
 }
 
 static BlobContainerClient CreateAvatarContainer(IConfigurationSection config)
