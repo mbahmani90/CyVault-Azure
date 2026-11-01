@@ -1,5 +1,6 @@
 package com.cypressit.cyvault
 
+import com.cypressit.cyvault.feature.authentication.domain.debug.ForgotPasswordPreview
 import com.cypressit.cyvault.feature.vault.debug.vaultDebugModule
 import com.cypressit.cyvault.feature.vault.home.data.remote.CyVaultApiConfig
 import org.koin.core.module.Module
@@ -12,6 +13,8 @@ import org.koin.dsl.module
 val buildTypeModules: List<Module> = listOf(
     vaultDebugModule,
     module {
+        // Unfinished: shown in debug builds only
+        single { ForgotPasswordPreview }
         // azd environment "debug" (azure-backend: azd env get-values -e debug).
         single {
             CyVaultApiConfig(

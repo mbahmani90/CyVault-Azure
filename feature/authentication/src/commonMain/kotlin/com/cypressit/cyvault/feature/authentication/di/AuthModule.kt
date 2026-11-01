@@ -10,7 +10,7 @@ import com.cypressit.cyvault.feature.authentication.domain.usecase.RegisterUseCa
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SignInWithGoogleUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SignOutUseCase
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthViewModel
-import org.koin.core.module.dsl.viewModelOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val authModule = module {
@@ -27,5 +27,17 @@ val authModule = module {
     factory { SignInWithGoogleUseCase(get()) }
 
     // ViewModel
-    viewModelOf(::AuthViewModel)
+    // Written out because ForgotPasswordPreview is optional: only debug builds provide it.
+    viewModel {
+        AuthViewModel(
+            loginUseCase = get(),
+            registerUseCase = get(),
+            confirmSignUpUseCase = get(),
+            forgotPasswordUseCase = get(),
+            signOutUseCase = get(),
+            getCurrentUserUseCase = get(),
+            signInWithGoogleUseCase = get(),
+            forgotPasswordPreview = getOrNull(),
+        )
+    }
 }

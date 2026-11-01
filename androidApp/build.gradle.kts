@@ -1,4 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+// The upload key's keystore and passwords live in the git-ignored local.properties
+val localProperties =
+    Properties().apply {
+        rootProject.file("local.properties").takeIf { it.exists() }?.reader()?.use { load(it) }
+    }
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -21,6 +28,8 @@ dependencies {
     debugImplementation(projects.feature.vaultDebug)
     // For CyVaultApiConfig: debug builds point the vault at the debug environment's API
     debugImplementation(projects.feature.vault)
+    // For ForgotPasswordPreview: debug builds show the unfinished Forgot Password
+    debugImplementation(projects.feature.authentication)
 
     implementation(libs.koin.android)
     implementation(libs.androidx.activity.compose)
@@ -37,8 +46,20 @@ android {
         applicationId = "com.cypressit.cyvault"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
+        versionCode = 2
         versionName = "1.0"
+        // The MSAL redirect URI's signing key hash, not URL-encoded. Release: the Play app signing
+        // key's hash (Play Console → Test and release → App integrity → App signing).
+        // Must match redirect_uri in src/main/res/raw/auth_config_native_auth.json.
+        manifestPlaceholders["msalSignatureHash"] = "vEllEfJ8DIztUlq9ZEKO6kmPMDs="
+    }
+    signingConfigs {
+        create("release") {
+            localProperties.getProperty("release.storeFile")?.let { storeFile = file(it) }
+            storePassword = localProperties.getProperty("release.storePassword")
+            keyAlias = localProperties.getProperty("release.keyAlias")
+            keyPassword = localProperties.getProperty("release.keyPassword")
+        }
     }
     packaging {
         resources {
@@ -46,7 +67,14 @@ android {
         }
     }
     buildTypes {
+        getByName("debug") {
+            // The debug keystore's hash; matches src/debug/res/raw/auth_config_native_auth.json
+            manifestPlaceholders["msalSignatureHash"] = "+6PpzKBqQ/0GponbMHq4NRPWiMc="
+        }
         getByName("release") {
+            if (localProperties.getProperty("release.storeFile") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

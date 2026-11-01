@@ -1,6 +1,6 @@
 {
   "client_id": "63b77443-9d6c-43ae-8385-50a9fa42f241",
-  "redirect_uri": "msauth://com.cypressit.cyvault/%2B6PpzKBqQ%2F0GponbMHq4NRPWiMc%3D",
+  "redirect_uri": "msauth://com.cypressit.cyvault/vEllEfJ8DIztUlq9ZEKO6kmPMDs%3D",
   "authorities": [
     {
       "type": "CIAM",
