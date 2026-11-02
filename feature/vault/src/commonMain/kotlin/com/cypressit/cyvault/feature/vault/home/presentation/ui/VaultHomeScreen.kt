@@ -54,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -344,6 +345,7 @@ internal fun VaultHomeScreen(
                 onTransfer = { viewModel.onIntent(VaultHomeIntent.TransferClicked) },
                 onClickBalance = { viewModel.onIntent(VaultHomeIntent.ClickBalance(it)) },
                 onLongClickBalance = { viewModel.onIntent(VaultHomeIntent.LongClickBalance(it)) },
+                onRefresh = { viewModel.onIntent(VaultHomeIntent.Refresh) },
                 modifier = Modifier.padding(paddingValues),
             )
         }
@@ -522,7 +524,11 @@ private fun BalanceDivider() {
     )
 }
 
-/** Total assets, then the user's balances and cards in one scrolling list. */
+/**
+ * Total assets, then the user's balances and cards in one scrolling list. Pulling the list down
+ * fetches them again.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeContent(
     state: VaultHomeState,
@@ -530,6 +536,7 @@ private fun HomeContent(
     onTransfer: () -> Unit,
     onClickBalance: (Balance) -> Unit,
     onLongClickBalance: (Balance) -> Unit,
+    onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when {
@@ -598,128 +605,136 @@ private fun HomeContent(
                 }
             }
 
-            LazyColumn(modifier = Modifier.testTag(VaultHomeTags.BALANCE_LIST)) {
-                if (state.isLoadingBalances && state.balances.isEmpty()) {
-                    item(key = "balances-loading") {
-                        LinearProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            // Gray instead of the theme's accent: loading shouldn't draw the eye.
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        )
-                    }
-                } else if (state.balances.isEmpty()) {
-                    item(key = "balances-empty") {
-                        Text(
-                            text = stringResource(Res.string.vault_home_balances_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                                .testTag(VaultHomeTags.BALANCES_EMPTY_TEXT),
-                        )
-                    }
-                }
-                // Prefixed keys: a balance ID must never collide with a card ID in this list.
-                itemsIndexed(state.balances, key = { _, balance -> "balance-${balance.id}" }) { index, balance ->
-                    // The same line between rows as after the last one.
-                    if (index > 0) BalanceDivider()
-                    // The amount shows without a sign; its colour tells money in from money out.
-                    val isIncome = !balance.type.isOutgoing
-                    val isSelected = state.isBalanceSelected(balance.id)
-                    ListItem(
-                        // A check box only in selection mode, so normal rows keep their full width.
-                        leadingContent = if (state.isSelectionMode) {
-                            { Checkbox(checked = isSelected, onCheckedChange = null) }
-                        } else {
-                            null
-                        },
-                        colors = ListItemDefaults.colors(
-                            // Neutral gray: the brand purple would compete with the amounts' colors.
-                            containerColor = if (isSelected) {
-                                MaterialTheme.colorScheme.surfaceContainerHighest
-                            } else {
-                                MaterialTheme.colorScheme.surface
-                            },
-                        ),
-                        headlineContent = {
-                            Text(balanceTitle(balance), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        },
-                        // Every row gets a second line, so rows without a description line up too.
-                        supportingContent = {
-                            Text(
-                                text = balanceSubtitle(balance).ifBlank { "-" },
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+            // Only the list pulls: the total card above stays where it is.
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.weight(1f),
+            ) {
+                // Fills the box, so a short list can still be pulled from its empty space.
+                LazyColumn(modifier = Modifier.fillMaxSize().testTag(VaultHomeTags.BALANCE_LIST)) {
+                    if (state.isLoadingBalances && state.balances.isEmpty()) {
+                        item(key = "balances-loading") {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                // Gray instead of the theme's accent: loading shouldn't draw the eye.
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
                             )
-                        },
-                        trailingContent = {
-                            Column(horizontalAlignment = Alignment.End) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    // The card's name in gray, so it doesn't read as part of the amount.
-                                    state.cardNameOf(balance)?.let { cardName ->
+                        }
+                    } else if (state.balances.isEmpty()) {
+                        item(key = "balances-empty") {
+                            Text(
+                                text = stringResource(Res.string.vault_home_balances_empty),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .testTag(VaultHomeTags.BALANCES_EMPTY_TEXT),
+                            )
+                        }
+                    }
+                    // Prefixed keys: a balance ID must never collide with a card ID in this list.
+                    itemsIndexed(state.balances, key = { _, balance -> "balance-${balance.id}" }) { index, balance ->
+                        // The same line between rows as after the last one.
+                        if (index > 0) BalanceDivider()
+                        // The amount shows without a sign; its colour tells money in from money out.
+                        val isIncome = !balance.type.isOutgoing
+                        val isSelected = state.isBalanceSelected(balance.id)
+                        ListItem(
+                            // A check box only in selection mode, so normal rows keep their full width.
+                            leadingContent = if (state.isSelectionMode) {
+                                { Checkbox(checked = isSelected, onCheckedChange = null) }
+                            } else {
+                                null
+                            },
+                            colors = ListItemDefaults.colors(
+                                // Neutral gray: the brand purple would compete with the amounts' colors.
+                                containerColor = if (isSelected) {
+                                    MaterialTheme.colorScheme.surfaceContainerHighest
+                                } else {
+                                    MaterialTheme.colorScheme.surface
+                                },
+                            ),
+                            headlineContent = {
+                                Text(balanceTitle(balance), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            },
+                            // Every row gets a second line, so rows without a description line up too.
+                            supportingContent = {
+                                Text(
+                                    text = balanceSubtitle(balance).ifBlank { "-" },
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                            trailingContent = {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        // The card's name in gray, so it doesn't read as part of the amount.
+                                        state.cardNameOf(balance)?.let { cardName ->
+                                            Text(
+                                                text = cardName,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
                                         Text(
-                                            text = cardName,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
+                                            text = formatAmount(
+                                                kotlin.math.abs(balance.amount),
+                                                balance.currency,
+                                                symbolAfter = true,
+                                            ),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = if (isIncome) IncomeGreen else MaterialTheme.colorScheme.error,
                                         )
                                     }
-                                    Text(
-                                        text = formatAmount(
-                                            kotlin.math.abs(balance.amount),
-                                            balance.currency,
-                                            symbolAfter = true,
-                                        ),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = if (isIncome) IncomeGreen else MaterialTheme.colorScheme.error,
-                                    )
+                                    formatBalanceDate(balance.date)?.let { date ->
+                                        Text(
+                                            text = date,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
-                                formatBalanceDate(balance.date)?.let { date ->
-                                    Text(
-                                        text = date,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        },
-                        // Tap edits, or selects in selection mode; a long press starts selection mode.
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag(VaultHomeTags.BALANCE_ROW)
-                            .combinedClickable(
-                                onClickLabel = stringResource(
-                                    if (state.isSelectionMode) {
-                                        Res.string.vault_home_select_balance_description
-                                    } else {
-                                        Res.string.vault_home_edit_item_title
-                                    },
+                            },
+                            // Tap edits, or selects in selection mode; a long press starts selection mode.
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag(VaultHomeTags.BALANCE_ROW)
+                                .combinedClickable(
+                                    onClickLabel = stringResource(
+                                        if (state.isSelectionMode) {
+                                            Res.string.vault_home_select_balance_description
+                                        } else {
+                                            Res.string.vault_home_edit_item_title
+                                        },
+                                    ),
+                                    onLongClickLabel = stringResource(Res.string.vault_home_select_balance_description),
+                                    onLongClick = { onLongClickBalance(balance) },
+                                    onClick = { onClickBalance(balance) },
                                 ),
-                                onLongClickLabel = stringResource(Res.string.vault_home_select_balance_description),
-                                onLongClick = { onLongClickBalance(balance) },
-                                onClick = { onClickBalance(balance) },
-                            ),
-                    )
-                }
-                // Only closes a list of rows; under the progress bar or empty text it's just noise.
-                if (state.balances.isNotEmpty()) {
-                    item(key = "balances-divider") { BalanceDivider() }
-                }
+                        )
+                    }
+                    // Only closes a list of rows; under the progress bar or empty text it's just noise.
+                    if (state.balances.isNotEmpty()) {
+                        item(key = "balances-divider") { BalanceDivider() }
+                    }
 
-                items(state.cards, key = { it.id }) { card ->
-                    ListItem(
-                        headlineContent = { Text(stringResource(Res.string.cards_masked_number, card.last4)) },
-                        supportingContent = { Text(card.phoneNumber) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    items(state.cards, key = { it.id }) { card ->
+                        ListItem(
+                            headlineContent = { Text(stringResource(Res.string.cards_masked_number, card.last4)) },
+                            supportingContent = { Text(card.phoneNumber) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
         }
