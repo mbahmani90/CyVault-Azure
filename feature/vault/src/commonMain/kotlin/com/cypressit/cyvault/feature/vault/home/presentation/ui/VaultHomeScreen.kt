@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -102,6 +104,7 @@ import cyvault.vault.generated.resources.vault_home_sign_out
 import cyvault.vault.generated.resources.vault_home_sign_out_description
 import cyvault.vault.generated.resources.vault_home_title
 import cyvault.vault.generated.resources.vault_home_total_since
+import cyvault.vault.generated.resources.vault_home_transfer_description
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.pluralStringResource
@@ -165,6 +168,10 @@ internal fun VaultHomeScreen(
     // Back leaves selection mode before it leaves the screen.
     SystemBackHandler(enabled = state.isSelectionMode) {
         viewModel.onIntent(VaultHomeIntent.ClearBalanceSelection)
+    }
+
+    if (state.isTransferDialogVisible) {
+        TransferDialog(state = state, onIntent = viewModel::onIntent)
     }
 
     if (state.isAddItemDialogVisible) {
@@ -313,6 +320,7 @@ internal fun VaultHomeScreen(
             HomeContent(
                 state = state,
                 onAddItem = { viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog) },
+                onTransfer = { viewModel.onIntent(VaultHomeIntent.TransferClicked) },
                 onClickBalance = { viewModel.onIntent(VaultHomeIntent.ClickBalance(it)) },
                 onLongClickBalance = { viewModel.onIntent(VaultHomeIntent.LongClickBalance(it)) },
                 modifier = Modifier.padding(paddingValues),
@@ -498,6 +506,7 @@ private fun BalanceDivider() {
 private fun HomeContent(
     state: VaultHomeState,
     onAddItem: () -> Unit,
+    onTransfer: () -> Unit,
     onClickBalance: (Balance) -> Unit,
     onLongClickBalance: (Balance) -> Unit,
     modifier: Modifier = Modifier,
@@ -546,6 +555,16 @@ private fun HomeContent(
                             )
                         }
                     }
+                    SmallFloatingActionButton(
+                        onClick = onTransfer,
+                        modifier = Modifier.testTag(VaultHomeTags.TRANSFER_BUTTON),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = stringResource(Res.string.vault_home_transfer_description),
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
                     SmallFloatingActionButton(
                         onClick = onAddItem,
                         modifier = Modifier.testTag(VaultHomeTags.ADD_ITEM_BUTTON),

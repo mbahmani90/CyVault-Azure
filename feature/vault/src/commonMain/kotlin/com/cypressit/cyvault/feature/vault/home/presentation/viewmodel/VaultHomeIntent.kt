@@ -12,6 +12,19 @@ sealed interface VaultHomeIntent {
     /** The drawer's "Add card" item: opens the add-card screen. */
     data object AddCardFromDrawer : VaultHomeIntent
 
+    /** The transfer button next to Add on the total balance card: opens the transfer dialog. */
+    data object TransferClicked : VaultHomeIntent
+    data object TransferDismissed : VaultHomeIntent
+    data class TransferPhoneNumberChanged(val value: String) : VaultHomeIntent
+    data class TransferAmountChanged(val value: String) : VaultHomeIntent
+    data class TransferCardMenuOpenChanged(val isOpen: Boolean) : VaultHomeIntent
+    data class TransferCardSelected(val cardId: String) : VaultHomeIntent
+    data class TransferCurrencyMenuOpenChanged(val isOpen: Boolean) : VaultHomeIntent
+    data class TransferCurrencySelected(val currency: String) : VaultHomeIntent
+
+    /** The dialog's Send button. */
+    data object TransferSubmitted : VaultHomeIntent
+
     data object ShowAddItemDialog : VaultHomeIntent
     data object DismissAddItemDialog : VaultHomeIntent
 

@@ -9,6 +9,7 @@
     <string name="vault_home_change_photo_description">Change profile photo</string>
     <string name="vault_home_photo_updated">Profile photo updated</string>
     <string name="vault_home_cards">Cards</string>
+    <string name="vault_home_transfer_description">Transfer</string>
     <string name="vault_home_add_item_description_fab">Add item</string>
     <string name="vault_home_edit_item_title">Edit Item</string>
     <string name="vault_home_add_item_currency_description">Currency</string>
@@ -48,6 +49,20 @@
     <string name="vault_home_balance_request_failed">Couldn't update your balances. Please try again.</string>
     <string name="vault_home_add_sample_balances">Add 50 sample items (debug)</string>
     <string name="vault_home_sample_balances_added">Added %1$d sample items</string>
+
+    <!-- Transfer Dialog -->
+    <string name="transfer_title">Transfer</string>
+    <string name="transfer_phone_number">Receiver's phone number</string>
+    <string name="transfer_phone_number_placeholder">+351 9XX XXX XXX</string>
+    <string name="transfer_amount">Value</string>
+    <string name="transfer_currency_description">Choose currency</string>
+    <string name="transfer_card">From card</string>
+    <string name="transfer_card_option">%1$s **** %2$s</string>
+    <string name="transfer_loading_cards">Loading your cards…</string>
+    <string name="transfer_no_cards">No cards yet: add one in Cards</string>
+    <string name="transfer_send">Send</string>
+    <string name="transfer_cancel">Cancel</string>
+    <string name="transfer_cards_load_failed">Couldn't load your cards. Please try again.</string>
 
     <!-- Cards Screen -->
     <string name="cards_title">Cards</string>

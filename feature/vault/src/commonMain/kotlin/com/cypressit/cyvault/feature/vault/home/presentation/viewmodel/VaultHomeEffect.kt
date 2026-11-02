@@ -9,6 +9,7 @@ sealed interface VaultHomeEffect {
     data object BalanceDeleted : VaultHomeEffect
     data class BalancesDeleted(val count: Int) : VaultHomeEffect
     data object BalanceRequestFailed : VaultHomeEffect
+    data object TransferCardsLoadFailed : VaultHomeEffect
     data class SampleBalancesAdded(val count: Int) : VaultHomeEffect
     data object NavigateToLogin : VaultHomeEffect
     data object NavigateToAddCard : VaultHomeEffect
