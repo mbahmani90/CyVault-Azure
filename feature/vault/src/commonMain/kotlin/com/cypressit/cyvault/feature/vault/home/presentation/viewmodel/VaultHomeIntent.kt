@@ -28,7 +28,10 @@ sealed interface VaultHomeIntent {
     data object ShowAddItemDialog : VaultHomeIntent
     data object DismissAddItemDialog : VaultHomeIntent
 
-    /** Saves the add-item dialog as a balance: a new one, or the one being edited. */
+    data class ItemCardMenuOpenChanged(val isOpen: Boolean) : VaultHomeIntent
+    data class ItemCardSelected(val cardId: String) : VaultHomeIntent
+
+    /** Saves the add-item dialog as a balance, on the chosen card: a new one, or the one being edited. */
     data class SaveItem(
         val title: String,
         val description: String,

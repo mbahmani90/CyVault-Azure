@@ -19,6 +19,9 @@
     <string name="vault_home_add_item_title_field">Title</string>
     <string name="vault_home_add_item_description">Description</string>
     <string name="vault_home_add_item_value">Value</string>
+    <string name="vault_home_add_item_card">Card</string>
+    <string name="vault_home_add_item_loading_cards">Loading your cards…</string>
+    <string name="vault_home_add_item_no_cards">No cards yet: add one in Cards</string>
     <string name="vault_home_add_item_date_description">Date and time</string>
     <string name="vault_home_add_item_date_next">Next</string>
     <string name="vault_home_add_item_date_done">OK</string>

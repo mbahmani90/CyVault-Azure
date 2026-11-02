@@ -18,6 +18,9 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -38,16 +41,20 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.systemdesign.components.exposeTestTags
 import com.cypressit.cyvault.testtags.AddItemDialogTags
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.vault_home_add_item_cancel
+import cyvault.vault.generated.resources.vault_home_add_item_card
 import cyvault.vault.generated.resources.vault_home_add_item_currency_description
 import cyvault.vault.generated.resources.vault_home_add_item_date_description
 import cyvault.vault.generated.resources.vault_home_add_item_date_done
 import cyvault.vault.generated.resources.vault_home_add_item_date_next
 import cyvault.vault.generated.resources.vault_home_add_item_description
+import cyvault.vault.generated.resources.vault_home_add_item_loading_cards
+import cyvault.vault.generated.resources.vault_home_add_item_no_cards
 import cyvault.vault.generated.resources.vault_home_add_item_save
 import cyvault.vault.generated.resources.vault_home_add_item_title_field
 import cyvault.vault.generated.resources.vault_home_add_item_type_description
@@ -73,16 +80,23 @@ internal fun currencySymbol(code: String): String = when (code) {
 }
 
 /**
- * Asks for an item's title, description, type, value with its currency, and date and time, and
- * saves it as a balance: a purchase is saved as a negative amount, income as a positive one.
- * The date starts at now, or at the stored date when editing [item]. Save needs a title and a
- * numeric value.
+ * Asks for an item's title, description, type, card, value with its currency, and date and time,
+ * and saves it as a balance: a purchase is saved as a negative amount, income as a positive one.
+ * The date starts at now, or at the stored date when editing [item]. Save needs a title, a card
+ * and a numeric value. The card list, the chosen card and its menu come from the ViewModel.
  */
-@OptIn(ExperimentalMaterial3Api::class) // DatePicker, TimePicker
+@OptIn(ExperimentalMaterial3Api::class) // DatePicker, TimePicker, ExposedDropdownMenuBox
 @Composable
 internal fun AddItemDialog(
     item: Balance?,
     isSaving: Boolean,
+    cards: List<Card>,
+    /** The chosen card, or null while none is. */
+    card: Card?,
+    isLoadingCards: Boolean,
+    isCardMenuOpen: Boolean,
+    onCardMenuOpenChanged: (Boolean) -> Unit,
+    onCardSelected: (cardId: String) -> Unit,
     onDismiss: () -> Unit,
     /** [date] is ISO 8601. */
     onSave: (title: String, description: String, value: Double, currency: String, date: String) -> Unit,
@@ -216,6 +230,34 @@ internal fun AddItemDialog(
                         }
                     }
                 }
+                // The card the item goes on: required.
+                ExposedDropdownMenuBox(expanded = isCardMenuOpen, onExpandedChange = onCardMenuOpenChanged) {
+                    OutlinedTextField(
+                        value = when {
+                            card != null -> cardLabel(card)
+                            isLoadingCards -> stringResource(Res.string.vault_home_add_item_loading_cards)
+                            else -> stringResource(Res.string.vault_home_add_item_no_cards)
+                        },
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(Res.string.vault_home_add_item_card)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCardMenuOpen) },
+                        modifier = Modifier
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                            .fillMaxWidth()
+                            .testTag(AddItemDialogTags.CARD_FIELD),
+                    )
+                    ExposedDropdownMenu(expanded = isCardMenuOpen, onDismissRequest = {
+                        onCardMenuOpenChanged(false)
+                    }) {
+                        cards.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(cardLabel(option)) },
+                                onClick = { onCardSelected(option.id) },
+                            )
+                        }
+                    }
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -290,7 +332,7 @@ internal fun AddItemDialog(
                         val signed = if (isIncome) parsedValue!! else -parsedValue!!
                         onSave(title.trim(), description.trim(), signed, currency, date.toString())
                     },
-                    enabled = title.isNotBlank() && parsedValue != null && !isSaving,
+                    enabled = title.isNotBlank() && card != null && parsedValue != null && !isSaving,
                     modifier = Modifier.testTag(AddItemDialogTags.SAVE_BUTTON),
                 ) {
                     Text(stringResource(Res.string.vault_home_add_item_save))
