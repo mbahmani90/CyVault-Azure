@@ -44,9 +44,11 @@ class AddCardViewModelTest {
     private fun viewModel(repository: CardRepository = FakeCardRepository()) =
         AddCardViewModel(GetCardsUseCase(repository), CreateCardUseCase(repository), DeleteCardsUseCase(repository))
 
-    private fun AddCardViewModel.enter(cardNumber: String, phoneNumber: String) {
+    // The bank name is required, so a valid form has one unless a test says otherwise.
+    private fun AddCardViewModel.enter(cardNumber: String, phoneNumber: String, bankName: String = "CGD") {
         onIntent(AddCardIntent.CardNumberChanged(cardNumber))
         onIntent(AddCardIntent.PhoneNumberChanged(phoneNumber))
+        onIntent(AddCardIntent.BankNameChanged(bankName))
     }
 
     @Test
@@ -304,12 +306,13 @@ class AddCardViewModelTest {
     }
 
     @Test
-    fun bankName_isOptional() {
+    fun bankName_isRequired() {
         val viewModel = viewModel()
 
-        viewModel.enter(cardNumber = "4111111111111111", phoneNumber = "912345678")
+        viewModel.enter(cardNumber = "4111111111111111", phoneNumber = "912345678", bankName = "  ")
 
-        assertTrue(viewModel.state.value.isAddEnabled)
+        assertFalse(viewModel.state.value.isBankNameValid)
+        assertFalse(viewModel.state.value.isAddEnabled)
     }
 
     @Test

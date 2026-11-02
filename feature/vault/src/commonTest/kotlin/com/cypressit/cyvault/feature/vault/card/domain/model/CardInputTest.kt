@@ -52,4 +52,13 @@ class CardInputTest {
         assertNull(CardInput.normalizePhoneNumber("91234567"))
         assertNull(CardInput.normalizePhoneNumber(""))
     }
+
+    @Test
+    fun bankName_isRequiredAndAtMost50Characters() {
+        assertTrue(CardInput.isValidBankName("CGD"))
+        assertTrue(CardInput.isValidBankName("  Millennium  "))
+        assertFalse(CardInput.isValidBankName(""))
+        assertFalse(CardInput.isValidBankName("   "))
+        assertFalse(CardInput.isValidBankName("x".repeat(51)))
+    }
 }

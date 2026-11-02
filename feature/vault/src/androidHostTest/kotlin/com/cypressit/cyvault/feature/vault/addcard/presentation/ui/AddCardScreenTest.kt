@@ -109,6 +109,7 @@ class AddCardScreenTest {
                 isAddCardDialogVisible = true,
                 cardNumber = "4111111111111111",
                 phoneNumber = "912345678",
+                bankName = "CGD",
             ),
         )
 
@@ -140,6 +141,7 @@ class AddCardScreenTest {
                 isAddCardDialogVisible = true,
                 cardNumber = "4111111111111111",
                 phoneNumber = "912345678",
+                bankName = "CGD",
             ),
         )
 
@@ -155,6 +157,7 @@ class AddCardScreenTest {
                 isAddCardDialogVisible = true,
                 cardNumber = "4111111111111111",
                 phoneNumber = "912345678",
+                bankName = "CGD",
                 isSavingCard = true,
             ),
         )

@@ -93,6 +93,6 @@
     <string name="add_card_card_number">Card Number</string>
     <string name="add_card_phone_number">Phone Number</string>
     <string name="add_card_phone_number_placeholder">+351 9XX XXX XXX</string>
-    <string name="add_card_bank_name">Bank name (optional)</string>
+    <string name="add_card_bank_name">Bank name</string>
     <string name="add_card_submit">Add card</string>
 </resources>

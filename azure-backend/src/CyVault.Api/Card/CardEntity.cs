@@ -23,7 +23,7 @@ public sealed class CardEntity : ITableEntity
     /// </summary>
     public string Brand { get; set; } = "";
 
-    /// <summary>The bank the user named for the card; empty when they didn't name one.</summary>
+    /// <summary>The bank the user named for the card. Required; empty only on cards stored before it was.</summary>
     public string BankName { get; set; } = "";
 
     /// <summary>

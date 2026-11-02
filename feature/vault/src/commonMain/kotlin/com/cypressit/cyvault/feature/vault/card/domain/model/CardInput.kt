@@ -9,6 +9,9 @@ object CardInput {
     /** The longest bank name the API stores. */
     const val MAX_BANK_NAME_LENGTH = 50
 
+    /** Required: not blank once trimmed, and at most [MAX_BANK_NAME_LENGTH] characters. */
+    fun isValidBankName(value: String): Boolean = value.trim().length in 1..MAX_BANK_NAME_LENGTH
+
     private val cardNumberPattern = Regex("^[0-9]{16,19}$")
     private val portugueseMobilePattern = Regex("^9[0-9]{8}$")
     private val e164Pattern = Regex("^\\+[1-9][0-9]{7,14}$")
