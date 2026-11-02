@@ -4,6 +4,7 @@ using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Storage.Blobs;
 using CyVault.Api.Card;
+using CyVault.Api.Device;
 using CyVault.Api.Session;
 using CyVault.Api.Transfer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -43,6 +44,7 @@ builder.Services.AddSingleton(_ => CreateBalanceTable(builder.Configuration.GetS
 builder.Services.AddSingleton(_ => CreateCardTables(builder.Configuration.GetSection("CardStorage")));
 builder.Services.AddSingleton(_ => CreateCardEncryption(builder.Configuration.GetSection("CardEncryption")));
 builder.Services.AddSingleton(_ => CreateTransferTable(builder.Configuration.GetSection("TransferStorage")));
+builder.Services.AddSingleton(_ => CreateDeviceTable(builder.Configuration.GetSection("DeviceStorage")));
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton(sp => new SignInSessions(
@@ -133,6 +135,25 @@ static TransferTable CreateTransferTable(IConfigurationSection config)
     var serviceUri = config["TableServiceUri"]
         ?? throw new InvalidOperationException("Set TransferStorage:TableServiceUri or TransferStorage:ConnectionString.");
     return new TransferTable(new TableClient(new Uri(serviceUri), tableName, new DefaultAzureCredential()));
+}
+
+static DeviceTable CreateDeviceTable(IConfigurationSection config)
+{
+    var tableName = config["TableName"] ?? "devices";
+
+    // Local development against Azurite. In Azure the Managed Identity is used, and Bicep
+    // creates the table.
+    var connectionString = config["ConnectionString"];
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        var local = new TableClient(connectionString, tableName);
+        local.CreateIfNotExists();
+        return new DeviceTable(local);
+    }
+
+    var serviceUri = config["TableServiceUri"]
+        ?? throw new InvalidOperationException("Set DeviceStorage:TableServiceUri or DeviceStorage:ConnectionString.");
+    return new DeviceTable(new TableClient(new Uri(serviceUri), tableName, new DefaultAzureCredential()));
 }
 
 // The Managed Identity in Azure; locally, the developer's `az login`, which Bicep gives the same
