@@ -47,7 +47,7 @@ class BalanceApiServiceTest {
         respond(json, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
 
     private val mainJson =
-        """{"id":"main","name":"Main account","amount":1250.5,"currency":"EUR","date":"2026-10-27T09:30:00+00:00","updatedAt":"2026-10-28T15:00:00+00:00"}"""
+        """{"id":"main","name":"Main account","amount":1250.5,"currency":"EUR","date":"2026-10-27T09:30:00+00:00","updatedAt":"2026-10-28T15:00:00+00:00","cardId":"card-1"}"""
 
     @Test
     fun getBalances_sendsABalanceScopeTokenAndParsesTheList() = runTest {
@@ -61,6 +61,7 @@ class BalanceApiServiceTest {
         assertEquals("Main account", balances.single().name)
         assertEquals(1250.5, balances.single().amount)
         assertEquals("2026-10-27T09:30:00+00:00", balances.single().date)
+        assertEquals("card-1", balances.single().cardId)
     }
 
     @Test
@@ -73,6 +74,7 @@ class BalanceApiServiceTest {
                     description = "Daily spending",
                     amount = 1250.5,
                     currency = "EUR",
+                    cardId = "card-1",
                 ),
             )
 
@@ -86,6 +88,7 @@ class BalanceApiServiceTest {
         assertEquals("Daily spending", json["description"]?.jsonPrimitive?.content)
         assertEquals("1250.5", json["amount"]?.jsonPrimitive?.content)
         assertEquals("EUR", json["currency"]?.jsonPrimitive?.content)
+        assertEquals("card-1", json["cardId"]?.jsonPrimitive?.content)
         assertEquals("main", saved.id)
     }
 
