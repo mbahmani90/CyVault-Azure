@@ -107,7 +107,8 @@ class AddItemDialogTest {
         )
         show(card = visa, item = transfer)
 
-        onNodeWithText("Sent to +351912345678").assertIsDisplayed()
+        onNodeWithText("Sent to").assertIsDisplayed()
+        onNodeWithText("+351912345678").assertIsDisplayed()
         onNodeWithText("20.00 €").assertIsDisplayed()
         onNodeWithTag(AddItemDialogTags.TITLE_FIELD).assertDoesNotExist()
         onNodeWithTag(AddItemDialogTags.SAVE_BUTTON).assertDoesNotExist()
