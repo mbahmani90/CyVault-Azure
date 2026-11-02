@@ -1,6 +1,7 @@
 package com.cypressit.cyvault.feature.vault.fake
 
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
+import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
 import com.cypressit.cyvault.feature.vault.home.domain.repository.BalanceRepository
 import kotlinx.coroutines.CompletableDeferred
 
@@ -20,6 +21,12 @@ class FakeBalanceRepository(var balances: List<Balance> = emptyList()) : Balance
     var gate: CompletableDeferred<Unit>? = null
     val saved = mutableListOf<Balance>()
     val deletedIds = mutableListOf<String>()
+
+    /** When set, sendTransfer fails with this instead of sending. */
+    var transferFailure: Exception? = null
+
+    /** The transfer IDs sendTransfer was called with, in order. */
+    val transferIds = mutableListOf<String>()
 
     override suspend fun getBalances(): Result<List<Balance>> {
         gate?.await()
@@ -44,5 +51,29 @@ class FakeBalanceRepository(var balances: List<Balance> = emptyList()) : Balance
         if (id in failingDeleteIds) return Result.failure(Exception("delete failed"))
         deletedIds += id
         return Result.success(Unit)
+    }
+
+    // Like the API: the sender's Transfer row, keyed by the transfer ID.
+    override suspend fun sendTransfer(
+        transferId: String,
+        cardId: String,
+        phoneNumber: String,
+        amount: Double,
+        currency: String,
+    ): Result<Balance> {
+        transferIds += transferId
+        transferFailure?.let { return Result.failure(it) }
+        return Result.success(
+            Balance(
+                id = "$transferId-sent",
+                name = "",
+                amount = amount,
+                currency = currency,
+                date = NOW,
+                cardId = cardId,
+                type = BalanceType.Transfer,
+                counterparty = phoneNumber,
+            ),
+        )
     }
 }
