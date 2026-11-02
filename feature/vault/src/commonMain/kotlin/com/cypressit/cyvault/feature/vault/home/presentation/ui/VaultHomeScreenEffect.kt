@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeEffect
 import cyvault.vault.generated.resources.Res
+import cyvault.vault.generated.resources.transfer_cards_load_failed
 import cyvault.vault.generated.resources.vault_home_balance_deleted
 import cyvault.vault.generated.resources.vault_home_balance_request_failed
 import cyvault.vault.generated.resources.vault_home_balance_saved
@@ -45,6 +46,8 @@ internal fun VaultHomeScreenEffect(
                 )
                 VaultHomeEffect.BalanceRequestFailed ->
                     snackBarHostState.showSnackbar(getString(Res.string.vault_home_balance_request_failed))
+                VaultHomeEffect.TransferCardsLoadFailed ->
+                    snackBarHostState.showSnackbar(getString(Res.string.transfer_cards_load_failed))
                 is VaultHomeEffect.SampleBalancesAdded ->
                     snackBarHostState.showSnackbar(getString(Res.string.vault_home_sample_balances_added, effect.count))
                 VaultHomeEffect.OpenDrawer -> drawerState.open()

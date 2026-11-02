@@ -70,6 +70,31 @@ class VaultHomeViewModel(
             VaultHomeIntent.SignOut -> signOut()
             VaultHomeIntent.OpenDrawer -> viewModelScope.launch { _effect.send(VaultHomeEffect.OpenDrawer) }
             is VaultHomeIntent.ChangeProfilePhoto -> updateProfilePhoto(intent.photo)
+            VaultHomeIntent.TransferClicked -> openTransfer()
+            VaultHomeIntent.TransferDismissed -> _state.update {
+                it.copy(
+                    isTransferDialogVisible = false,
+                    transferPhoneNumber = "",
+                    transferAmount = "",
+                    isTransferCardMenuOpen = false,
+                    isTransferCurrencyMenuOpen = false,
+                )
+            }
+            is VaultHomeIntent.TransferPhoneNumberChanged ->
+                _state.update { it.copy(transferPhoneNumber = intent.value) }
+            is VaultHomeIntent.TransferAmountChanged -> _state.update { it.copy(transferAmount = intent.value) }
+            is VaultHomeIntent.TransferCardMenuOpenChanged ->
+                _state.update { it.copy(isTransferCardMenuOpen = intent.isOpen) }
+            is VaultHomeIntent.TransferCardSelected -> _state.update {
+                it.copy(transferCardId = intent.cardId, isTransferCardMenuOpen = false)
+            }
+            is VaultHomeIntent.TransferCurrencyMenuOpenChanged ->
+                _state.update { it.copy(isTransferCurrencyMenuOpen = intent.isOpen) }
+            is VaultHomeIntent.TransferCurrencySelected -> _state.update {
+                it.copy(transferCurrency = intent.currency, isTransferCurrencyMenuOpen = false)
+            }
+            // Sending comes with the transfer API; until then Send does nothing.
+            VaultHomeIntent.TransferSubmitted -> Unit
             VaultHomeIntent.AddCardFromDrawer -> viewModelScope.launch {
                 _effect.send(VaultHomeEffect.CloseDrawer)
                 _effect.send(VaultHomeEffect.NavigateToAddCard)
@@ -260,6 +285,30 @@ class VaultHomeViewModel(
                 .onFailure {
                     _state.update { it.copy(isUpdatingPhoto = false) }
                     _effect.send(VaultHomeEffect.ProfilePhotoUpdateFailed)
+                }
+        }
+    }
+
+    // The dialog keeps its own card list and loading flag: Home's isLoading would replace the whole
+    // page with a spinner, and Home's cards would start showing as rows.
+    private fun openTransfer() {
+        _state.update { it.copy(isTransferDialogVisible = true, isLoadingTransferCards = true) }
+        viewModelScope.launch {
+            getCards()
+                .onSuccess { cards ->
+                    _state.update { state ->
+                        state.copy(
+                            transferCards = cards,
+                            isLoadingTransferCards = false,
+                            // Keep the card chosen last time if it still exists; else the first.
+                            transferCardId = state.transferCardId?.takeIf { id -> cards.any { it.id == id } }
+                                ?: cards.firstOrNull()?.id,
+                        )
+                    }
+                }
+                .onFailure {
+                    _state.update { it.copy(isLoadingTransferCards = false) }
+                    _effect.send(VaultHomeEffect.TransferCardsLoadFailed)
                 }
         }
     }
