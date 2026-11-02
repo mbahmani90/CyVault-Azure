@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.cypressit.cyvault.core.presentation.MviViewModel
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.model.CardInput
+import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningCancelledException
+import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningUnavailableException
 import com.cypressit.cyvault.feature.vault.device.domain.usecase.EnrollDeviceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
@@ -12,6 +14,8 @@ import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 import com.cypressit.cyvault.feature.vault.home.domain.repository.InvalidTransferException
 import com.cypressit.cyvault.feature.vault.home.domain.repository.NoCardForPhoneNumberException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.SigningLockedException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.TransferChallengeExpiredException
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
@@ -53,6 +57,7 @@ class VaultHomeViewModel(
     private val deleteBalances: DeleteBalancesUseCase,
     private val sendTransfer: SendTransferUseCase,
     private val enrollDevice: EnrollDeviceUseCase,
+    private val transferPromptTexts: TransferPromptTexts,
     /** Null unless :feature:vault-debug is loaded, which only debug builds do. */
     private val sampleBalancesSeeder: SampleBalancesSeeder? = null,
 ) : ViewModel(), MviViewModel<VaultHomeState, VaultHomeIntent, VaultHomeEffect> {
@@ -341,11 +346,18 @@ class VaultHomeViewModel(
         val cardId = current.transferCard?.id ?: return
         val phoneNumber = CardInput.normalizePhoneNumber(current.transferPhoneNumber) ?: return
         val amount = current.transferAmountValue ?: return
+        val id = userId ?: return
         val transferId = pendingTransferId ?: Uuid.random().toHexString().also { pendingTransferId = it }
 
         viewModelScope.launch {
             _state.update { it.copy(isSendingTransfer = true, transferError = null) }
-            sendTransfer(transferId, cardId, phoneNumber, amount, current.transferCurrency)
+            // What the user approves with their fingerprint or face: this amount to this number.
+            val prompt = transferPromptTexts.forTransfer(
+                amount = current.transferAmount.trim(),
+                currency = current.transferCurrency,
+                phoneNumber = phoneNumber,
+            )
+            sendTransfer(id, transferId, cardId, phoneNumber, amount, current.transferCurrency, prompt)
                 .onSuccess { sent ->
                     pendingTransferId = null
                     _state.update { state ->
@@ -360,10 +372,15 @@ class VaultHomeViewModel(
                     }
                 }
                 .onFailure { error ->
-                    // Shown in the dialog, which stays open with what the user typed.
+                    // Shown in the dialog, which stays open with what the user typed. Backing out
+                    // of the biometric prompt isn't an error: the dialog just waits for Send again.
                     val transferError = when (error) {
+                        is SigningCancelledException -> null
                         is NoCardForPhoneNumberException -> TransferError.NoCardForPhoneNumber
                         is InvalidTransferException -> TransferError.Invalid
+                        is SigningUnavailableException -> TransferError.SigningUnavailable
+                        is TransferChallengeExpiredException -> TransferError.ChallengeExpired
+                        is SigningLockedException -> TransferError.SigningLocked
                         else -> TransferError.Failed
                     }
                     _state.update { it.copy(isSendingTransfer = false, transferError = transferError) }

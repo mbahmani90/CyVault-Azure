@@ -64,8 +64,10 @@ to Koin.
 `:devicekey` is a library in the same way: no screens, no CyVault types and no `:core`. It exposes
 `DeviceKeyStore`, which makes one EC P-256 key per account in the Android Keystore (StrongBox when the
 phone has it). The key only signs right after a fingerprint or face check, and adding a new
-fingerprint or face invalidates it; the private key never leaves the hardware. On iOS it's a stand-in
-that makes no key yet. The vault's `device/` package uses it to enroll the phone with the API
+fingerprint or face invalidates it; the private key never leaves the hardware. `sign` shows the system
+`BiometricPrompt` with the transfer's amount and payee and signs with the key it unlocks (SHA256withECDSA),
+so it needs Android 9 (API 28) or later: older phones get no key and can't send money. On iOS it's a
+stand-in that makes no key yet. The vault's `device/` package uses it to enroll the phone with the API
 (`POST /me/devices`) when the vault opens, and keeps the device ID the API returns in a DataStore
 (never SharedPreferences).
 
@@ -155,7 +157,7 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 |---|---|---|
 | Authentication (`:auth`) | `AuthClient` interface, bound in `authClientModule` | `MsalAuthClient`: MSAL native auth (Entra External ID); `ActivityProvider` gives MSAL's browser sign-in the on-screen activity |
 | Profile photo | `rememberProfilePhotoPicker` (`expect`/`actual`); `PickedPhotoReader` and `AvatarFileStore` interfaces bound in `homePlatformModule` | Photo Picker; `AndroidPickedPhotoReader` turns the photo upright from EXIF and scales it to 1024 px; `AndroidAvatarFileStore` caches it in `filesDir` |
-| Device key (`:devicekey`) | `DeviceKeyStore` interface, bound in `deviceKeyModule` | `AndroidDeviceKeyStore`: EC P-256 key in the Android Keystore (StrongBox when available), biometric-gated |
+| Device key (`:devicekey`) | `DeviceKeyStore` interface, bound in `deviceKeyModule` | `AndroidDeviceKeyStore`: EC P-256 key in the Android Keystore (StrongBox when available), signs after the system `BiometricPrompt` (API 28+) |
 | Device ID | `DeviceIdStore` (DataStore Preferences); the file's folder comes from `devicePlatformModule` | `filesDir` |
 | DI | `platformModule` | Ktor OkHttp engine |
 

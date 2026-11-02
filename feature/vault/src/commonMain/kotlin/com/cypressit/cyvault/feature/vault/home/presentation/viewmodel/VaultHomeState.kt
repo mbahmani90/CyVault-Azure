@@ -112,6 +112,15 @@ enum class TransferError {
     /** The API rejected it, such as sending to the card the money comes from. */
     Invalid,
 
+    /** This phone can't approve it: no fingerprint or face unlock, or older than Android 9. */
+    SigningUnavailable,
+
+    /** The approval came too late for its challenge: sending again asks for a new one. */
+    ChallengeExpired,
+
+    /** Too many failed approvals in a row: the API blocks sending for a while (PSD2). */
+    SigningLocked,
+
     /** Anything else, such as no connection: the same transfer can be retried. */
     Failed,
 }

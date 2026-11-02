@@ -41,9 +41,12 @@ import cyvault.vault.generated.resources.transfer_cancel
 import cyvault.vault.generated.resources.transfer_card
 import cyvault.vault.generated.resources.transfer_card_option
 import cyvault.vault.generated.resources.transfer_currency_description
+import cyvault.vault.generated.resources.transfer_error_challenge_expired
 import cyvault.vault.generated.resources.transfer_error_failed
 import cyvault.vault.generated.resources.transfer_error_invalid
 import cyvault.vault.generated.resources.transfer_error_no_card
+import cyvault.vault.generated.resources.transfer_error_signing_locked
+import cyvault.vault.generated.resources.transfer_error_signing_unavailable
 import cyvault.vault.generated.resources.transfer_loading_cards
 import cyvault.vault.generated.resources.transfer_no_cards
 import cyvault.vault.generated.resources.transfer_phone_number
@@ -166,6 +169,9 @@ internal fun TransferDialog(
                             when (error) {
                                 TransferError.NoCardForPhoneNumber -> Res.string.transfer_error_no_card
                                 TransferError.Invalid -> Res.string.transfer_error_invalid
+                                TransferError.SigningUnavailable -> Res.string.transfer_error_signing_unavailable
+                                TransferError.ChallengeExpired -> Res.string.transfer_error_challenge_expired
+                                TransferError.SigningLocked -> Res.string.transfer_error_signing_locked
                                 TransferError.Failed -> Res.string.transfer_error_failed
                             },
                         ),

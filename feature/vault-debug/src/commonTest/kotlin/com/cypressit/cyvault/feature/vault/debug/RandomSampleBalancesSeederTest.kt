@@ -3,6 +3,8 @@ package com.cypressit.cyvault.feature.vault.debug
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.repository.CardRepository
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
+import com.cypressit.cyvault.feature.vault.home.domain.model.TransferApproval
+import com.cypressit.cyvault.feature.vault.home.domain.model.TransferChallenge
 import com.cypressit.cyvault.feature.vault.home.domain.repository.BalanceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
@@ -31,12 +33,21 @@ class RandomSampleBalancesSeederTest {
 
         override suspend fun deleteBalance(id: String): Result<Unit> = Result.success(Unit)
 
+        override suspend fun requestTransferChallenge(
+            transferId: String,
+            cardId: String,
+            phoneNumber: String,
+            amount: Double,
+            currency: String,
+        ): Result<TransferChallenge> = error("Not used")
+
         override suspend fun sendTransfer(
             transferId: String,
             cardId: String,
             phoneNumber: String,
             amount: Double,
             currency: String,
+            approval: TransferApproval,
         ): Result<Balance> = error("Not used")
     }
 

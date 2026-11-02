@@ -70,6 +70,11 @@
     <string name="transfer_error_no_card">No card is linked to this phone number.</string>
     <string name="transfer_error_invalid">This transfer isn't allowed. Check the card and the phone number.</string>
     <string name="transfer_error_failed">Couldn't send the money. Please try again.</string>
+    <string name="transfer_error_signing_unavailable">To send money, set up a fingerprint or face unlock. Android 9 or later is needed.</string>
+    <string name="transfer_error_challenge_expired">The approval took too long. Please send again.</string>
+    <string name="transfer_error_signing_locked">Too many failed approvals. Sending is blocked for 30 minutes.</string>
+    <string name="transfer_approve_title">Approve transfer</string>
+    <string name="transfer_approve_description">Send %1$s %2$s to %3$s</string>
     <string name="vault_home_balance_sent_to">Sent to</string>
     <string name="vault_home_balance_received_from">Received from</string>
     <string name="vault_home_balance_transfer_close">Close</string>
