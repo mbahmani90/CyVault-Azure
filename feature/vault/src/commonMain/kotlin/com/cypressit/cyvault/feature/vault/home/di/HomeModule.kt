@@ -1,6 +1,7 @@
 package com.cypressit.cyvault.feature.vault.home.di
 
 import com.cypressit.cyvault.core.di.IO_DISPATCHER
+import com.cypressit.cyvault.feature.vault.di.UserSession
 import com.cypressit.cyvault.feature.vault.home.data.remote.BalanceApiService
 import com.cypressit.cyvault.feature.vault.home.data.remote.CyVaultApiConfig
 import com.cypressit.cyvault.feature.vault.home.data.remote.ProfilePhotoApiService
@@ -37,51 +38,56 @@ internal val homeModule = module {
     single { BalanceApiService(get(), get(), apiConfig()) }
     single { SessionApiService(get(), get(), apiConfig()) }
 
-    // Repository (AuthClient comes from :auth's authClientModule)
+    // Repository (AuthClient comes from :auth's authClientModule). The account is the auth
+    // client's, so it stays a singleton.
     single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
-    single<BalanceRepository> { BalanceRepositoryImpl(get()) }
-    single<ProfilePhotoRepository> {
-        ProfilePhotoRepositoryImpl(
-            apiService = get(),
-            fileStore = get(),
-            photoReader = get(),
-            ioDispatcher = get(named(IO_DISPATCHER)),
-        )
-    }
 
-    // Use cases
-    factory { GetCardsUseCase(get()) }
-    factory { ObserveCardsUseCase(get()) }
-    factory { DeleteCardUseCase(get()) }
-    factory { GetCurrentAccountUseCase(get()) }
-    factory { SignOutUseCase(get()) }
-    factory { GetProfilePhotoUseCase(get()) }
-    factory { ChangeProfilePhotoUseCase(get()) }
-    factory { ClearProfilePhotoCacheUseCase(get()) }
-    factory { GetBalancesUseCase(get()) }
-    factory { SaveBalanceUseCase(get()) }
-    factory { DeleteBalanceUseCase(get()) }
-    factory { DeleteBalancesUseCase(get()) }
+    // Everything holding the user's data, and what's built on it, lives in their session.
+    scope(UserSession.qualifier) {
+        scoped<BalanceRepository> { BalanceRepositoryImpl(get()) }
+        scoped<ProfilePhotoRepository> {
+            ProfilePhotoRepositoryImpl(
+                apiService = get(),
+                fileStore = get(),
+                photoReader = get(),
+                ioDispatcher = get(named(IO_DISPATCHER)),
+            )
+        }
 
-    // ViewModel
-    // Written out because the sample-balances seeder is optional: only debug builds load
-    // :feature:vault-debug, which provides it.
-    viewModel {
-        VaultHomeViewModel(
-            getCards = get(),
-            observeCards = get(),
-            deleteCard = get(),
-            getCurrentAccount = get(),
-            signOutUser = get(),
-            getProfilePhoto = get(),
-            changeProfilePhoto = get(),
-            clearProfilePhotoCache = get(),
-            getBalances = get(),
-            saveBalance = get(),
-            deleteBalance = get(),
-            deleteBalances = get(),
-            sampleBalancesSeeder = getOrNull(),
-        )
+        // Use cases
+        factory { GetCardsUseCase(get()) }
+        factory { ObserveCardsUseCase(get()) }
+        factory { DeleteCardUseCase(get()) }
+        factory { GetCurrentAccountUseCase(get()) }
+        factory { SignOutUseCase(get()) }
+        factory { GetProfilePhotoUseCase(get()) }
+        factory { ChangeProfilePhotoUseCase(get()) }
+        factory { ClearProfilePhotoCacheUseCase(get()) }
+        factory { GetBalancesUseCase(get()) }
+        factory { SaveBalanceUseCase(get()) }
+        factory { DeleteBalanceUseCase(get()) }
+        factory { DeleteBalancesUseCase(get()) }
+
+        // ViewModel
+        // Written out because the sample-balances seeder is optional: only debug builds load
+        // :feature:vault-debug, which provides it.
+        viewModel {
+            VaultHomeViewModel(
+                getCards = get(),
+                observeCards = get(),
+                deleteCard = get(),
+                getCurrentAccount = get(),
+                signOutUser = get(),
+                getProfilePhoto = get(),
+                changeProfilePhoto = get(),
+                clearProfilePhotoCache = get(),
+                getBalances = get(),
+                saveBalance = get(),
+                deleteBalance = get(),
+                deleteBalances = get(),
+                sampleBalancesSeeder = getOrNull(),
+            )
+        }
     }
 }
 
