@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Azure;
 using Azure.Data.Tables;
 using CyVault.Api.Auth;
+using CyVault.Api.Card;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -16,7 +17,8 @@ namespace CyVault.Api.Balance;
 /// partition is always the oid from the validated access token, so a caller can only ever read
 /// or change their own rows.
 /// </summary>
-public sealed partial class BalanceFunctions(TableClient balances, ILogger<BalanceFunctions> logger)
+public sealed partial class BalanceFunctions(
+    TableClient balances, CardTables cardTables, ILogger<BalanceFunctions> logger)
 {
     private const int MaxNameLength = 100;
     private const int MaxDescriptionLength = 500;
@@ -77,15 +79,20 @@ public sealed partial class BalanceFunctions(TableClient balances, ILogger<Balan
         }
         catch (JsonException)
         {
-            return new BadRequestObjectResult("The body must be JSON: { \"name\", \"description\", \"amount\", \"currency\", \"date\" }.");
+            return new BadRequestObjectResult("The body must be JSON: { \"name\", \"description\", \"amount\", \"currency\", \"date\", \"cardId\" }.");
         }
 
         var error = Validate(body);
         if (error is not null) return new BadRequestObjectResult(error);
 
+        // The card must be one of the caller's own: their partition is the only one looked in.
+        var card = await cardTables.Cards.GetEntityIfExistsAsync<CardEntity>(
+            caller.ObjectId!, body!.CardId!, select: ["RowKey"], cancellationToken: cancellationToken);
+        if (!card.HasValue) return new BadRequestObjectResult("cardId must be one of your cards.");
+
         // Without a date in the body, an edit keeps the row's date (or, on a row stored before
         // the Date column, when it was last written) and a new row is dated now.
-        var date = body!.Date;
+        var date = body.Date;
         if (date is null)
         {
             var existing = await balances.GetEntityIfExistsAsync<BalanceEntity>(
@@ -104,6 +111,7 @@ public sealed partial class BalanceFunctions(TableClient balances, ILogger<Balan
             Amount = body.Amount!.Value.ToString(CultureInfo.InvariantCulture),
             Currency = body.Currency!.ToUpperInvariant(),
             Date = date!.Value.ToUniversalTime(),
+            CardId = body.CardId!,
         };
         await balances.UpsertEntityAsync(entity, TableUpdateMode.Replace, cancellationToken);
 
@@ -135,11 +143,12 @@ public sealed partial class BalanceFunctions(TableClient balances, ILogger<Balan
         decimal.Parse(entity.Amount, CultureInfo.InvariantCulture),
         entity.Currency,
         entity.Date ?? entity.Timestamp,
-        entity.Timestamp);
+        entity.Timestamp,
+        entity.CardId);
 
     private static string? Validate(BalanceRequest? body)
     {
-        if (body is null) return "The body must be JSON: { \"name\", \"description\", \"amount\", \"currency\", \"date\" }.";
+        if (body is null) return "The body must be JSON: { \"name\", \"description\", \"amount\", \"currency\", \"date\", \"cardId\" }.";
         if (string.IsNullOrWhiteSpace(body.Name) || body.Name.Trim().Length > MaxNameLength)
             return $"name is required and must be at most {MaxNameLength} characters.";
         if (body.Description?.Trim().Length > MaxDescriptionLength)
@@ -147,6 +156,7 @@ public sealed partial class BalanceFunctions(TableClient balances, ILogger<Balan
         if (body.Amount is null) return "amount is required.";
         if (body.Currency is null || !CurrencyPattern().IsMatch(body.Currency))
             return "currency must be a three-letter ISO 4217 code, such as EUR.";
+        if (body.CardId is null || !IsValidId(body.CardId)) return "cardId is required.";
         return null;
     }
 

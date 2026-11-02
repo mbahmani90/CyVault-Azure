@@ -30,12 +30,18 @@ public sealed class BalanceEntity : ITableEntity
     /// edited. Null only on rows stored before this column existed.
     /// </summary>
     public DateTimeOffset? Date { get; set; }
+
+    /// <summary>
+    /// The caller's card the purchase or income belongs to: a RowKey in the cards table. Empty
+    /// only on rows stored before this column existed.
+    /// </summary>
+    public string CardId { get; set; } = "";
 }
 
 /// <summary>What the client sends to create or replace a balance.</summary>
 /// Without a date, a new balance gets the current time and an edited one keeps its date.
 public sealed record BalanceRequest(
-    string? Name, string? Description, decimal? Amount, string? Currency, DateTimeOffset? Date);
+    string? Name, string? Description, decimal? Amount, string? Currency, DateTimeOffset? Date, string? CardId);
 
 /// <summary>What the API returns for a balance.</summary>
 public sealed record BalanceResponse(
@@ -45,4 +51,5 @@ public sealed record BalanceResponse(
     decimal Amount,
     string Currency,
     DateTimeOffset? Date,
-    DateTimeOffset? UpdatedAt);
+    DateTimeOffset? UpdatedAt,
+    string CardId);

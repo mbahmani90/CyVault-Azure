@@ -13,6 +13,8 @@ data class BalanceResponseDto(
     /** ISO 8601: when the purchase or income happened. */
     @SerialName("date") val date: String? = null,
     @SerialName("updatedAt") val updatedAt: String? = null,
+    /** Empty on balances stored before cards. */
+    @SerialName("cardId") val cardId: String = "",
 )
 
 @Serializable
@@ -23,4 +25,6 @@ data class BalanceRequestDto(
     @SerialName("currency") val currency: String,
     /** ISO 8601, or null to let the API date a new balance now and keep an edited one's date. */
     @SerialName("date") val date: String? = null,
+    /** Required: one of the user's cards. */
+    @SerialName("cardId") val cardId: String? = null,
 )

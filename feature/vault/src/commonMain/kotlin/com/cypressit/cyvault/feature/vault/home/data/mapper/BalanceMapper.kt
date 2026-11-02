@@ -11,6 +11,7 @@ fun BalanceResponseDto.toDomain(): Balance = Balance(
     amount = amount,
     currency = currency,
     date = date,
+    cardId = cardId.ifEmpty { null },
 )
 
 fun Balance.toRequest(): BalanceRequestDto = BalanceRequestDto(
@@ -19,4 +20,5 @@ fun Balance.toRequest(): BalanceRequestDto = BalanceRequestDto(
     amount = amount,
     currency = currency,
     date = date,
+    cardId = cardId,
 )
