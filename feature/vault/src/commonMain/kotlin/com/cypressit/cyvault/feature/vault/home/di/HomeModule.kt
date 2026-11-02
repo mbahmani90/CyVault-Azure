@@ -78,7 +78,6 @@ internal val homeModule = module {
             deleteBalance = get(),
             deleteBalances = get(),
             sampleBalancesSeeder = getOrNull(),
-            addCardPreview = getOrNull(),
         )
     }
 }

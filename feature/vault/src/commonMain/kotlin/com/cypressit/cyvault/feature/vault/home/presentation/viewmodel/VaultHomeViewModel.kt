@@ -3,7 +3,6 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cypressit.cyvault.core.presentation.MviViewModel
-import com.cypressit.cyvault.feature.vault.home.domain.debug.AddCardPreview
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
@@ -44,15 +43,10 @@ class VaultHomeViewModel(
     private val deleteBalances: DeleteBalancesUseCase,
     /** Null unless :feature:vault-debug is loaded, which only debug builds do. */
     private val sampleBalancesSeeder: SampleBalancesSeeder? = null,
-    /** Null unless :feature:vault-debug is loaded: Add Card isn't ready for release builds. */
-    addCardPreview: AddCardPreview? = null,
 ) : ViewModel(), MviViewModel<VaultHomeState, VaultHomeIntent, VaultHomeEffect> {
 
     private val _state = MutableStateFlow(
-        VaultHomeState(
-            canAddSampleBalances = sampleBalancesSeeder != null,
-            canAddCard = addCardPreview != null,
-        ),
+        VaultHomeState(canAddSampleBalances = sampleBalancesSeeder != null),
     )
     override val state: StateFlow<VaultHomeState> = _state.asStateFlow()
 
@@ -76,11 +70,9 @@ class VaultHomeViewModel(
             VaultHomeIntent.SignOut -> signOut()
             VaultHomeIntent.OpenDrawer -> viewModelScope.launch { _effect.send(VaultHomeEffect.OpenDrawer) }
             is VaultHomeIntent.ChangeProfilePhoto -> updateProfilePhoto(intent.photo)
-            VaultHomeIntent.AddCardFromDrawer -> if (_state.value.canAddCard) {
-                viewModelScope.launch {
-                    _effect.send(VaultHomeEffect.CloseDrawer)
-                    _effect.send(VaultHomeEffect.NavigateToAddCard)
-                }
+            VaultHomeIntent.AddCardFromDrawer -> viewModelScope.launch {
+                _effect.send(VaultHomeEffect.CloseDrawer)
+                _effect.send(VaultHomeEffect.NavigateToAddCard)
             }
             VaultHomeIntent.ShowAddItemDialog ->
                 _state.update { it.copy(isAddItemDialogVisible = true, editingBalance = null) }
