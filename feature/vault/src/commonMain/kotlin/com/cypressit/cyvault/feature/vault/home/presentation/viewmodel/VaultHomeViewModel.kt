@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.cypressit.cyvault.core.presentation.MviViewModel
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.model.CardInput
+import com.cypressit.cyvault.feature.vault.device.domain.usecase.EnrollDeviceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
@@ -51,6 +52,7 @@ class VaultHomeViewModel(
     private val deleteBalance: DeleteBalanceUseCase,
     private val deleteBalances: DeleteBalancesUseCase,
     private val sendTransfer: SendTransferUseCase,
+    private val enrollDevice: EnrollDeviceUseCase,
     /** Null unless :feature:vault-debug is loaded, which only debug builds do. */
     private val sampleBalancesSeeder: SampleBalancesSeeder? = null,
 ) : ViewModel(), MviViewModel<VaultHomeState, VaultHomeIntent, VaultHomeEffect> {
@@ -281,6 +283,9 @@ class VaultHomeViewModel(
             val user = getCurrentAccount() ?: return@launch
             userId = user.id
             _state.update { it.copy(userName = user.name, userEmail = user.email) }
+            // Quietly: a device that isn't enrolled yet, offline or without a biometric, is
+            // tried again the next time the vault opens.
+            launch { enrollDevice(user.id) }
             // The cached photo shows at once; the server's copy follows when it arrives.
             getProfilePhoto(user.id).collect { photo ->
                 // An upload started meanwhile wins over this older copy.

@@ -36,6 +36,7 @@ kotlin {
             // Core infrastructure
             implementation(projects.core)
             implementation(projects.auth)
+            implementation(projects.devicekey)
             implementation(projects.systemdesign)
             implementation(projects.testtags)
 
@@ -65,6 +66,9 @@ kotlin {
 
             // Dates shown in the user's time zone
             implementation(libs.kotlinx.datetime)
+
+            // The device ID the API gave this device's key
+            implementation(libs.androidx.datastore.preferences.core)
         }
 
         androidMain.dependencies {

@@ -46,6 +46,7 @@ kotlin {
             // Feature modules — add every new feature here
             implementation(projects.feature.authentication)
             implementation(projects.feature.vault)
+            implementation(projects.devicekey)
 
             // Compose — used directly in App.kt and MainViewController.kt
             implementation(libs.compose.runtime)

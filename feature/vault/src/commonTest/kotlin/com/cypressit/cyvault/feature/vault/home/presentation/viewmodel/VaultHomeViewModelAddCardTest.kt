@@ -1,8 +1,10 @@
 package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
+import com.cypressit.cyvault.feature.vault.device.domain.usecase.EnrollDeviceUseCase
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
+import com.cypressit.cyvault.feature.vault.fake.FakeDeviceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
 import com.cypressit.cyvault.feature.vault.fake.succeedingSessionApi
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
@@ -61,6 +63,7 @@ class VaultHomeViewModelAddCardTest {
             deleteBalance = DeleteBalanceUseCase(balances),
             deleteBalances = DeleteBalancesUseCase(balances),
             sendTransfer = SendTransferUseCase(balances),
+            enrollDevice = EnrollDeviceUseCase(FakeDeviceRepository()),
         )
     }
 

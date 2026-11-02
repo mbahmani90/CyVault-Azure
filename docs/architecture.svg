@@ -155,39 +155,44 @@
   <!-- Band: shared modules -->
   <rect x="40" y="730" width="810" height="100" rx="10" fill="#EEEEF0" stroke="#94A3B8"/>
   <text x="52" y="747" class="t-band">SHARED MODULES</text>
-  <rect x="55" y="757" width="250" height="56" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
-  <text x="180" y="778" class="t-box">auth</text>
-  <text x="180" y="794" class="t-boxsub">AuthClient · AuthUser · MSAL native auth</text>
-  <text x="180" y="806" class="t-boxsub">reusable: no core, no app IDs</text>
-  <rect x="320" y="757" width="250" height="56" rx="8" class="box" stroke="#64748B"/>
-  <text x="445" y="778" class="t-box">core</text>
-  <text x="445" y="794" class="t-boxsub">Ktor HttpClient · engines · I/O dispatcher</text>
-  <text x="445" y="806" class="t-boxsub">no Compose, no routes</text>
-  <rect x="585" y="757" width="250" height="56" rx="8" class="box" stroke="#64748B"/>
-  <text x="710" y="778" class="t-box">systemdesign</text>
-  <text x="710" y="794" class="t-boxsub">CyTheme · colors · typography · shapes</text>
-  <text x="710" y="806" class="t-boxsub">CyAvatar · CyButton · CyTopAppBar</text>
+  <rect x="55" y="757" width="185" height="56" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="147" y="778" class="t-box">auth</text>
+  <text x="147" y="794" class="t-boxsub">AuthClient · MSAL native auth</text>
+  <text x="147" y="806" class="t-boxsub">reusable: no core, no app IDs</text>
+  <rect x="255" y="757" width="185" height="56" rx="8" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="347" y="778" class="t-box">devicekey</text>
+  <text x="347" y="794" class="t-boxsub">DeviceKeyStore · Keystore key</text>
+  <text x="347" y="806" class="t-boxsub">biometric-gated · reusable</text>
+  <rect x="455" y="757" width="185" height="56" rx="8" class="box" stroke="#64748B"/>
+  <text x="547" y="778" class="t-box">core</text>
+  <text x="547" y="794" class="t-boxsub">Ktor HttpClient · I/O dispatcher</text>
+  <text x="547" y="806" class="t-boxsub">no Compose, no routes</text>
+  <rect x="655" y="757" width="185" height="56" rx="8" class="box" stroke="#64748B"/>
+  <text x="747" y="778" class="t-box">systemdesign</text>
+  <text x="747" y="794" class="t-boxsub">CyTheme · colors · typography</text>
+  <text x="747" y="806" class="t-boxsub">CyAvatar · CyButton · CyTopAppBar</text>
 
   <!-- features -> shared modules -->
-  <path d="M165 695 L170 755" class="dep"/>
-  <path d="M330 695 L250 755" class="dep"/>
-  <path d="M470 695 L450 755" class="dep"/>
-  <path d="M700 695 L705 755" class="dep"/>
+  <path d="M150 695 L147 755" class="dep"/>
+  <path d="M310 695 L215 755" class="dep"/>
+  <path d="M400 695 L347 755" class="dep"/>
+  <path d="M560 695 L547 755" class="dep"/>
+  <path d="M740 695 L747 755" class="dep"/>
 
   <!-- app -> core (side route) -->
-  <path d="M637 215 H868 V841 H445 V816" class="dep"/>
-  <text x="882" y="595" class="t-small" transform="rotate(90 882 595)" text-anchor="middle">app loads the core and auth Koin modules</text>
+  <path d="M637 215 H868 V841 H547 V816" class="dep"/>
+  <text x="882" y="595" class="t-small" transform="rotate(90 882 595)" text-anchor="middle">app loads the core, auth and devicekey Koin modules</text>
 
   <!-- Rules + legend -->
   <rect x="40" y="850" width="810" height="285" rx="10" class="panel"/>
   <text x="56" y="882" class="t-panel">Dependency rules · a module only sees what its build.gradle.kts declares</text>
-  <text x="56" y="920" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  app  →  authentication, vault, core, auth   (the only composition root: NavHost, Koin)</text>
-  <text x="56" y="951" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  authentication  →  auth     ·     vault  →  core, auth, systemdesign</text>
-  <text x="56" y="982" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  auth  →  core, a feature or app: reusable on its own; the app passes it its MSAL config</text>
-  <text x="56" y="1013" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  authentication ↔ vault: never import each other; app connects them with navigation callbacks</text>
-  <text x="56" y="1044" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  vault's screen packages never import each other; only VaultScreens.kt puts them together</text>
-
-  <text x="56" y="1075" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  androidApp  →  vault-debug  →  vault   (debug builds only; vault sees just the SampleBalancesSeeder interface)</text>
+  <text x="56" y="915" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  app  →  authentication, vault, core, auth, devicekey   (the only composition root: NavHost, Koin)</text>
+  <text x="56" y="942" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  authentication  →  auth     ·     vault  →  core, auth, devicekey, systemdesign</text>
+  <text x="56" y="969" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  auth  →  core, a feature or app: reusable on its own; the app passes it its MSAL config</text>
+  <text x="56" y="996" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  devicekey  →  core, a feature or app: only keys; the vault keeps the device ID itself</text>
+  <text x="56" y="1023" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  authentication ↔ vault: never import each other; app connects them with navigation callbacks</text>
+  <text x="56" y="1050" class="t-rule"><tspan fill="#DC2626" font-weight="700">✕</tspan>  vault's screen packages never import each other; only VaultScreens.kt puts them together</text>
+  <text x="56" y="1077" class="t-rule"><tspan fill="#16A34A" font-weight="700">✓</tspan>  androidApp  →  vault-debug  →  vault   (debug builds only; vault sees just the SampleBalancesSeeder interface)</text>
 
   <line x1="56" y1="1112" x2="96" y2="1112" class="dep"/>
   <text x="104" y="1116" class="t-small">depends on</text>
@@ -261,7 +266,7 @@
   <text x="916" y="624" class="t-small">client and token cache. On success, NavigateToLogin goes back to AuthRoute.</text>
 
   <!-- ===================== RIGHT C: EXTERNAL SERVICES ===================== -->
-  <rect x="900" y="655" width="480" height="176" rx="10" class="panel"/>
+  <rect x="900" y="655" width="480" height="234" rx="10" class="panel"/>
   <text x="916" y="680" class="t-panel">External services</text>
 
   <rect x="920" y="695" width="180" height="44" rx="8" class="box" stroke="#7C3AED"/>
@@ -280,5 +285,13 @@
   <text x="1260" y="786" class="t-boxsub">Azure Functions · Blob Storage</text>
   <path d="M1102 775 L1157 775" class="dep"/>
 
-  <text x="916" y="819" class="t-small">The vault's APIs use core's shared Ktor HttpClient.</text>
+  <rect x="920" y="811" width="180" height="44" rx="8" class="box" stroke="#D97706"/>
+  <text x="1010" y="829" class="t-box">vault · device/data</text>
+  <text x="1010" y="844" class="t-boxsub">DeviceApiService</text>
+  <rect x="1160" y="811" width="200" height="44" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
+  <text x="1260" y="829" class="t-box">CyVault devices API</text>
+  <text x="1260" y="844" class="t-boxsub">POST /me/devices · Table Storage</text>
+  <path d="M1102 833 L1157 833" class="dep"/>
+
+  <text x="916" y="877" class="t-small">The vault's APIs use core's shared Ktor HttpClient.</text>
 </svg>

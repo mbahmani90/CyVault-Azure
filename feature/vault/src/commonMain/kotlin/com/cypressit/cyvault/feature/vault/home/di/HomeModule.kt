@@ -88,6 +88,7 @@ internal val homeModule = module {
                 deleteBalance = get(),
                 deleteBalances = get(),
                 sendTransfer = get(),
+                enrollDevice = get(),
                 sampleBalancesSeeder = getOrNull(),
             )
         }
