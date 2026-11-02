@@ -29,30 +29,31 @@ class DeviceRepositoryImpl(
     private val ioDispatcher: CoroutineDispatcher,
 ) : DeviceRepository {
 
-    override suspend fun enroll(userId: String): Result<DeviceEnrollment> = runSuspendCatching {
-        try {
-            val deviceId = enrolledDeviceId(userId)
-            registerPushToken(deviceId)
-            DeviceEnrollment.Enrolled(deviceId)
-        } catch (_: BiometricsUnavailableException) {
-            DeviceEnrollment.BiometricsUnavailable
+    override suspend fun enroll(userId: String): Result<DeviceEnrollment> {
+        registerPushToken()
+        return runSuspendCatching {
+            try {
+                DeviceEnrollment.Enrolled(enrolledDeviceId(userId))
+            } catch (_: BiometricsUnavailableException) {
+                DeviceEnrollment.BiometricsUnavailable
+            }
         }
     }
 
-    override suspend fun stopPushes(userId: String) {
+    override suspend fun stopPushes() {
         // Each step on its own: offline, the API keeps the token, but the phone still drops it, and
         // FCM then tells the API it's gone at the next push.
-        idStore.deviceId(userId)?.let { deviceId ->
-            runSuspendCatching { apiService.deletePushToken(deviceId) }
+        runSuspendCatching {
+            pushTokens.current()?.let { apiService.deletePushToken(it) }
         }
         runSuspendCatching { pushTokens.delete() }
     }
 
-    // Sent on every start: the API keeps one device per token, and FCM may have replaced the token
+    // Sent on every start: the API keeps one user per token, and FCM may have replaced the token
     // since. A phone without a token (no Play services, iOS for now) just gets no pushes.
-    private suspend fun registerPushToken(deviceId: String) {
+    private suspend fun registerPushToken() {
         runSuspendCatching {
-            pushTokens.current()?.let { apiService.putPushToken(deviceId, it) }
+            pushTokens.current()?.let { apiService.putPushToken(it) }
         }
     }
 

@@ -19,6 +19,7 @@ var phoneTableName = 'phones'
 var transferTableName = 'transfers'
 var deviceTableName = 'devices'
 var challengeTableName = 'challenges'
+var pushTokenTableName = 'pushtokens'
 var cardKeyName = 'card-key'
 var deploymentContainerName = 'app-package'
 
@@ -131,6 +132,10 @@ resource avatarStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     resource challenges 'tables' = {
       name: challengeTableName
     }
+
+    resource pushTokens 'tables' = {
+      name: pushTokenTableName
+    }
   }
 }
 
@@ -236,6 +241,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       DeviceStorage__TableName: deviceTableName
       ChallengeStorage__TableServiceUri: avatarStorage.properties.primaryEndpoints.table
       ChallengeStorage__TableName: challengeTableName
+      PushTokenStorage__TableServiceUri: avatarStorage.properties.primaryEndpoints.table
+      PushTokenStorage__TableName: pushTokenTableName
       // Without a version, so new cards are always wrapped with card-key's current version.
       CardEncryption__KeyId: keyVault::cardKey.properties.keyUri
       // Pushes through FCM: Google trusts this Function's identity through workload identity
@@ -430,6 +437,27 @@ resource challengesContributor 'Microsoft.Authorization/roleAssignments@2022-04-
 resource developerChallengesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
   name: guid(avatarStorage::tableService::challenges.id, principalId, roles.storageTableDataContributor)
   scope: avatarStorage::tableService::challenges
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: principalId
+    principalType: 'User'
+  }
+}
+
+// The Function may read and write the pushtokens table: the phones that get each user's pushes.
+resource pushTokensContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(avatarStorage::tableService::pushTokens.id, functionApp.id, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::pushTokens
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource developerPushTokensContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
+  name: guid(avatarStorage::tableService::pushTokens.id, principalId, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::pushTokens
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
     principalId: principalId

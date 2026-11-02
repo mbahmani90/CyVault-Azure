@@ -29,6 +29,7 @@ class DeviceApiService(
 ) {
 
     private val devicesUrl = "${config.baseUrl}/me/devices"
+    private val pushTokensUrl = "${config.baseUrl}/me/push-tokens"
 
     /** The device routes share the profile scope of the CyVault API app registration. */
     private val profileScope = "${config.appIdUri}/Profile.ReadWrite"
@@ -45,19 +46,21 @@ class DeviceApiService(
             setBody(request)
         }.requireSuccess().body()
 
-    /** Tells the API where to send this device's pushes: the phone's push [token]. */
-    suspend fun putPushToken(deviceId: String, token: String) {
-        client.put("$devicesUrl/$deviceId/push-token") {
+    /** Sends the user's pushes to this phone: its push [token]. Needs no enrolled device. */
+    suspend fun putPushToken(token: String) {
+        client.put(pushTokensUrl) {
             bearerAuth(authClient.accessToken(listOf(profileScope)))
             contentType(ContentType.Application.Json)
             setBody(PushTokenRequestDto(token))
         }.requireSuccess()
     }
 
-    /** Stops the API sending pushes to this device. */
-    suspend fun deletePushToken(deviceId: String) {
-        client.delete("$devicesUrl/$deviceId/push-token") {
+    /** Stops the user's pushes to the phone with this push [token]. */
+    suspend fun deletePushToken(token: String) {
+        client.delete(pushTokensUrl) {
             bearerAuth(authClient.accessToken(listOf(profileScope)))
+            contentType(ContentType.Application.Json)
+            setBody(PushTokenRequestDto(token))
         }.requireSuccess()
     }
 

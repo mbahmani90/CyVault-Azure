@@ -12,7 +12,7 @@ class SignOutUseCase(
     private val devices: DeviceRepository,
 ) {
     suspend operator fun invoke(): Result<Unit> {
-        repository.currentAccount()?.let { devices.stopPushes(it.id) }
+        devices.stopPushes()
         return repository.signOut()
     }
 }
