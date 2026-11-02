@@ -45,6 +45,7 @@ CyVault
 ├── app              Composition root: root Compose App, NavHost, Koin setup
 ├── core             Shared non-UI code: Ktor client, platform DI, I/O dispatcher
 ├── auth             Sign-in and session library: AuthClient (MSAL native auth), reusable
+├── devicekey        Device signing keys: DeviceKeyStore (biometric-gated Android Keystore key), reusable
 ├── systemdesign     Design system: theme, colors, typography, shapes, reusable components
 ├── feature
 │   ├── authentication   Feature: sign-in / sign-up / Google / password reset
@@ -59,6 +60,14 @@ from their data layer and map `AuthUser` to their own models: `feature:authentic
 `AuthRepositoryImpl`, the vault in `home/data/AccountRepositoryImpl` and `ProfilePhotoApiService`.
 The app supplies the Entra registration: `androidApp` passes `MsalConfig(R.raw.auth_config_native_auth)`
 to Koin.
+
+`:devicekey` is a library in the same way: no screens, no CyVault types and no `:core`. It exposes
+`DeviceKeyStore`, which makes one EC P-256 key per account in the Android Keystore (StrongBox when the
+phone has it). The key only signs right after a fingerprint or face check, and adding a new
+fingerprint or face invalidates it; the private key never leaves the hardware. On iOS it's a stand-in
+that makes no key yet. The vault's `device/` package uses it to enroll the phone with the API
+(`POST /me/devices`) when the vault opens, and keeps the device ID the API returns in a DataStore
+(never SharedPreferences).
 
 Features never depend on each other and know nothing about navigation: they don't depend on
 Navigation Compose and have no routes. Each feature exposes plain screen composables
@@ -86,7 +95,7 @@ feature/vault/…/feature/vault/
 
 ### Architecture diagram
 
-The diagram below shows the modules as they are today: the two feature modules (authentication, and vault with its screen packages), the shared modules, the dependency rules, navigation, how vault signs out through `:auth`'s `AuthClient`, and the external services.
+The diagram below shows the modules as they are today: the two feature modules (authentication, and vault with its screen packages), the shared modules (`:auth`, `:devicekey`, `:core`, `:systemdesign`), the dependency rules, navigation, how vault signs out through `:auth`'s `AuthClient`, and the external services.
 
 ![CyVault modular architecture](docs/architecture.svg)
 
@@ -142,6 +151,8 @@ See [`docs/Effect.md`](docs/Effect.md) for why `Channel` is used instead of `Sha
 |---|---|---|
 | Authentication (`:auth`) | `AuthClient` interface, bound in `authClientModule` | `MsalAuthClient`: MSAL native auth (Entra External ID); `ActivityProvider` gives MSAL's browser sign-in the on-screen activity |
 | Profile photo | `rememberProfilePhotoPicker` (`expect`/`actual`); `PickedPhotoReader` and `AvatarFileStore` interfaces bound in `homePlatformModule` | Photo Picker; `AndroidPickedPhotoReader` turns the photo upright from EXIF and scales it to 1024 px; `AndroidAvatarFileStore` caches it in `filesDir` |
+| Device key (`:devicekey`) | `DeviceKeyStore` interface, bound in `deviceKeyModule` | `AndroidDeviceKeyStore`: EC P-256 key in the Android Keystore (StrongBox when available), biometric-gated |
+| Device ID | `DeviceIdStore` (DataStore Preferences); the file's folder comes from `devicePlatformModule` | `filesDir` |
 | DI | `platformModule` | Ktor OkHttp engine |
 
 ## Tech stack

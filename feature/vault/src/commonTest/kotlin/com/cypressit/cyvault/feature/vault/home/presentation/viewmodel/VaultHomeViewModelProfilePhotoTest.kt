@@ -1,9 +1,11 @@
 package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
+import com.cypressit.cyvault.feature.vault.device.domain.usecase.EnrollDeviceUseCase
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient.Companion.USER_ID
 import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
+import com.cypressit.cyvault.feature.vault.fake.FakeDeviceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
 import com.cypressit.cyvault.feature.vault.fake.succeedingSessionApi
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
@@ -51,6 +53,7 @@ class VaultHomeViewModelProfilePhotoTest {
     private val photos = FakeProfilePhotoRepository()
     private val cards = FakeCardRepository()
     private val balances = FakeBalanceRepository()
+    private val devices = FakeDeviceRepository()
 
     private val photo = PickedPhoto("content://media/picker/0/1")
 
@@ -72,6 +75,7 @@ class VaultHomeViewModelProfilePhotoTest {
         deleteBalance = DeleteBalanceUseCase(balances),
         deleteBalances = DeleteBalancesUseCase(balances),
         sendTransfer = SendTransferUseCase(balances),
+        enrollDevice = EnrollDeviceUseCase(devices),
     )
 
     @Test
@@ -82,6 +86,26 @@ class VaultHomeViewModelProfilePhotoTest {
         advanceUntilIdle()
 
         assertEquals(listOf(USER_ID), photos.photoRequests)
+        assertEquals("Ada Lovelace", viewModel.state.value.userName)
+        assertContentEquals(byteArrayOf(1), viewModel.state.value.profilePhoto)
+    }
+
+    @Test
+    fun init_enrollsThisDeviceForTheSignedInUser() = runTest(dispatcher) {
+        viewModel()
+        advanceUntilIdle()
+
+        assertEquals(listOf(USER_ID), devices.enrolledUserIds)
+    }
+
+    @Test
+    fun init_enrollmentFailure_staysQuiet() = runTest(dispatcher) {
+        devices.result = Result.failure(Exception("offline"))
+        photos.photo = flowOf(byteArrayOf(1))
+
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
         assertEquals("Ada Lovelace", viewModel.state.value.userName)
         assertContentEquals(byteArrayOf(1), viewModel.state.value.profilePhoto)
     }
