@@ -79,7 +79,7 @@ public sealed partial class BalanceFunctions(
         }
         catch (JsonException)
         {
-            return new BadRequestObjectResult("The body must be JSON: { \"name\", \"description\", \"amount\", \"currency\", \"date\", \"cardId\" }.");
+            return new BadRequestObjectResult("The body must be JSON: { \"name\", \"description\", \"amount\", \"currency\", \"date\", \"cardId\", \"type\" }.");
         }
 
         var error = Validate(body);
@@ -90,17 +90,16 @@ public sealed partial class BalanceFunctions(
             caller.ObjectId!, body!.CardId!, select: ["RowKey"], cancellationToken: cancellationToken);
         if (!card.HasValue) return new BadRequestObjectResult("cardId must be one of your cards.");
 
+        var existing = await balances.GetEntityIfExistsAsync<BalanceEntity>(
+            caller.ObjectId!, id, cancellationToken: cancellationToken);
+        // Transfers and receives are a record of money that moved: they can be deleted, not changed.
+        if (existing.HasValue && BalanceTypes.IsFromTransfer(existing.Value!.Type))
+            return new ConflictObjectResult("A transfer or receive can't be edited.");
+
         // Without a date in the body, an edit keeps the row's date (or, on a row stored before
         // the Date column, when it was last written) and a new row is dated now.
-        var date = body.Date;
-        if (date is null)
-        {
-            var existing = await balances.GetEntityIfExistsAsync<BalanceEntity>(
-                caller.ObjectId!, id, cancellationToken: cancellationToken);
-            date = existing.HasValue
-                ? existing.Value!.Date ?? existing.Value.Timestamp
-                : DateTimeOffset.UtcNow;
-        }
+        var date = body.Date
+            ?? (existing.HasValue ? existing.Value!.Date ?? existing.Value.Timestamp : DateTimeOffset.UtcNow);
 
         var entity = new BalanceEntity
         {
@@ -108,10 +107,12 @@ public sealed partial class BalanceFunctions(
             RowKey = id,
             Name = body.Name!.Trim(),
             Description = body.Description?.Trim() ?? "",
-            Amount = body.Amount!.Value.ToString(CultureInfo.InvariantCulture),
+            // Stored above zero: the type gives the direction.
+            Amount = Math.Abs(body.Amount!.Value).ToString(CultureInfo.InvariantCulture),
             Currency = body.Currency!.ToUpperInvariant(),
             Date = date!.Value.ToUniversalTime(),
             CardId = body.CardId!,
+            Type = TypeOf(body),
         };
         await balances.UpsertEntityAsync(entity, TableUpdateMode.Replace, cancellationToken);
 
@@ -136,24 +137,52 @@ public sealed partial class BalanceFunctions(
         return new NoContentResult();
     }
 
-    private static BalanceResponse ToResponse(BalanceEntity entity) => new(
-        entity.RowKey,
-        entity.Name,
-        entity.Description,
-        decimal.Parse(entity.Amount, CultureInfo.InvariantCulture),
-        entity.Currency,
-        entity.Date ?? entity.Timestamp,
-        entity.Timestamp,
-        entity.CardId);
+    /// <summary>
+    /// The row as the API returns it. Rows stored before the Type column hold a signed amount:
+    /// negative was a purchase, the rest income.
+    /// </summary>
+    internal static BalanceResponse ToResponse(BalanceEntity entity)
+    {
+        var amount = decimal.Parse(entity.Amount, CultureInfo.InvariantCulture);
+        var type = entity.Type.Length > 0
+            ? entity.Type
+            : amount < 0 ? BalanceTypes.Purchase : BalanceTypes.Income;
+        return new BalanceResponse(
+            entity.RowKey,
+            entity.Name,
+            entity.Description,
+            Math.Abs(amount),
+            entity.Currency,
+            entity.Date ?? entity.Timestamp,
+            entity.Timestamp,
+            entity.CardId,
+            type,
+            entity.Counterparty,
+            entity.TransferId);
+    }
+
+    // A request without a type is from an older app, which signs the amount instead.
+    private static string TypeOf(BalanceRequest body) =>
+        body.Type ?? (body.Amount < 0 ? BalanceTypes.Purchase : BalanceTypes.Income);
 
     private static string? Validate(BalanceRequest? body)
     {
-        if (body is null) return "The body must be JSON: { \"name\", \"description\", \"amount\", \"currency\", \"date\", \"cardId\" }.";
+        if (body is null) return "The body must be JSON: { \"name\", \"description\", \"amount\", \"currency\", \"date\", \"cardId\", \"type\" }.";
         if (string.IsNullOrWhiteSpace(body.Name) || body.Name.Trim().Length > MaxNameLength)
             return $"name is required and must be at most {MaxNameLength} characters.";
         if (body.Description?.Trim().Length > MaxDescriptionLength)
             return $"description must be at most {MaxDescriptionLength} characters.";
         if (body.Amount is null) return "amount is required.";
+        if (body.Type is not null)
+        {
+            if (body.Type is not (BalanceTypes.Purchase or BalanceTypes.Income))
+                return "type must be Purchase or Income: transfers are made with POST /me/transfers.";
+            if (body.Amount <= 0) return "amount must be above zero: the type gives the direction.";
+        }
+        else if (body.Amount == 0)
+        {
+            return "amount can't be zero.";
+        }
         if (body.Currency is null || !CurrencyPattern().IsMatch(body.Currency))
             return "currency must be a three-letter ISO 4217 code, such as EUR.";
         if (body.CardId is null || !IsValidId(body.CardId)) return "cardId is required.";

@@ -14,6 +14,7 @@ var avatarContainerName = 'avatars'
 var balanceTableName = 'balances'
 var cardTableName = 'cards'
 var phoneTableName = 'phones'
+var transferTableName = 'transfers'
 var cardKeyName = 'card-key'
 var deploymentContainerName = 'app-package'
 
@@ -114,6 +115,10 @@ resource avatarStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     resource phones 'tables' = {
       name: phoneTableName
     }
+
+    resource transfers 'tables' = {
+      name: transferTableName
+    }
   }
 }
 
@@ -213,6 +218,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       CardStorage__TableServiceUri: avatarStorage.properties.primaryEndpoints.table
       CardStorage__CardsTableName: cardTableName
       CardStorage__PhonesTableName: phoneTableName
+      TransferStorage__TableServiceUri: avatarStorage.properties.primaryEndpoints.table
+      TransferStorage__TableName: transferTableName
       // Without a version, so new cards are always wrapped with card-key's current version.
       CardEncryption__KeyId: keyVault::cardKey.properties.keyUri
     }
@@ -336,6 +343,27 @@ resource developerCardsContributor 'Microsoft.Authorization/roleAssignments@2022
 resource developerPhonesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
   name: guid(avatarStorage::tableService::phones.id, principalId, roles.storageTableDataContributor)
   scope: avatarStorage::tableService::phones
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: principalId
+    principalType: 'User'
+  }
+}
+
+// The Function may read and write the transfers table: one row per transfer, under the sender.
+resource transfersContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(avatarStorage::tableService::transfers.id, functionApp.id, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::transfers
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource developerTransfersContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
+  name: guid(avatarStorage::tableService::transfers.id, principalId, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::transfers
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
     principalId: principalId
