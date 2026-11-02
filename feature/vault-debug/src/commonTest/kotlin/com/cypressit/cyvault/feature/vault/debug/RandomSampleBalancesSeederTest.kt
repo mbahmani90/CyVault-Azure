@@ -30,6 +30,14 @@ class RandomSampleBalancesSeederTest {
         }
 
         override suspend fun deleteBalance(id: String): Result<Unit> = Result.success(Unit)
+
+        override suspend fun sendTransfer(
+            transferId: String,
+            cardId: String,
+            phoneNumber: String,
+            amount: Double,
+            currency: String,
+        ): Result<Balance> = error("Not used")
     }
 
     private class FakeCardRepository(var serverCards: List<Card>) : CardRepository {

@@ -4,6 +4,7 @@ import com.cypressit.cyvault.core.coroutines.runSuspendCatching
 import com.cypressit.cyvault.feature.vault.home.data.mapper.toDomain
 import com.cypressit.cyvault.feature.vault.home.data.mapper.toRequest
 import com.cypressit.cyvault.feature.vault.home.data.remote.BalanceApiService
+import com.cypressit.cyvault.feature.vault.home.data.remote.dto.TransferRequestDto
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.repository.BalanceRepository
 
@@ -19,4 +20,22 @@ class BalanceRepositoryImpl(
 
     override suspend fun deleteBalance(id: String): Result<Unit> =
         runSuspendCatching { apiService.deleteBalance(id) }
+
+    override suspend fun sendTransfer(
+        transferId: String,
+        cardId: String,
+        phoneNumber: String,
+        amount: Double,
+        currency: String,
+    ): Result<Balance> = runSuspendCatching {
+        apiService.postTransfer(
+            TransferRequestDto(
+                transferId = transferId,
+                cardId = cardId,
+                phoneNumber = phoneNumber,
+                amount = amount,
+                currency = currency,
+            ),
+        ).toDomain()
+    }
 }
