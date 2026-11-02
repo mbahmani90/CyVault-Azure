@@ -224,6 +224,19 @@ class VaultHomeViewModelTransferTest {
     }
 
     @Test
+    fun send_success_saysTheMoneyWasSent() = runTest(dispatcher) {
+        val viewModel = filledTransfer()
+
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        assertEquals(
+            VaultHomeEffect.TransferSent(amount = "20,50", currency = "EUR", phoneNumber = "+351912345678"),
+            viewModel.effect.first(),
+        )
+    }
+
+    @Test
     fun send_signsTheTransfersChallengeAfterShowingWhatIsApproved() = runTest(dispatcher) {
         val viewModel = filledTransfer()
 
