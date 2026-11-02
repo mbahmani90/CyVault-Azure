@@ -23,10 +23,34 @@ public sealed partial class TransferFunctions(
     TransferTable transfers,
     TableClient balances,
     CardTables cardTables,
+    TransferSigning signing,
     ILogger<TransferFunctions> logger)
 {
     private const string BodyShape =
-        "The body must be JSON: { \"transferId\", \"cardId\", \"phoneNumber\", \"amount\", \"currency\" }.";
+        "The body must be JSON: { \"transferId\", \"cardId\", \"phoneNumber\", \"amount\", \"currency\" }, " +
+        "plus \"deviceId\", \"nonce\" and \"signature\" for the transfer itself.";
+
+    /// <summary>
+    /// Issues the one-time challenge the app's device key signs to approve this exact transfer.
+    /// The body is the transfer's: the same checks run now, so a transfer that can't go through
+    /// fails before the user is asked for a biometric.
+    /// </summary>
+    [Function("PostTransferChallenge")]
+    public async Task<IActionResult> PostChallenge(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "me/transfers/challenge")] HttpRequest req,
+        CancellationToken cancellationToken)
+    {
+        var caller = await CallerAuthentication.AuthenticateAsync(req.HttpContext, CallerAuthentication.BalanceScope);
+        if (caller.Failure is not null) return caller.Failure;
+
+        var (body, bodyError) = await ReadAsync(req, cancellationToken);
+        if (bodyError is not null) return bodyError;
+        var (resolved, error) = await ResolveAsync(caller.ObjectId!, body!, cancellationToken);
+        if (error is not null) return error;
+        if (await signing.LockedAsync(caller.ObjectId!, cancellationToken) is { } locked) return locked;
+
+        return new OkObjectResult(await signing.IssueAsync(caller.ObjectId!, resolved!.Details, cancellationToken));
+    }
 
     /// <summary>
     /// Returns the caller's Transfer row. The app picks the transfer ID once per Send, so a retry
@@ -41,51 +65,37 @@ public sealed partial class TransferFunctions(
         if (caller.Failure is not null) return caller.Failure;
         var senderOid = caller.ObjectId!;
 
-        TransferRequest? body;
-        try
-        {
-            body = await JsonSerializer.DeserializeAsync<TransferRequest>(
-                req.Body, JsonSerializerOptions.Web, cancellationToken);
-        }
-        catch (JsonException)
-        {
-            return new BadRequestObjectResult(BodyShape);
-        }
+        var (body, bodyError) = await ReadAsync(req, cancellationToken);
+        if (bodyError is not null) return bodyError;
+        var (resolved, error) = await ResolveAsync(senderOid, body!, cancellationToken);
+        if (error is not null) return error;
+        var (details, senderCard, link) = resolved!;
 
-        var error = Validate(body);
-        if (error is not null) return new BadRequestObjectResult(error);
-        var phoneNumber = CardFunctions.NormalizePhoneNumber(body!.PhoneNumber);
-        if (phoneNumber is null) return new BadRequestObjectResult("phoneNumber isn't a valid phone number.");
-
-        // The money leaves one of the caller's own cards: their partition is the only one looked in.
-        var senderCard = await cardTables.Cards.GetEntityIfExistsAsync<CardEntity>(
-            senderOid, body.CardId!, cancellationToken: cancellationToken);
-        if (!senderCard.HasValue) return new BadRequestObjectResult("cardId must be one of your cards.");
-
-        // The receiver is whoever linked this phone number to a card.
-        var link = await cardTables.Phones.GetEntityIfExistsAsync<PhoneEntity>(
-            phoneNumber, "", cancellationToken: cancellationToken);
-        if (!link.HasValue) return new NotFoundObjectResult("No card is linked to this phone number.");
-        if (link.Value!.Oid == senderOid && link.Value.CardId == body.CardId)
-            return new BadRequestObjectResult("The money can't go to the card it comes from.");
+        // Strong customer authentication: no money moves without the device's signature.
+        var signingError = await signing.VerifyAsync(
+            senderOid, details, body!.DeviceId, body.Nonce, body.Signature, cancellationToken);
+        if (signingError is not null) return signingError;
 
         var transfer = await RecordAsync(new TransferEntity
         {
             PartitionKey = senderOid,
-            RowKey = body.TransferId!,
-            CardId = body.CardId!,
-            PhoneNumber = phoneNumber,
-            ReceiverOid = link.Value.Oid,
-            ReceiverCardId = link.Value.CardId,
-            Amount = body.Amount!.Value.ToString(CultureInfo.InvariantCulture),
-            Currency = body.Currency!.ToUpperInvariant(),
+            RowKey = details.TransferId,
+            CardId = details.CardId,
+            PhoneNumber = details.PhoneNumber,
+            ReceiverOid = link.Oid,
+            ReceiverCardId = link.CardId,
+            Amount = details.Amount.ToString(CultureInfo.InvariantCulture),
+            Currency = details.Currency,
+            DeviceId = body.DeviceId!,
+            Nonce = body.Nonce!,
+            Signature = body.Signature!,
             Status = TransferStatus.Pending,
             CreatedAt = DateTimeOffset.UtcNow,
         }, cancellationToken);
         if (transfer is null)
             return new ConflictObjectResult("This transferId was already used for a different transfer.");
 
-        var (sent, received) = Rows(transfer, senderPhone: senderCard.Value!.PhoneNumber);
+        var (sent, received) = Rows(transfer, senderPhone: senderCard.PhoneNumber);
         // Already finished: return what it wrote, without bringing back a row the user deleted.
         if (transfer.Status == TransferStatus.Completed) return new OkObjectResult(BalanceFunctions.ToResponse(sent));
 
@@ -99,6 +109,51 @@ public sealed partial class TransferFunctions(
             "Transfer {Id} from {Sender} to {Receiver} completed", transfer.RowKey, senderOid, transfer.ReceiverOid);
         var saved = await balances.GetEntityAsync<BalanceEntity>(sent.PartitionKey, sent.RowKey, cancellationToken: cancellationToken);
         return new OkObjectResult(BalanceFunctions.ToResponse(saved.Value));
+    }
+
+    private static async Task<(TransferRequest? Body, IActionResult? Error)> ReadAsync(
+        HttpRequest req, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var body = await JsonSerializer.DeserializeAsync<TransferRequest>(
+                req.Body, JsonSerializerOptions.Web, cancellationToken);
+            var error = Validate(body);
+            return error is null ? (body, null) : (null, new BadRequestObjectResult(error));
+        }
+        catch (JsonException)
+        {
+            return (null, new BadRequestObjectResult(BodyShape));
+        }
+    }
+
+    private sealed record Resolved(TransferDetails Details, CardEntity SenderCard, PhoneEntity Link);
+
+    /// <summary>
+    /// The transfer's details once checked: the card is the caller's, and a card other than it is
+    /// linked to the phone number. Otherwise the response to send.
+    /// </summary>
+    private async Task<(Resolved? Resolved, IActionResult? Error)> ResolveAsync(
+        string senderOid, TransferRequest body, CancellationToken cancellationToken)
+    {
+        var phoneNumber = CardFunctions.NormalizePhoneNumber(body.PhoneNumber);
+        if (phoneNumber is null) return (null, new BadRequestObjectResult("phoneNumber isn't a valid phone number."));
+
+        // The money leaves one of the caller's own cards: their partition is the only one looked in.
+        var senderCard = await cardTables.Cards.GetEntityIfExistsAsync<CardEntity>(
+            senderOid, body.CardId!, cancellationToken: cancellationToken);
+        if (!senderCard.HasValue) return (null, new BadRequestObjectResult("cardId must be one of your cards."));
+
+        // The receiver is whoever linked this phone number to a card.
+        var link = await cardTables.Phones.GetEntityIfExistsAsync<PhoneEntity>(
+            phoneNumber, "", cancellationToken: cancellationToken);
+        if (!link.HasValue) return (null, new NotFoundObjectResult("No card is linked to this phone number."));
+        if (link.Value!.Oid == senderOid && link.Value.CardId == body.CardId)
+            return (null, new BadRequestObjectResult("The money can't go to the card it comes from."));
+
+        var details = new TransferDetails(
+            body.TransferId!, body.CardId!, phoneNumber, body.Amount!.Value, body.Currency!.ToUpperInvariant());
+        return (new Resolved(details, senderCard.Value!, link.Value), null);
     }
 
     // Adds the Pending row, or returns the one a retry already added; null when that one is a

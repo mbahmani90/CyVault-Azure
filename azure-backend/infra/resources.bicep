@@ -16,6 +16,7 @@ var cardTableName = 'cards'
 var phoneTableName = 'phones'
 var transferTableName = 'transfers'
 var deviceTableName = 'devices'
+var challengeTableName = 'challenges'
 var cardKeyName = 'card-key'
 var deploymentContainerName = 'app-package'
 
@@ -124,6 +125,10 @@ resource avatarStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     resource devices 'tables' = {
       name: deviceTableName
     }
+
+    resource challenges 'tables' = {
+      name: challengeTableName
+    }
   }
 }
 
@@ -227,6 +232,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       TransferStorage__TableName: transferTableName
       DeviceStorage__TableServiceUri: avatarStorage.properties.primaryEndpoints.table
       DeviceStorage__TableName: deviceTableName
+      ChallengeStorage__TableServiceUri: avatarStorage.properties.primaryEndpoints.table
+      ChallengeStorage__TableName: challengeTableName
       // Without a version, so new cards are always wrapped with card-key's current version.
       CardEncryption__KeyId: keyVault::cardKey.properties.keyUri
     }
@@ -392,6 +399,28 @@ resource devicesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01'
 resource developerDevicesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
   name: guid(avatarStorage::tableService::devices.id, principalId, roles.storageTableDataContributor)
   scope: avatarStorage::tableService::devices
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: principalId
+    principalType: 'User'
+  }
+}
+
+// The Function may read and write the challenges table: one row per transfer challenge, and each
+// user's failed-signature count, under the sender.
+resource challengesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(avatarStorage::tableService::challenges.id, functionApp.id, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::challenges
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource developerChallengesContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
+  name: guid(avatarStorage::tableService::challenges.id, principalId, roles.storageTableDataContributor)
+  scope: avatarStorage::tableService::challenges
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
     principalId: principalId

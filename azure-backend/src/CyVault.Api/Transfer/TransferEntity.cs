@@ -32,6 +32,15 @@ public sealed class TransferEntity : ITableEntity
     public string Status { get; set; } = "";
 
     public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>The enrolled device whose key approved the transfer.</summary>
+    public string DeviceId { get; set; } = "";
+
+    /// <summary>The challenge the device signed.</summary>
+    public string Nonce { get; set; } = "";
+
+    /// <summary>The device's signature over the challenge (base64 DER), kept as proof of approval.</summary>
+    public string Signature { get; set; } = "";
 }
 
 /// <summary>
@@ -47,6 +56,17 @@ public static class TransferStatus
 /// <summary>The transfers table, so DI can tell it from the balances table.</summary>
 public sealed record TransferTable(TableClient Client);
 
-/// <summary>What the client sends to move money from one of its cards to a phone number.</summary>
+/// <summary>
+/// What the client sends to move money from one of its cards to a phone number. A challenge request
+/// sends the same body without the last three: the transfer adds the device's signature over the
+/// challenge.
+/// </summary>
 public sealed record TransferRequest(
-    string? TransferId, string? CardId, string? PhoneNumber, decimal? Amount, string? Currency);
+    string? TransferId,
+    string? CardId,
+    string? PhoneNumber,
+    decimal? Amount,
+    string? Currency,
+    string? DeviceId = null,
+    string? Nonce = null,
+    string? Signature = null);
