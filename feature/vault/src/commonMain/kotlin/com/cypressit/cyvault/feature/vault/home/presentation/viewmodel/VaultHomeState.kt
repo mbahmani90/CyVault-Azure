@@ -20,7 +20,7 @@ data class VaultHomeState(
     /** The balance being edited in the add-item dialog, or null when adding a new one. */
     val editingBalance: Balance? = null,
     val isSavingBalance: Boolean = false,
-    /** The user's cards for the add-item dialog; loaded when it opens. */
+    /** The user's cards: named on each balance row, and offered in the add-item dialog. */
     val itemCards: List<Card> = emptyList(),
     val isLoadingItemCards: Boolean = false,
     /** The card the item goes on: required to save. */
@@ -51,6 +51,14 @@ data class VaultHomeState(
 ) {
     val itemCard: Card?
         get() = itemCards.firstOrNull { it.id == itemCardId }
+
+    /**
+     * The name shown on [balance]'s row: its card's bank, or the brand when the card has no bank.
+     * Null when the balance has no card, or its card is gone or not loaded yet.
+     */
+    fun cardNameOf(balance: Balance): String? = itemCards
+        .firstOrNull { it.id == balance.cardId }
+        ?.let { card -> card.bankName.ifBlank { card.brand }.ifBlank { null } }
 
     val transferCard: Card?
         get() = transferCards.firstOrNull { it.id == transferCardId }

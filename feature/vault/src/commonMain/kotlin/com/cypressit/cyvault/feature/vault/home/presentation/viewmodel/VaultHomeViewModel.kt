@@ -61,6 +61,7 @@ class VaultHomeViewModel(
         // Cards aren't loaded on start: CardApiService still points to a placeholder host that
         // doesn't exist, so every start showed an error. Load them again once cards move to Azure.
         loadBalances()
+        loadRowCards()
     }
 
     override fun onIntent(intent: VaultHomeIntent) {
@@ -294,6 +295,14 @@ class VaultHomeViewModel(
                     _state.update { it.copy(isUpdatingPhoto = false) }
                     _effect.send(VaultHomeEffect.ProfilePhotoUpdateFailed)
                 }
+        }
+    }
+
+    // The cards the balance rows are named after. Quietly leaves the names out on failure: the
+    // rows still work without them, and the dialog reports it when it loads the cards again.
+    private fun loadRowCards() {
+        viewModelScope.launch {
+            getCards().onSuccess { cards -> _state.update { it.copy(itemCards = cards) } }
         }
     }
 

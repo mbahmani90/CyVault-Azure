@@ -190,6 +190,23 @@ class VaultHomeViewModelBalanceTest {
     }
 
     @Test
+    fun init_loadsTheCardsTheRowsAreNamedAfter() = runTest(dispatcher) {
+        val onVisa = main.copy(cardId = "visa")
+        val onMastercard = savings.copy(cardId = "mastercard")
+        balances.balances = listOf(onVisa, onMastercard)
+        cards.cards = listOf(visa, mastercard.copy(bankName = ""))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.state.value
+        // The bank, or the brand when the card has no bank.
+        assertEquals("CGD", state.cardNameOf(onVisa))
+        assertEquals("Mastercard", state.cardNameOf(onMastercard))
+        assertNull(state.cardNameOf(main))
+        assertNull(state.cardNameOf(main.copy(cardId = "deleted")))
+    }
+
+    @Test
     fun showAddItemDialog_loadsTheCardsAndPicksTheFirst() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()
