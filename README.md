@@ -141,9 +141,9 @@ Users and their sessions aren't Azure resources, so this access isn't an IAM rol
 
 ![Server-side sign-out revokes the user's Entra sessions through Microsoft Graph](docs/sign-out-flow.svg)
 
-### Push notifications: workload identity federation with Google (planned)
+### Push notifications: workload identity federation with Google
 
-When money arrives, the receiver will get a push through Firebase Cloud Messaging (FCM, HTTP v1). The Function will reach FCM without any Google key: through **workload identity federation**, Google trusts the Function's Azure Managed Identity. The Function gets an Azure token from Entra ID, exchanges it at Google STS for a short-lived federated token, uses that to act as a Firebase service account that has no key, and sends the push with the resulting one-hour access token, which it caches. Entra ID and Google never talk to each other: STS only checks the Azure token against Entra's published public keys. This isn't built yet.
+When money arrives, the receiver gets a push through Firebase Cloud Messaging (FCM, HTTP v1) on each phone they enrolled (the API side is built; the app doesn't register for pushes yet). The Function reaches FCM without any Google key: through **workload identity federation**, Google trusts the Function's Azure Managed Identity. The Function gets an Azure token from Entra ID, exchanges it at Google STS for a short-lived federated token, uses that to act as a Firebase service account that has no key, and sends the push with the resulting one-hour access token, which it caches. Entra ID and Google never talk to each other: STS only checks the Azure token against Entra's published public keys. The push carries data only, so the app writes the notification in the phone's language. The setup steps are in [`azure-backend/README.md`](azure-backend/README.md#push-notifications).
 
 ![Sending a push to the receiver through workload identity federation](docs/push-token-flow.svg)
 

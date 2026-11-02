@@ -8,6 +8,8 @@ param principalId string
 param entraInstance string
 param entraTenantId string
 param entraApiClientId string
+param googleProjectId string
+param googleProjectNumber string
 
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, environmentName))
 var avatarContainerName = 'avatars'
@@ -236,6 +238,13 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       ChallengeStorage__TableName: challengeTableName
       // Without a version, so new cards are always wrapped with card-key's current version.
       CardEncryption__KeyId: keyVault::cardKey.properties.keyUri
+      // Pushes through FCM: Google trusts this Function's identity through workload identity
+      // federation (pool "azure", provider "cyvault"), so no Google key is stored.
+      Push__ProjectId: googleProjectId
+      Push__ProjectNumber: googleProjectNumber
+      Push__ServiceAccount: empty(googleProjectId) ? '' : 'fcm-sender@${googleProjectId}.iam.gserviceaccount.com'
+      // Entra only allows identifier URIs that contain the tenant ID (or a verified domain).
+      Push__Audience: 'api://${tenant().tenantId}/cyvault-fcm'
     }
     dependsOn: [
       runtimeBlobOwner

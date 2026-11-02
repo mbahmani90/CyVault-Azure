@@ -22,6 +22,12 @@ param entraTenantId string
 @description('Client ID of the "CyVault API" app registration in the External ID tenant.')
 param entraApiClientId string
 
+@description('Google Cloud project that sends pushes (Firebase Cloud Messaging). Empty to send none.')
+param googleProjectId string = ''
+
+@description('Number of that Google project, for its workload identity pool.')
+param googleProjectNumber string = ''
+
 var tags = { 'azd-env-name': environmentName }
 
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
@@ -41,6 +47,8 @@ module resources 'resources.bicep' = {
     entraInstance: entraInstance
     entraTenantId: entraTenantId
     entraApiClientId: entraApiClientId
+    googleProjectId: googleProjectId
+    googleProjectNumber: googleProjectNumber
   }
 }
 

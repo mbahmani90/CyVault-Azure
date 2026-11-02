@@ -5,6 +5,7 @@ using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Storage.Blobs;
 using CyVault.Api.Card;
 using CyVault.Api.Device;
+using CyVault.Api.Push;
 using CyVault.Api.Session;
 using CyVault.Api.Transfer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -13,6 +14,7 @@ using Microsoft.Azure.Functions.Worker.OpenTelemetry;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Web;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
@@ -49,11 +51,39 @@ builder.Services.AddSingleton(_ => CreateChallengeTable(builder.Configuration.Ge
 builder.Services.AddSingleton<TransferSigning>();
 
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton(sp =>
+{
+    var httpClients = sp.GetRequiredService<IHttpClientFactory>();
+    var options = CreatePushOptions(builder.Configuration.GetSection("Push"));
+    var googleToken = options is null
+        ? null
+        : new GoogleAccessToken(httpClients, new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned), options);
+    return new PushNotifications(
+        httpClients, sp.GetRequiredService<DeviceTable>(), googleToken, options,
+        sp.GetRequiredService<ILogger<PushNotifications>>());
+});
 builder.Services.AddSingleton(sp => new SignInSessions(
     sp.GetRequiredService<IHttpClientFactory>(),
     CreateGraphCredential(builder.Configuration.GetSection("AzureAd"), builder.Configuration.GetSection("Graph"))));
 
 builder.Build().Run();
+
+// Google only trusts the Function App's Managed Identity, so without a project (local runs) no
+// push is sent.
+static PushOptions? CreatePushOptions(IConfigurationSection config)
+{
+    var projectId = config["ProjectId"];
+    if (string.IsNullOrEmpty(projectId)) return null;
+
+    string Required(string key) => config[key] ?? throw new InvalidOperationException($"Set Push:{key}.");
+    return new PushOptions(
+        projectId,
+        Required("ProjectNumber"),
+        config["PoolId"] ?? "azure",
+        config["ProviderId"] ?? "cyvault",
+        Required("ServiceAccount"),
+        Required("Audience"));
+}
 
 // Graph is called as the CyVault API app registration in the External ID tenant.
 static TokenCredential CreateGraphCredential(IConfigurationSection azureAd, IConfigurationSection graph)

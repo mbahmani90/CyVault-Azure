@@ -32,6 +32,12 @@ public sealed class DeviceEntity : ITableEntity
     /// checked later, but a revoked device can't sign anything new.
     /// </summary>
     public DateTimeOffset? RevokedAt { get; set; }
+
+    /// <summary>
+    /// The phone's Firebase Cloud Messaging registration token, which pushes go to. Empty until
+    /// the app sends one; cleared when FCM says it's no longer valid.
+    /// </summary>
+    public string PushToken { get; set; } = "";
 }
 
 public static class DeviceKeyAlgorithm
@@ -45,6 +51,9 @@ public sealed record DeviceTable(TableClient Client);
 
 /// <summary>What the app sends to enroll a phone.</summary>
 public sealed record DeviceRequest(string? PublicKey, string? DeviceName);
+
+/// <summary>What the app sends to register the phone's FCM token for pushes.</summary>
+public sealed record PushTokenRequest(string? Token);
 
 /// <summary>What the API returns for a device. The app keeps the ID and sends it with every signature.</summary>
 public sealed record DeviceResponse(
