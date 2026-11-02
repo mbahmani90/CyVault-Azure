@@ -21,6 +21,7 @@ val codeModules = listOf(
     ":core",
     ":auth",
     ":devicekey",
+    ":push",
     ":systemdesign",
     ":feature:authentication",
     ":feature:vault",
