@@ -143,6 +143,54 @@ class VaultHomeViewModelBalanceTest {
     }
 
     @Test
+    fun refresh_fetchesTheBalancesAndCardsAgain() = runTest(dispatcher) {
+        balances.balances = listOf(savings)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        val cardFetches = cards.getCardsCalls
+
+        balances.balances = listOf(main, savings)
+        viewModel.onIntent(VaultHomeIntent.Refresh)
+
+        assertTrue(viewModel.state.value.isRefreshing)
+        advanceUntilIdle()
+        assertFalse(viewModel.state.value.isRefreshing)
+        assertEquals(listOf(main, savings), viewModel.state.value.balances)
+        assertEquals(cardFetches + 1, cards.getCardsCalls)
+    }
+
+    @Test
+    fun refresh_whileRefreshing_isIgnored() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        val response = CompletableDeferred<Unit>()
+        balances.gate = response
+        val cardFetches = cards.getCardsCalls
+
+        viewModel.onIntent(VaultHomeIntent.Refresh)
+        viewModel.onIntent(VaultHomeIntent.Refresh)
+        runCurrent()
+        response.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(cardFetches + 1, cards.getCardsCalls)
+        assertFalse(viewModel.state.value.isRefreshing)
+    }
+
+    @Test
+    fun refresh_whenLoadingFails_reportsItAndStopsSpinning() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        balances.failure = Exception("offline")
+
+        viewModel.onIntent(VaultHomeIntent.Refresh)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.isRefreshing)
+        assertEquals(VaultHomeEffect.BalanceRequestFailed, viewModel.effect.first())
+    }
+
+    @Test
     fun saveBalance_new_getsAnIdAndIsAddedNewestFirst() = runTest(dispatcher) {
         balances.balances = listOf(savings)
         val viewModel = viewModel()

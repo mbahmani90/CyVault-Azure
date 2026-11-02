@@ -29,6 +29,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCa
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -89,6 +90,7 @@ class VaultHomeViewModel(
     override fun onIntent(intent: VaultHomeIntent) {
         when (intent) {
             VaultHomeIntent.LoadCards -> loadCards()
+            VaultHomeIntent.Refresh -> refresh()
             is VaultHomeIntent.DeleteCard -> deleteExistingCard(intent.id)
             VaultHomeIntent.SignOut -> signOut()
             VaultHomeIntent.OpenDrawer -> viewModelScope.launch { _effect.send(VaultHomeEffect.OpenDrawer) }
@@ -145,24 +147,40 @@ class VaultHomeViewModel(
     }
 
     private fun loadBalances() {
+        viewModelScope.launch { fetchBalances() }
+    }
+
+    private suspend fun fetchBalances() {
+        _state.update { it.copy(isLoadingBalances = true) }
+        getBalances()
+            .onSuccess { balances ->
+                _state.update { state ->
+                    val ids = balances.mapTo(mutableSetOf()) { it.id }
+                    state.copy(
+                        balances = balances.newestFirst(),
+                        isLoadingBalances = false,
+                        // A selected balance that's gone can't stay selected.
+                        selectedBalanceIds = state.selectedBalanceIds intersect ids,
+                    )
+                }
+            }
+            .onFailure {
+                _state.update { it.copy(isLoadingBalances = false) }
+                _effect.send(VaultHomeEffect.BalanceRequestFailed)
+            }
+    }
+
+    // Fetches the balances and the cards (for the rows' bank names) side by side; the spinner stays
+    // until both are back. A balance failure is reported like on start; a card failure is quiet,
+    // as the rows just keep the names they had. A pull while one is running is ignored.
+    private fun refresh() {
+        if (_state.value.isRefreshing) return
+        _state.update { it.copy(isRefreshing = true) }
         viewModelScope.launch {
-            _state.update { it.copy(isLoadingBalances = true) }
-            getBalances()
-                .onSuccess { balances ->
-                    _state.update { state ->
-                        val ids = balances.mapTo(mutableSetOf()) { it.id }
-                        state.copy(
-                            balances = balances.newestFirst(),
-                            isLoadingBalances = false,
-                            // A selected balance that's gone can't stay selected.
-                            selectedBalanceIds = state.selectedBalanceIds intersect ids,
-                        )
-                    }
-                }
-                .onFailure {
-                    _state.update { it.copy(isLoadingBalances = false) }
-                    _effect.send(VaultHomeEffect.BalanceRequestFailed)
-                }
+            val cards = async { getCards() }
+            fetchBalances()
+            cards.await()
+            _state.update { it.copy(isRefreshing = false) }
         }
     }
 

@@ -5,6 +5,9 @@ import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 
 sealed interface VaultHomeIntent {
     data object LoadCards : VaultHomeIntent
+
+    /** The user pulled the list down: fetch the balances and cards again. */
+    data object Refresh : VaultHomeIntent
     data class DeleteCard(val id: String) : VaultHomeIntent
     data object SignOut : VaultHomeIntent
     data object OpenDrawer : VaultHomeIntent

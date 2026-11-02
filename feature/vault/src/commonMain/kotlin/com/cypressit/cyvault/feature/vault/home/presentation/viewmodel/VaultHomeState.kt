@@ -17,6 +17,8 @@ data class VaultHomeState(
     val balances: List<Balance> = emptyList(),
     /** True while the balances are being fetched, so the list doesn't claim there are none. */
     val isLoadingBalances: Boolean = false,
+    /** True while a pull-to-refresh fetches the balances and cards again: the list shows its spinner. */
+    val isRefreshing: Boolean = false,
     /** The balance being edited in the add-item dialog, or null when adding a new one. */
     val editingBalance: Balance? = null,
     val isSavingBalance: Boolean = false,
