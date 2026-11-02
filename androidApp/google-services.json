@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "949572795462",
+    "project_id": "cyvault-512912",
+    "storage_bucket": "cyvault-512912.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:949572795462:android:19e6e8211df46d0f7d9e47",
+        "android_client_info": {
+          "package_name": "com.cypressit.cyvault"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "949572795462-0ocmiktabsr45lfmm1elcr9p3f12qbjq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-4515eQcdqCQl20-16HRJxC6iuVfLCeE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "949572795462-0ocmiktabsr45lfmm1elcr9p3f12qbjq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

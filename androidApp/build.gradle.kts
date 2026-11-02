@@ -11,6 +11,8 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    // Firebase project config (push notifications) from google-services.json
+    alias(libs.plugins.googleServices)
 }
 
 kotlin {
