@@ -17,6 +17,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCas
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.CompletableDeferred
@@ -58,6 +59,7 @@ class VaultHomeViewModelProfilePhotoTest {
 
     private fun viewModel() = VaultHomeViewModel(
         getCards = GetCardsUseCase(cards),
+        observeCards = ObserveCardsUseCase(cards),
         deleteCard = DeleteCardUseCase(cards),
         getCurrentAccount = GetCurrentAccountUseCase(accounts),
         signOutUser = SignOutUseCase(accounts),

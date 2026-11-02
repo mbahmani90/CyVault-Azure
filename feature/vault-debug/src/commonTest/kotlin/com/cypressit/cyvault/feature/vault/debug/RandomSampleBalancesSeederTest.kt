@@ -4,6 +4,7 @@ import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.repository.CardRepository
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.repository.BalanceRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlin.math.round
 import kotlin.random.Random
@@ -31,8 +32,10 @@ class RandomSampleBalancesSeederTest {
         override suspend fun deleteBalance(id: String): Result<Unit> = Result.success(Unit)
     }
 
-    private class FakeCardRepository(var cards: List<Card>) : CardRepository {
-        override suspend fun getCards(): Result<List<Card>> = Result.success(cards)
+    private class FakeCardRepository(var serverCards: List<Card>) : CardRepository {
+        override val cards = MutableStateFlow(serverCards)
+
+        override suspend fun getCards(): Result<List<Card>> = Result.success(serverCards)
 
         override suspend fun createCard(
             id: String,
@@ -89,7 +92,7 @@ class RandomSampleBalancesSeederTest {
 
     @Test
     fun withoutCards_failsAndSavesNothing() = runTest {
-        cards.cards = emptyList()
+        cards.serverCards = emptyList()
 
         assertTrue(seeder(count = 5).addSampleBalances().isFailure)
         assertTrue(repository.saved.isEmpty())
