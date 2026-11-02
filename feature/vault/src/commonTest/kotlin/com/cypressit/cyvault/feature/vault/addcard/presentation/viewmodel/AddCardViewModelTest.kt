@@ -8,6 +8,7 @@ import com.cypressit.cyvault.feature.vault.card.domain.repository.InvalidCardExc
 import com.cypressit.cyvault.feature.vault.card.domain.repository.PhoneNumberAlreadyLinkedException
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -42,7 +43,12 @@ class AddCardViewModelTest {
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel(repository: CardRepository = FakeCardRepository()) =
-        AddCardViewModel(GetCardsUseCase(repository), CreateCardUseCase(repository), DeleteCardsUseCase(repository))
+        AddCardViewModel(
+            GetCardsUseCase(repository),
+            ObserveCardsUseCase(repository),
+            CreateCardUseCase(repository),
+            DeleteCardsUseCase(repository),
+        )
 
     // The bank name is required, so a valid form has one unless a test says otherwise.
     private fun AddCardViewModel.enter(cardNumber: String, phoneNumber: String, bankName: String = "CGD") {
@@ -60,6 +66,19 @@ class AddCardViewModelTest {
         assertEquals(listOf(visa), viewModel.state.value.cards)
         assertFalse(viewModel.state.value.isCardsLoading)
         assertFalse(viewModel.state.value.isEmpty)
+    }
+
+    @Test
+    fun init_showsTheCardsAlreadyFetchedWithoutASpinner() = runTest(dispatcher) {
+        val repository = FakeCardRepository(cards = listOf(visa))
+        // As Home would have, before the Cards screen opens.
+        repository.getCards()
+
+        val viewModel = viewModel(repository)
+        dispatcher.scheduler.runCurrent()
+
+        assertEquals(listOf(visa), viewModel.state.value.cards)
+        assertFalse(viewModel.state.value.isCardsLoading)
     }
 
     @Test

@@ -18,6 +18,7 @@ import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.repository.CardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
 import com.cypressit.cyvault.systemdesign.theme.CyTheme
 import com.cypressit.cyvault.testtags.CardsTags
 import org.junit.Test
@@ -33,6 +34,7 @@ class AddCardRouteTest {
         // Built outside setContent: a ViewModel constructed in a composable is a lint error.
         val viewModel = AddCardViewModel(
             GetCardsUseCase(repository),
+            ObserveCardsUseCase(repository),
             CreateCardUseCase(repository),
             DeleteCardsUseCase(repository),
         )
