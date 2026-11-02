@@ -32,6 +32,8 @@ core = "1.7.0"
 kover = "0.9.11"
 ktlint = "14.2.0"
 appium-javaClient = "9.4.0"
+firebase-bom = "35.1.0"
+googleServices = "4.5.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -59,6 +61,10 @@ compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMul
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "composeMultiplatform" }
+
+# Firebase Cloud Messaging: the BOM picks matching versions of the Firebase libraries
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 
 # Microsoft Authentication Library (Entra External ID native auth)
 msal = { module = "com.microsoft.identity.client:msal", version.ref = "msal" }
@@ -103,3 +109,5 @@ kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", vers
 android-lint = { id = "com.android.lint", version.ref = "agp" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+# Reads androidApp/google-services.json, which tells Firebase which project the app belongs to
+googleServices = { id = "com.google.gms.google-services", version.ref = "googleServices" }
