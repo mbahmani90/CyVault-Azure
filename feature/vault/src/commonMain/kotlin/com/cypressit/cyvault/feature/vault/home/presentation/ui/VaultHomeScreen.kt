@@ -640,16 +640,32 @@ private fun HomeContent(
                         },
                         trailingContent = {
                             Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = formatAmount(
-                                        balance.amount,
-                                        balance.currency,
-                                        plusSign = true,
-                                        symbolAfter = true,
-                                    ),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = if (isIncome) IncomeGreen else MaterialTheme.colorScheme.error,
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    // The card's name in gray, so it doesn't read as part of the amount.
+                                    state.cardNameOf(balance)?.let { cardName ->
+                                        Text(
+                                            text = cardName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                    Text(
+                                        text = formatAmount(
+                                            balance.amount,
+                                            balance.currency,
+                                            plusSign = true,
+                                            symbolAfter = true,
+                                        ),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = if (isIncome) IncomeGreen else MaterialTheme.colorScheme.error,
+                                    )
+                                }
                                 formatBalanceDate(balance.date)?.let { date ->
                                     Text(
                                         text = date,
