@@ -74,8 +74,8 @@ public sealed partial class CardFunctions(
         if (phoneNumber is null)
             return new BadRequestObjectResult("phoneNumber must be a Portuguese mobile number or an E.164 number, such as +351912345678.");
         var bankName = body?.BankName?.Trim() ?? "";
-        if (bankName.Length > MaxBankNameLength)
-            return new BadRequestObjectResult($"bankName must be at most {MaxBankNameLength} characters.");
+        if (bankName.Length is 0 or > MaxBankNameLength)
+            return new BadRequestObjectResult($"bankName is required and must be at most {MaxBankNameLength} characters.");
 
         var existing = await tables.Cards.GetEntityIfExistsAsync<CardEntity>(
             caller.ObjectId!, id, cancellationToken: cancellationToken);

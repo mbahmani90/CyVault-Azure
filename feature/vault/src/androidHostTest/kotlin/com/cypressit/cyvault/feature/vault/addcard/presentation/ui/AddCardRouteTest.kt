@@ -54,6 +54,7 @@ class AddCardRouteTest {
         onNodeWithTag(CardsTags.ADD_BUTTON).performClick()
         onNodeWithTag(CardsTags.CARD_NUMBER_FIELD).performTextInput("4111111111111111")
         onNodeWithTag(CardsTags.PHONE_NUMBER_FIELD).performTextInput("912345678")
+        onNodeWithTag(CardsTags.BANK_NAME_FIELD).performTextInput("CGD")
 
         onNodeWithTag(CardsTags.SUBMIT_BUTTON).assertIsEnabled()
     }
@@ -89,6 +90,7 @@ class AddCardRouteTest {
         onNodeWithTag(CardsTags.ADD_BUTTON).performClick()
         onNodeWithTag(CardsTags.CARD_NUMBER_FIELD).performTextInput("4111111111111111")
         onNodeWithTag(CardsTags.PHONE_NUMBER_FIELD).performTextInput("912345678")
+        onNodeWithTag(CardsTags.BANK_NAME_FIELD).performTextInput("CGD")
         onNodeWithTag(CardsTags.SUBMIT_BUTTON).performClick()
 
         waitUntil { onAllNodesWithTag(CardsTags.ADD_CARD_DIALOG).fetchSemanticsNodes().isEmpty() }

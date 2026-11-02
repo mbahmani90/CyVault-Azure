@@ -6,7 +6,7 @@ data class Card(
     val last4: String,
     /** Visa, Mastercard, Maestro or Other; empty for cards added before brands were stored. */
     val brand: String,
-    /** The bank the user named for the card; empty when they didn't name one. */
+    /** The bank the user named for the card; empty only on cards added before it was required. */
     val bankName: String,
     /** E.164, such as +351912345678. */
     val phoneNumber: String,

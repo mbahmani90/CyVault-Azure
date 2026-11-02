@@ -9,7 +9,6 @@ data class AddCardState(
     val isAddCardDialogVisible: Boolean = false,
     val cardNumber: String = "",
     val phoneNumber: String = "",
-    /** Optional, so it doesn't affect whether Add is enabled. */
     val bankName: String = "",
     val isSavingCard: Boolean = false,
     /** Why the last Add failed, shown in the dialog; null while there's nothing to show. */
@@ -41,8 +40,11 @@ data class AddCardState(
     val isPhoneNumberValid: Boolean
         get() = CardInput.normalizePhoneNumber(phoneNumber) != null
 
+    val isBankNameValid: Boolean
+        get() = CardInput.isValidBankName(bankName)
+
     val isAddEnabled: Boolean
-        get() = isCardNumberValid && isPhoneNumberValid && !isSavingCard
+        get() = isCardNumberValid && isPhoneNumberValid && isBankNameValid && !isSavingCard
 
     val isEmpty: Boolean
         get() = cards.isEmpty() && !isCardsLoading

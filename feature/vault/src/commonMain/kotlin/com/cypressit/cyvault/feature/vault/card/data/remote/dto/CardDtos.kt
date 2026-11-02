@@ -19,6 +19,6 @@ data class CardRequestDto(
     /** Sent once to add the card; the API keeps only its last four digits. */
     @SerialName("cardNumber") val cardNumber: String,
     @SerialName("phoneNumber") val phoneNumber: String,
-    /** Optional; an empty string leaves the card without a bank name. */
+    /** Required, at most 50 characters. */
     @SerialName("bankName") val bankName: String,
 )
