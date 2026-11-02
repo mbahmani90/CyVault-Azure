@@ -388,6 +388,13 @@ class VaultHomeViewModel(
                             transferAmount = "",
                         )
                     }
+                    _effect.send(
+                        VaultHomeEffect.TransferSent(
+                            amount = current.transferAmount.trim(),
+                            currency = current.transferCurrency,
+                            phoneNumber = phoneNumber,
+                        ),
+                    )
                 }
                 .onFailure { error ->
                     // Shown in the dialog, which stays open with what the user typed. Backing out

@@ -67,6 +67,7 @@
     <string name="transfer_cancel">Cancel</string>
     <string name="transfer_cards_load_failed">Couldn't load your cards. Please try again.</string>
     <string name="transfer_sending">Sending…</string>
+    <string name="transfer_sent">Sent %1$s %2$s to %3$s</string>
     <string name="transfer_error_no_card">No card is linked to this phone number.</string>
     <string name="transfer_error_invalid">This transfer isn't allowed. Check the card and the phone number.</string>
     <string name="transfer_error_failed">Couldn't send the money. Please try again.</string>
