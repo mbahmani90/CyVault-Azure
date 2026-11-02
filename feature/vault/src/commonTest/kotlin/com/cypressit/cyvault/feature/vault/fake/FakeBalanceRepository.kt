@@ -2,6 +2,8 @@ package com.cypressit.cyvault.feature.vault.fake
 
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
+import com.cypressit.cyvault.feature.vault.home.domain.model.TransferApproval
+import com.cypressit.cyvault.feature.vault.home.domain.model.TransferChallenge
 import com.cypressit.cyvault.feature.vault.home.domain.repository.BalanceRepository
 import kotlinx.coroutines.CompletableDeferred
 
@@ -27,6 +29,24 @@ class FakeBalanceRepository(var balances: List<Balance> = emptyList()) : Balance
 
     /** The transfer IDs sendTransfer was called with, in order. */
     val transferIds = mutableListOf<String>()
+
+    /** When set, requestTransferChallenge fails with this, before anything is signed. */
+    var challengeFailure: Exception? = null
+
+    /** The approvals sendTransfer was called with, in order. */
+    val approvals = mutableListOf<TransferApproval>()
+
+    // Like the API: one nonce and payload per transfer ID.
+    override suspend fun requestTransferChallenge(
+        transferId: String,
+        cardId: String,
+        phoneNumber: String,
+        amount: Double,
+        currency: String,
+    ): Result<TransferChallenge> {
+        challengeFailure?.let { return Result.failure(it) }
+        return Result.success(TransferChallenge(nonce = "nonce-$transferId", payload = "payload-$transferId"))
+    }
 
     override suspend fun getBalances(): Result<List<Balance>> {
         gate?.await()
@@ -60,8 +80,10 @@ class FakeBalanceRepository(var balances: List<Balance> = emptyList()) : Balance
         phoneNumber: String,
         amount: Double,
         currency: String,
+        approval: TransferApproval,
     ): Result<Balance> {
         transferIds += transferId
+        approvals += approval
         transferFailure?.let { return Result.failure(it) }
         return Result.success(
             Balance(

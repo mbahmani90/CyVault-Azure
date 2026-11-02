@@ -2,17 +2,23 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.repository.CardRepository
+import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningCancelledException
+import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningUnavailableException
 import com.cypressit.cyvault.feature.vault.device.domain.usecase.EnrollDeviceUseCase
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeDeviceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
+import com.cypressit.cyvault.feature.vault.fake.fixedTransferPromptTexts
 import com.cypressit.cyvault.feature.vault.fake.succeedingSessionApi
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
+import com.cypressit.cyvault.feature.vault.home.domain.model.TransferApproval
 import com.cypressit.cyvault.feature.vault.home.domain.repository.InvalidTransferException
 import com.cypressit.cyvault.feature.vault.home.domain.repository.NoCardForPhoneNumberException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.SigningLockedException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.TransferChallengeExpiredException
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
@@ -63,6 +69,7 @@ class VaultHomeViewModelTransferTest {
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
     private val balances = FakeBalanceRepository()
+    private val devices = FakeDeviceRepository()
 
     private fun viewModel(
         cards: CardRepository = FakeCardRepository(cards = listOf(visa, mastercard)),
@@ -83,8 +90,9 @@ class VaultHomeViewModelTransferTest {
             saveBalance = SaveBalanceUseCase(balances),
             deleteBalance = DeleteBalanceUseCase(balances),
             deleteBalances = DeleteBalancesUseCase(balances),
-            sendTransfer = SendTransferUseCase(balances),
-            enrollDevice = EnrollDeviceUseCase(FakeDeviceRepository()),
+            sendTransfer = SendTransferUseCase(balances, devices),
+            enrollDevice = EnrollDeviceUseCase(devices),
+            transferPromptTexts = fixedTransferPromptTexts,
         )
     }
 
@@ -213,6 +221,88 @@ class VaultHomeViewModelTransferTest {
         assertFalse(state.isTransferDialogVisible)
         assertFalse(state.isSendingTransfer)
         assertEquals("", state.transferAmount)
+    }
+
+    @Test
+    fun send_signsTheTransfersChallengeAfterShowingWhatIsApproved() = runTest(dispatcher) {
+        val viewModel = filledTransfer()
+
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        val transferId = balances.transferIds.single()
+        assertEquals(listOf("payload-$transferId"), devices.signedMessages)
+        assertEquals("Send 20,50 EUR to +351912345678", devices.prompts.single().description)
+        assertEquals(
+            TransferApproval(
+                deviceId = "device-1",
+                nonce = "nonce-$transferId",
+                signature = "signature-of-payload-$transferId",
+            ),
+            balances.approvals.single(),
+        )
+    }
+
+    @Test
+    fun send_approvalCancelled_keepsTheDialogOpenWithoutAnError() = runTest(dispatcher) {
+        devices.signFailure = SigningCancelledException()
+        val viewModel = filledTransfer()
+
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        val state = viewModel.state.value
+        assertTrue(balances.transferIds.isEmpty())
+        assertNull(state.transferError)
+        assertFalse(state.isSendingTransfer)
+        assertTrue(state.isTransferDialogVisible)
+        assertEquals("20,50", state.transferAmount)
+    }
+
+    @Test
+    fun send_phoneCantSign_saysSo() = runTest(dispatcher) {
+        devices.signFailure = SigningUnavailableException()
+        val viewModel = filledTransfer()
+
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        assertTrue(balances.transferIds.isEmpty())
+        assertEquals(TransferError.SigningUnavailable, viewModel.state.value.transferError)
+    }
+
+    @Test
+    fun send_approvalTooLate_saysSo() = runTest(dispatcher) {
+        balances.transferFailure = TransferChallengeExpiredException()
+        val viewModel = filledTransfer()
+
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        assertEquals(TransferError.ChallengeExpired, viewModel.state.value.transferError)
+    }
+
+    @Test
+    fun send_signingBlocked_saysSo() = runTest(dispatcher) {
+        balances.transferFailure = SigningLockedException()
+        val viewModel = filledTransfer()
+
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        assertEquals(TransferError.SigningLocked, viewModel.state.value.transferError)
+    }
+
+    @Test
+    fun send_noCardForThePhoneNumber_isFoundBeforeAskingForApproval() = runTest(dispatcher) {
+        balances.challengeFailure = NoCardForPhoneNumberException()
+        val viewModel = filledTransfer()
+
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        assertTrue(devices.signedMessages.isEmpty())
+        assertEquals(TransferError.NoCardForPhoneNumber, viewModel.state.value.transferError)
     }
 
     @Test

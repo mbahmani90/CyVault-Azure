@@ -3,9 +3,12 @@ package com.cypressit.cyvault.feature.vault.home.data.remote
 import com.cypressit.cyvault.auth.AuthClient
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceRequestDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceResponseDto
+import com.cypressit.cyvault.feature.vault.home.data.remote.dto.TransferChallengeDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.TransferRequestDto
 import com.cypressit.cyvault.feature.vault.home.domain.repository.InvalidTransferException
 import com.cypressit.cyvault.feature.vault.home.domain.repository.NoCardForPhoneNumberException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.SigningLockedException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.TransferChallengeExpiredException
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.bearerAuth
@@ -33,6 +36,7 @@ class BalanceApiService(
 
     private val balancesUrl = "${config.baseUrl}/me/balances"
     private val transfersUrl = "${config.baseUrl}/me/transfers"
+    private val challengeUrl = "${config.baseUrl}/me/transfers/challenge"
 
     /** The CyVault API app registration's balance scope in the environment's Entra tenant. */
     private val balanceScope = "${config.appIdUri}/Balance.ReadWrite"
@@ -53,26 +57,41 @@ class BalanceApiService(
     }
 
     /**
-     * Sends money; returns the sender's Transfer balance. Fails with [NoCardForPhoneNumberException]
-     * when no card is linked to the phone number, and [InvalidTransferException] when the API
-     * rejects the transfer, such as sending to the card the money comes from.
+     * Asks for the one-time challenge that approves this transfer, sent without the signing fields.
+     * The API checks the transfer first, so it fails like [postTransfer] does.
      */
-    suspend fun postTransfer(request: TransferRequestDto): BalanceResponseDto {
-        val response = client.post(transfersUrl) {
+    suspend fun postTransferChallenge(request: TransferRequestDto): TransferChallengeDto =
+        client.post(challengeUrl) {
             bearerAuth(accessToken())
             contentType(ContentType.Application.Json)
             setBody(request)
-        }
-        when (response.status) {
-            HttpStatusCode.NotFound -> throw NoCardForPhoneNumberException()
-            HttpStatusCode.BadRequest -> throw InvalidTransferException()
-            else -> return response.requireSuccess().body()
-        }
-    }
+        }.requireTransferSuccess().body()
+
+    /**
+     * Sends money, with the device's signature over its challenge; returns the sender's Transfer
+     * balance. Fails with [NoCardForPhoneNumberException] when no card is linked to the phone
+     * number, [InvalidTransferException] when the API rejects the transfer (such as sending to the
+     * card the money comes from), [TransferChallengeExpiredException] when the challenge expired,
+     * and [SigningLockedException] after too many wrong signatures.
+     */
+    suspend fun postTransfer(request: TransferRequestDto): BalanceResponseDto =
+        client.post(transfersUrl) {
+            bearerAuth(accessToken())
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.requireTransferSuccess().body()
 
     private fun urlFor(id: String) = "$balancesUrl/${id.encodeURLPathPart()}"
 
     private suspend fun accessToken(): String = authClient.accessToken(listOf(balanceScope))
+
+    private fun HttpResponse.requireTransferSuccess(): HttpResponse = when (status) {
+        HttpStatusCode.NotFound -> throw NoCardForPhoneNumberException()
+        HttpStatusCode.BadRequest -> throw InvalidTransferException()
+        HttpStatusCode.Gone -> throw TransferChallengeExpiredException()
+        HttpStatusCode.Locked -> throw SigningLockedException()
+        else -> requireSuccess()
+    }
 
     private fun HttpResponse.requireSuccess(): HttpResponse {
         if (!status.isSuccess()) throw Exception("Balance request failed (${status.value})")

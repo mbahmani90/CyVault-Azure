@@ -45,4 +45,19 @@ data class TransferRequestDto(
     /** Above zero. */
     @SerialName("amount") val amount: Double,
     @SerialName("currency") val currency: String,
+    /** The enrolled device whose key signed [nonce]'s challenge; null when asking for the challenge. */
+    @SerialName("deviceId") val deviceId: String? = null,
+    @SerialName("nonce") val nonce: String? = null,
+    /** Base64 DER ECDSA signature over the challenge's payload. */
+    @SerialName("signature") val signature: String? = null,
+)
+
+/** The one-time challenge the device signs to approve one transfer. */
+@Serializable
+data class TransferChallengeDto(
+    @SerialName("nonce") val nonce: String,
+    /** The exact text to sign as UTF-8: the nonce and the transfer's details. */
+    @SerialName("payload") val payload: String,
+    /** ISO 8601. */
+    @SerialName("expiresAt") val expiresAt: String,
 )

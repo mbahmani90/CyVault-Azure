@@ -1,7 +1,11 @@
 package com.cypressit.cyvault.feature.vault.device.data.repository
 
 import com.cypressit.cyvault.feature.vault.device.data.remote.DeviceApiService
+import com.cypressit.cyvault.feature.vault.device.domain.repository.ApprovalPrompt
 import com.cypressit.cyvault.feature.vault.device.domain.repository.DeviceEnrollment
+import com.cypressit.cyvault.feature.vault.device.domain.repository.DeviceSignature
+import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningCancelledException
+import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningUnavailableException
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeDeviceIdStore
 import com.cypressit.cyvault.feature.vault.fake.FakeDeviceKeyStore
@@ -27,6 +31,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class DeviceRepositoryImplTest {
@@ -146,5 +151,63 @@ class DeviceRepositoryImplTest {
         assertTrue(result.isFailure)
         assertEquals(null, idStore.ids[userId])
         assertEquals(1, keyStore.keys.size)
+    }
+
+    private val prompt =
+        ApprovalPrompt(title = "Approve transfer", description = "Send 20 EUR to +351912345678", cancelLabel = "Cancel")
+
+    @Test
+    fun sign_enrolledDevice_showsThePromptAndSignsWithItsKey() = runTest {
+        keyStore.createKey(userId)
+        idStore.ids[userId] = "device-1"
+
+        val result = repository { error("No request expected") }.sign(userId, "payload", prompt)
+
+        // The fake's signature is the key byte (0x01) followed by the message: base64 of 01 "payload".
+        assertEquals(DeviceSignature("device-1", "AXBheWxvYWQ="), result.getOrThrow())
+        assertEquals("Send 20 EUR to +351912345678", keyStore.prompts.single().description)
+        assertTrue(requests.isEmpty())
+    }
+
+    @Test
+    fun sign_notEnrolledYet_enrollsFirst() = runTest {
+        val result = repository { respondDevice("device-1") }.sign(userId, "payload", prompt)
+
+        assertEquals("device-1", result.getOrThrow().deviceId)
+        assertEquals(1, requests.size)
+    }
+
+    @Test
+    fun sign_keyDisabledByANewBiometric_enrollsANewKeyAndSigns() = runTest {
+        keyStore.createKey(userId)
+        idStore.ids[userId] = "device-1"
+        keyStore.invalidatedKeys += userId
+
+        val result = repository { respondDevice("device-2") }.sign(userId, "payload", prompt)
+
+        assertEquals("device-2", result.getOrThrow().deviceId)
+        assertEquals(2, keyStore.createdKeyCount)
+        assertEquals("Ag==", requests.single().jsonBody()["publicKey"]!!.jsonPrimitive.content)
+        assertEquals("device-2", idStore.ids[userId])
+    }
+
+    @Test
+    fun sign_userBacksOut_isCancelled() = runTest {
+        keyStore.createKey(userId)
+        idStore.ids[userId] = "device-1"
+        keyStore.cancelsPrompt = true
+
+        val result = repository { error("No request expected") }.sign(userId, "payload", prompt)
+
+        assertIs<SigningCancelledException>(result.exceptionOrNull())
+    }
+
+    @Test
+    fun sign_withoutBiometrics_isUnavailable() = runTest {
+        keyStore.hasBiometrics = false
+
+        val result = repository { error("No request expected") }.sign(userId, "payload", prompt)
+
+        assertIs<SigningUnavailableException>(result.exceptionOrNull())
     }
 }

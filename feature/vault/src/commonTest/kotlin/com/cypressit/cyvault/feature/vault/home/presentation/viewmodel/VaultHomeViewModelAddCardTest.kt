@@ -6,6 +6,7 @@ import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeDeviceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
+import com.cypressit.cyvault.feature.vault.fake.fixedTransferPromptTexts
 import com.cypressit.cyvault.feature.vault.fake.succeedingSessionApi
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
@@ -62,8 +63,9 @@ class VaultHomeViewModelAddCardTest {
             saveBalance = SaveBalanceUseCase(balances),
             deleteBalance = DeleteBalanceUseCase(balances),
             deleteBalances = DeleteBalancesUseCase(balances),
-            sendTransfer = SendTransferUseCase(balances),
+            sendTransfer = SendTransferUseCase(balances, FakeDeviceRepository()),
             enrollDevice = EnrollDeviceUseCase(FakeDeviceRepository()),
+            transferPromptTexts = fixedTransferPromptTexts,
         )
     }
 

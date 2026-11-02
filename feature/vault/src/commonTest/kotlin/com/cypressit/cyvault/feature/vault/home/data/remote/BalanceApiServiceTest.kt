@@ -5,6 +5,8 @@ import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceRequestDt
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.TransferRequestDto
 import com.cypressit.cyvault.feature.vault.home.domain.repository.InvalidTransferException
 import com.cypressit.cyvault.feature.vault.home.domain.repository.NoCardForPhoneNumberException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.SigningLockedException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.TransferChallengeExpiredException
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -21,11 +23,13 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 class BalanceApiServiceTest {
 
@@ -156,6 +160,59 @@ class BalanceApiServiceTest {
     fun postTransfer_rejected_throwsInvalidTransfer() = runTest {
         assertFailsWith<InvalidTransferException> {
             api { respond("", HttpStatusCode.BadRequest) }.postTransfer(transfer)
+        }
+    }
+
+    @Test
+    fun postTransferChallenge_postsTheTransferWithoutSigningFieldsAndParsesTheChallenge() = runTest {
+        val challengeJson =
+            """{"nonce":"n1","payload":"CyVault transfer v1\nnonce:n1","expiresAt":"2026-11-02T10:02:00+00:00"}"""
+
+        val challenge = api { respondJson(challengeJson) }.postTransferChallenge(transfer)
+
+        val request = requests.single()
+        assertEquals(HttpMethod.Post, request.method)
+        assertEquals("https://api.test/api/me/transfers/challenge", request.url.toString())
+        assertEquals("Bearer test-token", request.headers[HttpHeaders.Authorization])
+        val json = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+        assertEquals("t1", json["transferId"]?.jsonPrimitive?.content)
+        assertNull(json["signature"]?.jsonPrimitive?.contentOrNull)
+        assertEquals("n1", challenge.nonce)
+        assertEquals("CyVault transfer v1\nnonce:n1", challenge.payload)
+    }
+
+    @Test
+    fun postTransferChallenge_noCardForThePhoneNumber_throwsNoCardForPhoneNumber() = runTest {
+        assertFailsWith<NoCardForPhoneNumberException> {
+            api { respond("", HttpStatusCode.NotFound) }.postTransferChallenge(transfer)
+        }
+    }
+
+    @Test
+    fun postTransfer_sendsTheApproval() = runTest {
+        val sentJson =
+            """{"id":"t1-sent","name":"","amount":20.0,"currency":"EUR","cardId":"card-1","type":"Transfer"}"""
+
+        api { respondJson(sentJson) }
+            .postTransfer(transfer.copy(deviceId = "device-1", nonce = "n1", signature = "c2ln"))
+
+        val json = Json.parseToJsonElement((requests.single().body as TextContent).text).jsonObject
+        assertEquals("device-1", json["deviceId"]?.jsonPrimitive?.content)
+        assertEquals("n1", json["nonce"]?.jsonPrimitive?.content)
+        assertEquals("c2ln", json["signature"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun postTransfer_expiredChallenge_throwsChallengeExpired() = runTest {
+        assertFailsWith<TransferChallengeExpiredException> {
+            api { respond("", HttpStatusCode.Gone) }.postTransfer(transfer)
+        }
+    }
+
+    @Test
+    fun postTransfer_signingBlocked_throwsSigningLocked() = runTest {
+        assertFailsWith<SigningLockedException> {
+            api { respond("", HttpStatusCode.Locked) }.postTransfer(transfer)
         }
     }
 }

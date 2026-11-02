@@ -11,4 +11,7 @@ class UnsupportedDeviceKeyStore : DeviceKeyStore {
 
     override fun createKey(userId: String): ByteArray =
         throw BiometricsUnavailableException(UnsupportedOperationException("Device keys aren't supported on iOS yet"))
+
+    override suspend fun sign(userId: String, message: ByteArray, prompt: SigningPrompt): ByteArray =
+        throw BiometricsUnavailableException(UnsupportedOperationException("Device keys aren't supported on iOS yet"))
 }

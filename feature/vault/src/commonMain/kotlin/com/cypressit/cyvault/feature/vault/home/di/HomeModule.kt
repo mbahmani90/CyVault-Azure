@@ -25,6 +25,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCa
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
+import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.ResourceTransferPromptTexts
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -68,7 +69,7 @@ internal val homeModule = module {
         factory { SaveBalanceUseCase(get()) }
         factory { DeleteBalanceUseCase(get()) }
         factory { DeleteBalancesUseCase(get()) }
-        factory { SendTransferUseCase(get()) }
+        factory { SendTransferUseCase(get(), get()) }
 
         // ViewModel
         // Written out because the sample-balances seeder is optional: only debug builds load
@@ -89,6 +90,7 @@ internal val homeModule = module {
                 deleteBalances = get(),
                 sendTransfer = get(),
                 enrollDevice = get(),
+                transferPromptTexts = ResourceTransferPromptTexts(),
                 sampleBalancesSeeder = getOrNull(),
             )
         }
