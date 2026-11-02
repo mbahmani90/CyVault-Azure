@@ -13,6 +13,7 @@
         "CardStorage__ConnectionString": "UseDevelopmentStorage=true",
         "CardStorage__CardsTableName": "cards",
         "CardStorage__PhonesTableName": "phones",
+        "CardEncryption__KeyId": "https://<key vault name>.vault.azure.net/keys/card-key",
         "Graph__ClientSecret": "<CyVault API client secret, only for POST /me/signout>"
     }
 }

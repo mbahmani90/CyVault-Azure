@@ -14,6 +14,7 @@ var avatarContainerName = 'avatars'
 var balanceTableName = 'balances'
 var cardTableName = 'cards'
 var phoneTableName = 'phones'
+var cardKeyName = 'card-key'
 var deploymentContainerName = 'app-package'
 
 // Built-in role definition IDs
@@ -22,6 +23,7 @@ var roles = {
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
   storageQueueDataContributor: '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
   storageTableDataContributor: '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
+  keyVaultCryptoUser: '12338af0-0e69-4776-bea7-57ae8d297424'
 }
 
 // ---------- Monitoring ----------
@@ -115,6 +117,34 @@ resource avatarStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
+// ---------- Card encryption ----------
+
+// Holds card-key, the RSA key that wraps each card's AES data key (envelope encryption, see
+// CardEncryption). Access is by Azure RBAC role only, no access policies.
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: 'kv-cyvault-${token}'
+  location: location
+  tags: tags
+  properties: {
+    tenantId: subscription().tenantId
+    sku: { family: 'A', name: 'standard' }
+    enableRbacAuthorization: true
+    enableSoftDelete: true
+    softDeleteRetentionInDays: 90
+  }
+
+  // Its private key never leaves the vault: the Function wraps with the public key and asks the
+  // vault to unwrap.
+  resource cardKey 'keys' = {
+    name: cardKeyName
+    properties: {
+      kty: 'RSA'
+      keySize: 2048
+      keyOps: ['wrapKey', 'unwrapKey']
+    }
+  }
+}
+
 // ---------- Function App ----------
 
 resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
@@ -183,6 +213,8 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       CardStorage__TableServiceUri: avatarStorage.properties.primaryEndpoints.table
       CardStorage__CardsTableName: cardTableName
       CardStorage__PhonesTableName: phoneTableName
+      // Without a version, so new cards are always wrapped with card-key's current version.
+      CardEncryption__KeyId: keyVault::cardKey.properties.keyUri
     }
     dependsOn: [
       runtimeBlobOwner
@@ -306,6 +338,29 @@ resource developerPhonesContributor 'Microsoft.Authorization/roleAssignments@202
   scope: avatarStorage::tableService::phones
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.storageTableDataContributor)
+    principalId: principalId
+    principalType: 'User'
+  }
+}
+
+// The Function may wrap and unwrap with the vault's keys, nothing more (no reading secrets or
+// managing keys).
+resource keyVaultCryptoUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, functionApp.id, roles.keyVaultCryptoUser)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultCryptoUser)
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Lets the developer run the Function locally against the real vault through `az login`.
+resource developerKeyVaultCryptoUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
+  name: guid(keyVault.id, principalId, roles.keyVaultCryptoUser)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.keyVaultCryptoUser)
     principalId: principalId
     principalType: 'User'
   }

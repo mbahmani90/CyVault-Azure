@@ -40,6 +40,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddSingleton(_ => CreateAvatarContainer(builder.Configuration.GetSection("AvatarStorage")));
 builder.Services.AddSingleton(_ => CreateBalanceTable(builder.Configuration.GetSection("BalanceStorage")));
 builder.Services.AddSingleton(_ => CreateCardTables(builder.Configuration.GetSection("CardStorage")));
+builder.Services.AddSingleton(_ => CreateCardEncryption(builder.Configuration.GetSection("CardEncryption")));
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton(sp => new SignInSessions(
@@ -111,6 +112,14 @@ static CardTables CreateCardTables(IConfigurationSection config)
     return new CardTables(
         new TableClient(serviceUri, cardsTableName, credential),
         new TableClient(serviceUri, phonesTableName, credential));
+}
+
+// The Managed Identity in Azure; locally, the developer's `az login`, which Bicep gives the same
+// role on the vault. There's no local Key Vault emulator, so local runs use the real vault.
+static CardEncryption CreateCardEncryption(IConfigurationSection config)
+{
+    var keyId = config["KeyId"] ?? throw new InvalidOperationException("Set CardEncryption:KeyId to card-key's URI.");
+    return new CardEncryption(new Uri(keyId), new DefaultAzureCredential());
 }
 
 static BlobContainerClient CreateAvatarContainer(IConfigurationSection config)
