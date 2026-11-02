@@ -1,8 +1,17 @@
 package com.cypressit.cyvault.feature.vault.card.domain.repository
 
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
+import kotlinx.coroutines.flow.StateFlow
 
+/**
+ * The user's cards, kept in memory so every screen shares one list: [getCards], [createCard] and
+ * [deleteCard] update [cards], so a card added on one screen shows on the others at once.
+ */
 interface CardRepository {
+    /** The last list fetched, with every add and delete since; empty until the first fetch. */
+    val cards: StateFlow<List<Card>>
+
+    /** Fetches the cards from the API and publishes them to [cards]. */
     suspend fun getCards(): Result<List<Card>>
 
     /**

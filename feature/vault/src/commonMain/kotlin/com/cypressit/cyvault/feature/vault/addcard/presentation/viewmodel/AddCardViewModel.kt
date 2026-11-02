@@ -10,6 +10,7 @@ import com.cypressit.cyvault.feature.vault.card.domain.model.CardInput
 import com.cypressit.cyvault.feature.vault.card.domain.repository.InvalidCardException
 import com.cypressit.cyvault.feature.vault.card.domain.repository.PhoneNumberAlreadyLinkedException
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,7 @@ import kotlin.uuid.Uuid
 
 class AddCardViewModel(
     private val getCards: GetCardsUseCase,
+    private val observeCards: ObserveCardsUseCase,
     private val createCard: CreateCardUseCase,
     private val deleteCards: DeleteCardsUseCase,
 ) : ViewModel(), MviViewModel<AddCardState, AddCardIntent, AddCardEffect> {
@@ -38,6 +40,7 @@ class AddCardViewModel(
     private var pendingCardId: String? = null
 
     init {
+        collectCards()
         loadCards()
     }
 
@@ -104,13 +107,10 @@ class AddCardViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isDeletingCards = true) }
             val deleted = deleteCards(ids)
-            // The ones that failed stay in the list and stay selected, so the user can retry.
+            // The repository drops the deleted ones from the list. The ones that failed stay
+            // selected, so the user can retry.
             _state.update { state ->
-                state.copy(
-                    cards = state.cards.filterNot { it.id in deleted },
-                    selectedCardIds = state.selectedCardIds - deleted,
-                    isDeletingCards = false,
-                )
+                state.copy(selectedCardIds = state.selectedCardIds - deleted, isDeletingCards = false)
             }
             if (deleted.isNotEmpty()) _effect.send(AddCardEffect.CardsDeleted(deleted.size))
             if (deleted.size < ids.size) _effect.send(AddCardEffect.CardsDeleteFailed)
@@ -147,11 +147,11 @@ class AddCardViewModel(
                 phoneNumber = current.phoneNumber,
                 bankName = current.bankName.trim(),
             )
-                .onSuccess { card ->
+                .onSuccess {
+                    // The repository adds the card to the list.
                     pendingCardId = null
                     _state.update {
                         it.copy(
-                            cards = listOf(card) + it.cards.filterNot { existing -> existing.id == card.id },
                             isSavingCard = false,
                             isAddCardDialogVisible = false,
                             cardNumber = "",
@@ -173,11 +173,26 @@ class AddCardViewModel(
         }
     }
 
+    // The list is the repository's shared one, so the cards Home already fetched show at once.
+    private fun collectCards() {
+        viewModelScope.launch {
+            observeCards().collect { cards ->
+                _state.update { state ->
+                    val ids = cards.mapTo(mutableSetOf()) { it.id }
+                    // A selected card that's gone can't stay selected.
+                    state.copy(cards = cards, selectedCardIds = state.selectedCardIds intersect ids)
+                }
+            }
+        }
+    }
+
+    // Fetches again in case the cards changed elsewhere; the spinner shows only while there are
+    // none to show yet.
     private fun loadCards() {
         viewModelScope.launch {
-            _state.update { it.copy(isCardsLoading = true) }
+            _state.update { it.copy(isCardsLoading = it.cards.isEmpty()) }
             getCards()
-                .onSuccess { cards -> _state.update { it.copy(cards = cards, isCardsLoading = false) } }
+                .onSuccess { _state.update { it.copy(isCardsLoading = false) } }
                 .onFailure {
                     _state.update { it.copy(isCardsLoading = false) }
                     _effect.send(AddCardEffect.CardsLoadFailed)

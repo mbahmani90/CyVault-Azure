@@ -20,6 +20,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCas
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeViewModel
@@ -50,6 +51,7 @@ internal val homeModule = module {
 
     // Use cases
     factory { GetCardsUseCase(get()) }
+    factory { ObserveCardsUseCase(get()) }
     factory { DeleteCardUseCase(get()) }
     factory { GetCurrentAccountUseCase(get()) }
     factory { SignOutUseCase(get()) }
@@ -67,6 +69,7 @@ internal val homeModule = module {
     viewModel {
         VaultHomeViewModel(
             getCards = get(),
+            observeCards = get(),
             deleteCard = get(),
             getCurrentAccount = get(),
             signOutUser = get(),

@@ -18,6 +18,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCas
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.CompletableDeferred
@@ -62,6 +63,7 @@ class VaultHomeViewModelBalanceTest {
         val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient))
         return VaultHomeViewModel(
             getCards = GetCardsUseCase(cards),
+            observeCards = ObserveCardsUseCase(cards),
             deleteCard = DeleteCardUseCase(cards),
             getCurrentAccount = GetCurrentAccountUseCase(accounts),
             signOutUser = SignOutUseCase(accounts),
@@ -194,7 +196,7 @@ class VaultHomeViewModelBalanceTest {
         val onVisa = main.copy(cardId = "visa")
         val onMastercard = savings.copy(cardId = "mastercard")
         balances.balances = listOf(onVisa, onMastercard)
-        cards.cards = listOf(visa, mastercard.copy(bankName = ""))
+        cards.serverCards = listOf(visa, mastercard.copy(bankName = ""))
         val viewModel = viewModel()
         advanceUntilIdle()
 
@@ -207,18 +209,47 @@ class VaultHomeViewModelBalanceTest {
     }
 
     @Test
-    fun showAddItemDialog_loadsTheCardsAndPicksTheFirst() = runTest(dispatcher) {
+    fun showAddItemDialog_usesTheCardsFetchedOnStartAndPicksTheFirst() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
-        assertTrue(viewModel.state.value.isLoadingItemCards)
         advanceUntilIdle()
 
         val state = viewModel.state.value
         assertFalse(state.isLoadingItemCards)
         assertEquals(listOf(visa, mastercard), state.itemCards)
         assertEquals(visa, state.itemCard)
+        // Fetched once, on start: the dialog doesn't fetch again.
+        assertEquals(1, cards.getCardsCalls)
+    }
+
+    @Test
+    fun showAddItemDialog_withoutCardsYet_fetchesThem() = runTest(dispatcher) {
+        cards.serverCards = emptyList()
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        cards.serverCards = listOf(visa)
+
+        viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
+        assertTrue(viewModel.state.value.isLoadingItemCards)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.isLoadingItemCards)
+        assertEquals(visa, viewModel.state.value.itemCard)
+    }
+
+    @Test
+    fun aCardAddedElsewhere_showsOnHomeWithoutFetching() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        // As the Cards screen would, through the shared repository.
+        val added = cards.createCard("amex", "378282246310005", "+351912345679", "Millennium").getOrThrow()
+        advanceUntilIdle()
+
+        assertEquals(listOf(added, visa, mastercard), viewModel.state.value.itemCards)
+        assertEquals(1, cards.getCardsCalls)
     }
 
     @Test
@@ -251,7 +282,7 @@ class VaultHomeViewModelBalanceTest {
 
     @Test
     fun saveItem_withoutACard_savesNothing() = runTest(dispatcher) {
-        cards.cards = emptyList()
+        cards.serverCards = emptyList()
         val viewModel = viewModel()
         advanceUntilIdle()
         viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
