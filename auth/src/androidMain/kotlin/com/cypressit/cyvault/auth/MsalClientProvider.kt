@@ -13,7 +13,15 @@ import kotlinx.coroutines.withContext
  * The app's MSAL configuration: a raw resource with the client ID, tenant authority and
  * redirect URI. It lives in the app, so this module has no app-specific IDs.
  */
-data class MsalConfig(@param:RawRes val configResId: Int)
+data class MsalConfig(
+    @param:RawRes val configResId: Int,
+    /**
+     * API scopes requested at sign-in (email and Google). Conditional Access policies on that
+     * API (such as requiring MFA) apply during sign-in only for an API the sign-in asks a token
+     * for; otherwise they'd surface later, when the app first calls the API.
+     */
+    val signInScopes: List<String> = emptyList(),
+)
 
 /**
  * Holds the single MSAL native auth client. MSAL's factory blocks while it reads the config,
@@ -23,6 +31,8 @@ internal class MsalClientProvider(
     private val context: Context,
     private val config: MsalConfig,
 ) {
+    val signInScopes: List<String> get() = config.signInScopes
+
     private var client: INativeAuthPublicClientApplication? = null
     private val mutex = Mutex()
 

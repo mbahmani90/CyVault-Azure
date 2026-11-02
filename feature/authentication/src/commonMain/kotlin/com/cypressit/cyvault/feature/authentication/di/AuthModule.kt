@@ -9,6 +9,8 @@ import com.cypressit.cyvault.feature.authentication.domain.usecase.LoginUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.RegisterUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SignInWithGoogleUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SignOutUseCase
+import com.cypressit.cyvault.feature.authentication.domain.usecase.SubmitMfaCodeUseCase
+import com.cypressit.cyvault.feature.authentication.domain.usecase.SubmitMfaPhoneNumberUseCase
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -25,6 +27,8 @@ val authModule = module {
     factory { SignOutUseCase(get()) }
     factory { GetCurrentUserUseCase(get()) }
     factory { SignInWithGoogleUseCase(get()) }
+    factory { SubmitMfaPhoneNumberUseCase(get()) }
+    factory { SubmitMfaCodeUseCase(get()) }
 
     // ViewModel
     // Written out because ForgotPasswordPreview is optional: only debug builds provide it.
@@ -37,6 +41,8 @@ val authModule = module {
             signOutUseCase = get(),
             getCurrentUserUseCase = get(),
             signInWithGoogleUseCase = get(),
+            submitMfaPhoneNumberUseCase = get(),
+            submitMfaCodeUseCase = get(),
             forgotPasswordPreview = getOrNull(),
         )
     }

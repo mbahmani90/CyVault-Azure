@@ -13,6 +13,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthEffect
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthViewModel
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.MfaStep
+import cyvault.authentication.generated.resources.Res
+import cyvault.authentication.generated.resources.mfa_failed
+import org.jetbrains.compose.resources.getString
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -30,6 +34,8 @@ fun AuthScreen(
                 AuthEffect.NavigateToHome -> onAuthSuccess()
                 is AuthEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
                 is AuthEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is AuthEffect.ShowMfaFailed ->
+                    snackbarHostState.showSnackbar(effect.message ?: getString(Res.string.mfa_failed))
             }
         }
     }
@@ -39,6 +45,16 @@ fun AuthScreen(
         containerColor = MaterialTheme.colorScheme.background,
     ) { _ ->
         when {
+            state.mfaStep == MfaStep.PhoneNumber -> MfaPhoneNumberScreen(
+                state = state,
+                onIntent = viewModel::onIntent,
+                modifier = modifier.fillMaxSize(),
+            )
+            state.mfaStep == MfaStep.Code -> MfaCodeScreen(
+                state = state,
+                onIntent = viewModel::onIntent,
+                modifier = modifier.fillMaxSize(),
+            )
             state.isVerificationMode -> VerificationScreen(
                 state = state,
                 onIntent = viewModel::onIntent,

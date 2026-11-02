@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cypressit.cyvault.core.presentation.MviViewModel
 import com.cypressit.cyvault.feature.authentication.domain.debug.ForgotPasswordPreview
+import com.cypressit.cyvault.feature.authentication.domain.model.LoginResult
 import com.cypressit.cyvault.feature.authentication.domain.usecase.ConfirmSignUpUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.ForgotPasswordUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.GetCurrentUserUseCase
@@ -11,6 +12,8 @@ import com.cypressit.cyvault.feature.authentication.domain.usecase.LoginUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.RegisterUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SignInWithGoogleUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SignOutUseCase
+import com.cypressit.cyvault.feature.authentication.domain.usecase.SubmitMfaCodeUseCase
+import com.cypressit.cyvault.feature.authentication.domain.usecase.SubmitMfaPhoneNumberUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +31,8 @@ class AuthViewModel(
     private val signOutUseCase: SignOutUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
+    private val submitMfaPhoneNumberUseCase: SubmitMfaPhoneNumberUseCase,
+    private val submitMfaCodeUseCase: SubmitMfaCodeUseCase,
     /** Null except in debug builds: Forgot Password isn't finished. */
     forgotPasswordPreview: ForgotPasswordPreview? = null,
 ) : ViewModel(), MviViewModel<AuthState, AuthIntent, AuthEffect> {
@@ -82,9 +87,25 @@ class AuthViewModel(
                         isRegisterMode = false,
                         isVerificationMode = false,
                         emailError = null,
+                        mfaStep = null,
+                        mfaPhoneNumber = "",
+                        mfaCode = "",
+                        mfaPhoneNumberError = null,
+                        mfaCodeError = null,
                     )
                 }
 
+            is AuthIntent.MfaPhoneNumberChanged -> _state.update {
+                val typed = intent.phoneNumber.filter { c -> c.isDigit() || c == '+' || c == ' ' }
+                it.copy(mfaPhoneNumber = typed.take(MAX_PHONE_NUMBER_INPUT), mfaPhoneNumberError = null)
+            }
+
+            is AuthIntent.MfaCodeChanged -> _state.update {
+                it.copy(mfaCode = intent.code.filter(Char::isDigit).take(it.mfaCodeLength), mfaCodeError = null)
+            }
+
+            AuthIntent.SubmitMfaPhoneNumber -> handleMfaPhoneNumber()
+            AuthIntent.SubmitMfaCode -> handleMfaCode()
             AuthIntent.SubmitLogin -> handleLogin()
             AuthIntent.SubmitRegister -> handleRegister()
             AuthIntent.SubmitVerification -> handleVerification()
@@ -99,8 +120,61 @@ class AuthViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             loginUseCase(s.email.trim(), s.password)
-                .onSuccess { _effect.send(AuthEffect.NavigateToHome) }
+                .onSuccess { onLoginResult(it) }
                 .onFailure { _effect.send(AuthEffect.ShowError(it.message ?: "Login failed. Please try again.")) }
+            _state.update { it.copy(isLoading = false) }
+        }
+    }
+
+    private suspend fun onLoginResult(result: LoginResult) {
+        when (result) {
+            is LoginResult.SignedIn -> _effect.send(AuthEffect.NavigateToHome)
+            LoginResult.PhoneNumberRequired -> _state.update {
+                it.copy(mfaStep = MfaStep.PhoneNumber, mfaPhoneNumber = "", mfaPhoneNumberError = null)
+            }
+            is LoginResult.CodeRequired -> _state.update {
+                it.copy(
+                    mfaStep = MfaStep.Code,
+                    mfaSentTo = result.sentTo,
+                    mfaCodeLength = result.codeLength.takeIf { length -> length > 0 }
+                        ?: AuthState.DEFAULT_MFA_CODE_LENGTH,
+                    mfaCode = "",
+                    mfaCodeError = null,
+                )
+            }
+        }
+    }
+
+    private fun handleMfaPhoneNumber() {
+        // Entra wants the international format: +, country code, number, no spaces.
+        val phoneNumber = _state.value.mfaPhoneNumber.filterNot { it == ' ' }
+        if (!PHONE_NUMBER.matches(phoneNumber)) {
+            _state.update { it.copy(mfaPhoneNumberError = MfaInputError.InvalidPhoneNumber) }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            submitMfaPhoneNumberUseCase(phoneNumber)
+                .onSuccess { onLoginResult(it) }
+                .onFailure { _effect.send(AuthEffect.ShowMfaFailed(it.message)) }
+            _state.update { it.copy(isLoading = false) }
+        }
+    }
+
+    private fun handleMfaCode() {
+        val s = _state.value
+        if (s.mfaCode.length != s.mfaCodeLength) {
+            _state.update { it.copy(mfaCodeError = MfaInputError.IncompleteCode) }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            submitMfaCodeUseCase(s.mfaCode)
+                .onSuccess { _effect.send(AuthEffect.NavigateToHome) }
+                .onFailure {
+                    _state.update { it.copy(mfaCode = "") }
+                    _effect.send(AuthEffect.ShowMfaFailed(it.message))
+                }
             _state.update { it.copy(isLoading = false) }
         }
     }
@@ -186,6 +260,14 @@ class AuthViewModel(
             valid = false
         }
         return valid
+    }
+
+    private companion object {
+        /** E.164: +, a country code that doesn't start with 0, 8 to 15 digits in all. */
+        val PHONE_NUMBER = Regex("""\+[1-9]\d{7,14}""")
+
+        /** E.164's 16 characters plus room for the spaces people type between groups. */
+        const val MAX_PHONE_NUMBER_INPUT = 20
     }
 
     private fun validateRegisterInputs(): Boolean {

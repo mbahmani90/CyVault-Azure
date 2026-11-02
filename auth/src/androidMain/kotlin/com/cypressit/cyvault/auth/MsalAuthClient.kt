@@ -6,7 +6,9 @@ import com.microsoft.identity.client.IAccount
 import com.microsoft.identity.client.IAuthenticationResult
 import com.microsoft.identity.client.exception.MsalDeclinedScopeException
 import com.microsoft.identity.client.exception.MsalException
+import com.microsoft.identity.nativeauth.AuthMethod
 import com.microsoft.identity.nativeauth.UserAttributes
+import com.microsoft.identity.nativeauth.parameters.NativeAuthChallengeAuthMethodParameters
 import com.microsoft.identity.nativeauth.parameters.NativeAuthGetAccessTokenParameters
 import com.microsoft.identity.nativeauth.parameters.NativeAuthResetPasswordParameters
 import com.microsoft.identity.nativeauth.parameters.NativeAuthSignInParameters
@@ -14,11 +16,15 @@ import com.microsoft.identity.nativeauth.parameters.NativeAuthSignUpParameters
 import com.microsoft.identity.nativeauth.statemachine.errors.Error
 import com.microsoft.identity.nativeauth.statemachine.results.GetAccessTokenResult
 import com.microsoft.identity.nativeauth.statemachine.results.GetAccountResult
+import com.microsoft.identity.nativeauth.statemachine.results.MFARequiredResult
+import com.microsoft.identity.nativeauth.statemachine.results.RegisterStrongAuthChallengeResult
 import com.microsoft.identity.nativeauth.statemachine.results.ResetPasswordStartResult
 import com.microsoft.identity.nativeauth.statemachine.results.SignInResult
 import com.microsoft.identity.nativeauth.statemachine.results.SignOutResult
 import com.microsoft.identity.nativeauth.statemachine.results.SignUpResult
 import com.microsoft.identity.nativeauth.statemachine.states.AccountState
+import com.microsoft.identity.nativeauth.statemachine.states.AwaitingMFAState
+import com.microsoft.identity.nativeauth.statemachine.states.RegisterStrongAuthState
 import com.microsoft.identity.nativeauth.statemachine.states.ResetPasswordCodeRequiredState
 import com.microsoft.identity.nativeauth.statemachine.states.SignUpCodeRequiredState
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -36,15 +42,75 @@ internal class MsalAuthClient(
     private var pendingSignUp: SignUpCodeRequiredState? = null
     private var pendingPasswordReset: ResetPasswordCodeRequiredState? = null
 
-    override suspend fun signIn(email: String, password: String): AuthUser {
+    // MFA: the account's first MFA sign-in registers a phone (RegisterStrongAuthState), later
+    // ones only send a code. Either way the code goes to a different state's submitChallenge(),
+    // so the step that sent it keeps that call here.
+    private var pendingPhoneRegistration: Pair<RegisterStrongAuthState, AuthMethod>? = null
+    private var pendingMfaCode: (suspend (String) -> Any)? = null
+
+    override suspend fun signIn(email: String, password: String): SignInStep {
         val parameters = NativeAuthSignInParameters(email).apply {
             this.password = password.toCharArray()
+            clientProvider.signInScopes.takeIf { it.isNotEmpty() }?.let { scopes = it }
         }
+        pendingPhoneRegistration = null
+        pendingMfaCode = null
         return when (val result = clientProvider.get().signIn(parameters)) {
-            is SignInResult.Complete -> result.resultValue.toAuthUser()
+            is SignInResult.Complete -> SignInStep.SignedIn(result.resultValue.toAuthUser())
+            is SignInResult.StrongAuthMethodRegistrationRequired -> {
+                pendingPhoneRegistration = result.nextState to result.authMethods.sms()
+                SignInStep.PhoneNumberRequired
+            }
+            is SignInResult.MFARequired -> sendMfaCode(result.nextState, result.authMethods.sms())
             else -> fail(result, "Sign in failed")
         }
     }
+
+    override suspend fun submitMfaPhoneNumber(phoneNumber: String): SignInStep {
+        val (state, authMethod) = pendingPhoneRegistration ?: throw sessionExpired()
+        val parameters = NativeAuthChallengeAuthMethodParameters(authMethod, phoneNumber)
+        return when (val result = state.challengeAuthMethod(parameters)) {
+            is RegisterStrongAuthChallengeResult.VerificationRequired -> {
+                pendingPhoneRegistration = null
+                val sent = result.result
+                pendingMfaCode = { code -> sent.getNextState().submitChallenge(code) }
+                SignInStep.CodeRequired(sentTo = sent.getSentTo(), codeLength = sent.getCodeLength())
+            }
+            is SignInResult.Complete -> {
+                pendingPhoneRegistration = null
+                SignInStep.SignedIn(result.resultValue.toAuthUser())
+            }
+            // The registration state is kept, so the user can correct the number and retry.
+            else -> fail(result, "Couldn't send a code to this number")
+        }
+    }
+
+    override suspend fun submitMfaCode(code: String): AuthUser {
+        val submit = pendingMfaCode ?: throw sessionExpired()
+        return when (val result = submit(code)) {
+            is SignInResult.Complete -> {
+                pendingMfaCode = null
+                result.resultValue.toAuthUser()
+            }
+            else -> fail(result, "Verification failed")
+        }
+    }
+
+    private suspend fun sendMfaCode(state: AwaitingMFAState, authMethod: AuthMethod): SignInStep =
+        when (val result = state.requestChallenge(authMethod)) {
+            is MFARequiredResult.VerificationRequired -> {
+                pendingMfaCode = { code -> result.nextState.submitChallenge(code) }
+                SignInStep.CodeRequired(sentTo = result.sentTo, codeLength = result.codeLength)
+            }
+            else -> fail(result, "Couldn't send the code")
+        }
+
+    /** The SMS method among those Entra offers; it's the only MFA method the app supports. */
+    private fun List<AuthMethod>.sms(): AuthMethod =
+        firstOrNull { it.challengeChannel.equals("sms", ignoreCase = true) }
+            ?: throw Exception("Sign in needs a verification method this app doesn't support")
+
+    private fun sessionExpired() = Exception("Sign in session expired. Please sign in again.")
 
     override suspend fun signUp(name: String, email: String, password: String) {
         val parameters = NativeAuthSignUpParameters(email).apply {
@@ -84,9 +150,10 @@ internal class MsalAuthClient(
             suspendCancellableCoroutine<IAuthenticationResult> { continuation ->
                 val parameters = AcquireTokenParameters.Builder()
                     .startAuthorizationFromActivity(activity)
-                    // MSAL rejects an empty list. No API scopes are needed, so ask only for the
-                    // sign-in scopes the app registration already grants.
-                    .withScopes(listOf("openid", "offline_access"))
+                    // The API scope makes Entra run the API's Conditional Access (MFA) here, on
+                    // its own pages in this browser tab: native auth's in-app MFA screens only
+                    // cover email sign-in.
+                    .withScopes(listOf("openid", "offline_access") + clientProvider.signInScopes)
                     // Skips Entra's provider picker and goes straight to Google.
                     .withDomainHint("google.com")
                     .withCallback(object : AuthenticationCallback {

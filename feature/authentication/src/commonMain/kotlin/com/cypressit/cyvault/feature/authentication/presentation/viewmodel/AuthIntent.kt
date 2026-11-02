@@ -14,4 +14,8 @@ sealed interface AuthIntent {
     object BackToLogin : AuthIntent
     object SubmitForgotPassword : AuthIntent
     object SignInWithGoogle : AuthIntent
+    data class MfaPhoneNumberChanged(val phoneNumber: String) : AuthIntent
+    data class MfaCodeChanged(val code: String) : AuthIntent
+    object SubmitMfaPhoneNumber : AuthIntent
+    object SubmitMfaCode : AuthIntent
 }
