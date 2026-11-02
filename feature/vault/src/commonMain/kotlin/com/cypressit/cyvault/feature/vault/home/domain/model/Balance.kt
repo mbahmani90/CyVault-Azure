@@ -8,4 +8,6 @@ data class Balance(
     val currency: String, // ISO 4217, e.g. EUR
     /** ISO 8601: when the purchase or income happened; null lets the API choose when saving. */
     val date: String? = null,
+    /** The card it belongs to; required when saving, null only on balances stored before cards. */
+    val cardId: String? = null,
 )

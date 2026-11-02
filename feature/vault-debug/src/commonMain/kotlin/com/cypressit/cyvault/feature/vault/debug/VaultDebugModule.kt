@@ -6,5 +6,5 @@ import org.koin.dsl.module
 
 /** Loaded in debug builds only; with it, the vault drawer shows "Add 50 sample items". */
 val vaultDebugModule: Module = module {
-    single<SampleBalancesSeeder> { RandomSampleBalancesSeeder(get()) }
+    single<SampleBalancesSeeder> { RandomSampleBalancesSeeder(get(), get()) }
 }
