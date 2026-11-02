@@ -21,8 +21,6 @@ data class VaultHomeState(
     val isSavingBalance: Boolean = false,
     /** True in debug builds, where :feature:vault-debug can add sample balances. */
     val canAddSampleBalances: Boolean = false,
-    /** True in debug builds only, until Add Card's API is ready. */
-    val canAddCard: Boolean = false,
     val isAddingSampleBalances: Boolean = false,
     /** The balance waiting for the user to confirm its deletion, or null when nothing is asked. */
     val pendingDeleteBalance: Balance? = null,
