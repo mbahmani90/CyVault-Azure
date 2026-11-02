@@ -15,6 +15,10 @@ data class BalanceResponseDto(
     @SerialName("updatedAt") val updatedAt: String? = null,
     /** Empty on balances stored before cards. */
     @SerialName("cardId") val cardId: String = "",
+    /** Purchase, Income, Transfer or Receive; [amount] is always above zero. */
+    @SerialName("type") val type: String = "",
+    /** On a transfer or receive, the other side's phone number; else empty. */
+    @SerialName("counterparty") val counterparty: String = "",
 )
 
 @Serializable
@@ -27,4 +31,18 @@ data class BalanceRequestDto(
     @SerialName("date") val date: String? = null,
     /** Required: one of the user's cards. */
     @SerialName("cardId") val cardId: String? = null,
+    /** Purchase or Income: transfers are only made with [TransferRequestDto]. */
+    @SerialName("type") val type: String? = null,
+)
+
+/** Sends money from one of the user's cards to the card linked to [phoneNumber]. */
+@Serializable
+data class TransferRequestDto(
+    /** Picked once per send, so a retry repeats the same transfer instead of sending twice. */
+    @SerialName("transferId") val transferId: String,
+    @SerialName("cardId") val cardId: String,
+    @SerialName("phoneNumber") val phoneNumber: String,
+    /** Above zero. */
+    @SerialName("amount") val amount: Double,
+    @SerialName("currency") val currency: String,
 )

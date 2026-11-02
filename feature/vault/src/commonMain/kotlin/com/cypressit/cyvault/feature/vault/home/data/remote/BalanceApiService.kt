@@ -3,15 +3,20 @@ package com.cypressit.cyvault.feature.vault.home.data.remote
 import com.cypressit.cyvault.auth.AuthClient
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceRequestDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceResponseDto
+import com.cypressit.cyvault.feature.vault.home.data.remote.dto.TransferRequestDto
+import com.cypressit.cyvault.feature.vault.home.domain.repository.InvalidTransferException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.NoCardForPhoneNumberException
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.encodeURLPathPart
 import io.ktor.http.isSuccess
@@ -27,6 +32,7 @@ class BalanceApiService(
 ) {
 
     private val balancesUrl = "${config.baseUrl}/me/balances"
+    private val transfersUrl = "${config.baseUrl}/me/transfers"
 
     /** The CyVault API app registration's balance scope in the environment's Entra tenant. */
     private val balanceScope = "${config.appIdUri}/Balance.ReadWrite"
@@ -44,6 +50,24 @@ class BalanceApiService(
 
     suspend fun deleteBalance(id: String) {
         client.delete(urlFor(id)) { bearerAuth(accessToken()) }.requireSuccess()
+    }
+
+    /**
+     * Sends money; returns the sender's Transfer balance. Fails with [NoCardForPhoneNumberException]
+     * when no card is linked to the phone number, and [InvalidTransferException] when the API
+     * rejects the transfer, such as sending to the card the money comes from.
+     */
+    suspend fun postTransfer(request: TransferRequestDto): BalanceResponseDto {
+        val response = client.post(transfersUrl) {
+            bearerAuth(accessToken())
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        when (response.status) {
+            HttpStatusCode.NotFound -> throw NoCardForPhoneNumberException()
+            HttpStatusCode.BadRequest -> throw InvalidTransferException()
+            else -> return response.requireSuccess().body()
+        }
     }
 
     private fun urlFor(id: String) = "$balancesUrl/${id.encodeURLPathPart()}"

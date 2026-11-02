@@ -2,6 +2,9 @@ package com.cypressit.cyvault.feature.vault.home.data.remote
 
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceRequestDto
+import com.cypressit.cyvault.feature.vault.home.data.remote.dto.TransferRequestDto
+import com.cypressit.cyvault.feature.vault.home.domain.repository.InvalidTransferException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.NoCardForPhoneNumberException
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -113,6 +116,46 @@ class BalanceApiServiceTest {
     fun getBalances_serverError_throws() = runTest {
         assertFailsWith<Exception> {
             api { respond("", HttpStatusCode.Unauthorized) }.getBalances()
+        }
+    }
+
+    private val transfer = TransferRequestDto(
+        transferId = "t1",
+        cardId = "card-1",
+        phoneNumber = "912345678",
+        amount = 20.0,
+        currency = "EUR",
+    )
+
+    @Test
+    fun postTransfer_postsTheTransferAndParsesTheSentBalance() = runTest {
+        val sentJson =
+            """{"id":"t1-sent","name":"","amount":20.0,"currency":"EUR","cardId":"card-1","type":"Transfer","counterparty":"+351912345678"}"""
+
+        val sent = api { respondJson(sentJson) }.postTransfer(transfer)
+
+        val request = requests.single()
+        assertEquals(HttpMethod.Post, request.method)
+        assertEquals("https://api.test/api/me/transfers", request.url.toString())
+        assertEquals("Bearer test-token", request.headers[HttpHeaders.Authorization])
+        val json = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+        assertEquals("t1", json["transferId"]?.jsonPrimitive?.content)
+        assertEquals("912345678", json["phoneNumber"]?.jsonPrimitive?.content)
+        assertEquals("Transfer", sent.type)
+        assertEquals("+351912345678", sent.counterparty)
+    }
+
+    @Test
+    fun postTransfer_noCardForThePhoneNumber_throwsNoCardForPhoneNumber() = runTest {
+        assertFailsWith<NoCardForPhoneNumberException> {
+            api { respond("", HttpStatusCode.NotFound) }.postTransfer(transfer)
+        }
+    }
+
+    @Test
+    fun postTransfer_rejected_throwsInvalidTransfer() = runTest {
+        assertFailsWith<InvalidTransferException> {
+            api { respond("", HttpStatusCode.BadRequest) }.postTransfer(transfer)
         }
     }
 }
