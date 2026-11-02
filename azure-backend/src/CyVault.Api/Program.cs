@@ -48,6 +48,7 @@ builder.Services.AddSingleton(_ => CreateCardEncryption(builder.Configuration.Ge
 builder.Services.AddSingleton(_ => CreateTransferTable(builder.Configuration.GetSection("TransferStorage")));
 builder.Services.AddSingleton(_ => CreateDeviceTable(builder.Configuration.GetSection("DeviceStorage")));
 builder.Services.AddSingleton(_ => CreateChallengeTable(builder.Configuration.GetSection("ChallengeStorage")));
+builder.Services.AddSingleton(_ => CreatePushTokenTable(builder.Configuration.GetSection("PushTokenStorage")));
 builder.Services.AddSingleton<TransferSigning>();
 
 builder.Services.AddHttpClient();
@@ -59,7 +60,7 @@ builder.Services.AddSingleton(sp =>
         ? null
         : new GoogleAccessToken(httpClients, new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned), options);
     return new PushNotifications(
-        httpClients, sp.GetRequiredService<DeviceTable>(), googleToken, options,
+        httpClients, sp.GetRequiredService<PushTokenTable>(), googleToken, options,
         sp.GetRequiredService<ILogger<PushNotifications>>());
 });
 builder.Services.AddSingleton(sp => new SignInSessions(
@@ -186,6 +187,25 @@ static ChallengeTable CreateChallengeTable(IConfigurationSection config)
     var serviceUri = config["TableServiceUri"]
         ?? throw new InvalidOperationException("Set ChallengeStorage:TableServiceUri or ChallengeStorage:ConnectionString.");
     return new ChallengeTable(new TableClient(new Uri(serviceUri), tableName, new DefaultAzureCredential()));
+}
+
+static PushTokenTable CreatePushTokenTable(IConfigurationSection config)
+{
+    var tableName = config["TableName"] ?? "pushtokens";
+
+    // Local development against Azurite. In Azure the Managed Identity is used, and Bicep
+    // creates the table.
+    var connectionString = config["ConnectionString"];
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        var local = new TableClient(connectionString, tableName);
+        local.CreateIfNotExists();
+        return new PushTokenTable(local);
+    }
+
+    var serviceUri = config["TableServiceUri"]
+        ?? throw new InvalidOperationException("Set PushTokenStorage:TableServiceUri or PushTokenStorage:ConnectionString.");
+    return new PushTokenTable(new TableClient(new Uri(serviceUri), tableName, new DefaultAzureCredential()));
 }
 
 static DeviceTable CreateDeviceTable(IConfigurationSection config)

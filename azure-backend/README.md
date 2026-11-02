@@ -185,13 +185,15 @@ These steps are manual for now, once per environment, in its tenant:
 
 ## Push notifications
 
-When a transfer completes, the Function sends a push to each enrolled phone of the receiver
-through Firebase Cloud Messaging (HTTP v1). The push carries data only (`type`, `transferId`,
-`amount`, `currency`, `from`); the app turns it into a notification. The app saves its FCM token
-with `PUT /me/devices/{id}/push-token` (`{ "token": "…" }`) and removes it with `DELETE` on the same
-route. A token lives on one device row at a time: saving it clears it from any other account's
-device on the same phone. A push never fails the transfer, and a token FCM no longer knows is
-dropped.
+When a transfer completes, the Function sends a push to each phone of the receiver that saved its
+token, through Firebase Cloud Messaging (HTTP v1). The push carries data only (`type`, `transferId`,
+`amount`, `currency`, `sender`); the app turns it into a notification. After each sign-in the app
+saves its FCM token with `PUT /me/push-tokens` (`{ "token": "…" }`), and on sign-out removes it
+with `DELETE` on the same route and body. Tokens live in the `pushtokens` table (`PartitionKey` =
+the user's `oid`, `RowKey` = the token's SHA-256), apart from the devices table, so a phone without
+a fingerprint or face unlock, which has no signing key, still gets pushes. A token belongs to one
+user at a time: saving it removes it from any other account that used the same phone. A push never
+fails the transfer, and a token FCM no longer knows is dropped.
 
 No Google key exists: Google trusts the Function's Managed Identity through **workload identity
 federation**. How the flow works, with a diagram, is in the

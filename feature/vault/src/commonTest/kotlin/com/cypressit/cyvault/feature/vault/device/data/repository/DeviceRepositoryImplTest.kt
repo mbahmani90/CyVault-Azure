@@ -215,7 +215,7 @@ class DeviceRepositoryImplTest {
     }
 
     @Test
-    fun enroll_withPushToken_sendsItForTheDevice() = runTest {
+    fun enroll_withPushToken_sendsItFirst() = runTest {
         keyStore.createKey(userId)
         idStore.ids[userId] = "device-1"
         pushTokens.token = "fcm-token"
@@ -225,8 +225,19 @@ class DeviceRepositoryImplTest {
         assertEquals(DeviceEnrollment.Enrolled("device-1"), result.getOrThrow())
         val request = requests.single()
         assertEquals(HttpMethod.Put, request.method)
-        assertEquals("https://api.test/api/me/devices/device-1/push-token", request.url.toString())
+        assertEquals("https://api.test/api/me/push-tokens", request.url.toString())
         assertEquals("fcm-token", request.jsonBody()["token"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun enroll_withoutBiometrics_stillSendsThePushToken() = runTest {
+        keyStore.hasBiometrics = false
+        pushTokens.token = "fcm-token"
+
+        val result = repository { respond("", HttpStatusCode.NoContent) }.enroll(userId)
+
+        assertEquals(DeviceEnrollment.BiometricsUnavailable, result.getOrThrow())
+        assertEquals("https://api.test/api/me/push-tokens", requests.single().url.toString())
     }
 
     @Test
@@ -242,30 +253,29 @@ class DeviceRepositoryImplTest {
 
     @Test
     fun stopPushes_removesTheTokenOnTheApiAndThePhone() = runTest {
-        idStore.ids[userId] = "device-1"
         pushTokens.token = "fcm-token"
 
-        repository { respond("", HttpStatusCode.NoContent) }.stopPushes(userId)
+        repository { respond("", HttpStatusCode.NoContent) }.stopPushes()
 
         val request = requests.single()
         assertEquals(HttpMethod.Delete, request.method)
-        assertEquals("https://api.test/api/me/devices/device-1/push-token", request.url.toString())
+        assertEquals("https://api.test/api/me/push-tokens", request.url.toString())
+        assertEquals("fcm-token", request.jsonBody()["token"]?.jsonPrimitive?.content)
         assertEquals(1, pushTokens.deleteCount)
     }
 
     @Test
     fun stopPushes_apiFails_stillDropsThePhonesToken() = runTest {
-        idStore.ids[userId] = "device-1"
         pushTokens.token = "fcm-token"
 
-        repository { respond("", HttpStatusCode.InternalServerError) }.stopPushes(userId)
+        repository { respond("", HttpStatusCode.InternalServerError) }.stopPushes()
 
         assertEquals(1, pushTokens.deleteCount)
     }
 
     @Test
-    fun stopPushes_notEnrolled_onlyDropsThePhonesToken() = runTest {
-        repository { error("No request expected") }.stopPushes(userId)
+    fun stopPushes_noToken_onlyDropsThePhonesToken() = runTest {
+        repository { error("No request expected") }.stopPushes()
 
         assertEquals(1, pushTokens.deleteCount)
     }

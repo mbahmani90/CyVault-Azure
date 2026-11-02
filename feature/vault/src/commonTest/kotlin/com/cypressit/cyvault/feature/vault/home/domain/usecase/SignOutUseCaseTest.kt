@@ -12,35 +12,24 @@ class SignOutUseCaseTest {
 
     private val devices = FakeDeviceRepository()
 
-    /** Records each step, so the order of stopping pushes and signing out can be checked. */
-    private val steps = mutableListOf<String>()
+    /** How many times pushes had been stopped when the sign-out ran. */
+    private val stopsAtSignOut = mutableListOf<Int>()
 
-    private fun accounts(account: Account?) = object : AccountRepository {
-        override suspend fun currentAccount(): Account? = account
+    private val accounts = object : AccountRepository {
+        override suspend fun currentAccount(): Account? = null
 
         override suspend fun signOut(): Result<Unit> {
-            steps += "signOut:${devices.stoppedPushUserIds}"
+            stopsAtSignOut += devices.stopPushesCount
             return Result.success(Unit)
         }
     }
 
     @Test
-    fun signOut_stopsTheAccountsPushesFirst() = runTest {
-        val account = Account(id = "user-1", name = "Ana", email = "ana@example.com")
-
-        val result = SignOutUseCase(accounts(account), devices)()
+    fun signOut_stopsThePushesFirst() = runTest {
+        val result = SignOutUseCase(accounts, devices)()
 
         assertTrue(result.isSuccess)
         // The pushes stopped while the user was still signed in: the API needs their token.
-        assertEquals(listOf("signOut:[user-1]"), steps)
-    }
-
-    @Test
-    fun signOut_nobodySignedIn_stillSignsOut() = runTest {
-        val result = SignOutUseCase(accounts(account = null), devices)()
-
-        assertTrue(result.isSuccess)
-        assertEquals(emptyList(), devices.stoppedPushUserIds)
-        assertEquals(1, steps.size)
+        assertEquals(listOf(1), stopsAtSignOut)
     }
 }

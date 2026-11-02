@@ -25,7 +25,7 @@ class CyVaultMessagingService : FirebaseMessagingService() {
         if (data["type"] != TRANSFER_RECEIVED) return
         val amount = data["amount"] ?: return
         val currency = data["currency"] ?: return
-        val from = data["from"] ?: return
+        val from = data["sender"] ?: return
         showTransferReceived(data["transferId"].orEmpty(), formatAmount(amount), currency, from)
     }
 
