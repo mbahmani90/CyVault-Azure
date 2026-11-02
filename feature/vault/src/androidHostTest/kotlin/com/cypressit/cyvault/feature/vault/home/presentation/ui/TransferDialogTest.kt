@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
+import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.TransferError
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeIntent
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeState
 import com.cypressit.cyvault.systemdesign.theme.CyTheme
@@ -104,5 +105,27 @@ class TransferDialogTest {
         onNodeWithTag(TransferDialogTags.CANCEL_BUTTON).performClick()
 
         assertEquals(listOf<VaultHomeIntent>(VaultHomeIntent.TransferDismissed), intents)
+    }
+
+    @Test
+    fun aFailedSend_showsWhyInTheDialog() = runComposeUiTest {
+        show(opened.copy(transferError = TransferError.NoCardForPhoneNumber))
+
+        onNodeWithText("No card is linked to this phone number.").assertIsDisplayed()
+    }
+
+    @Test
+    fun whileSending_sendAndCancelAreDisabled() = runComposeUiTest {
+        show(
+            opened.copy(
+                transferPhoneNumber = "912345678",
+                transferAmount = "20",
+                isSendingTransfer = true,
+            ),
+        )
+
+        onNodeWithText("Sending…").assertIsDisplayed()
+        onNodeWithTag(TransferDialogTags.SEND_BUTTON).assertIsNotEnabled()
+        onNodeWithTag(TransferDialogTags.CANCEL_BUTTON).assertIsNotEnabled()
     }
 }

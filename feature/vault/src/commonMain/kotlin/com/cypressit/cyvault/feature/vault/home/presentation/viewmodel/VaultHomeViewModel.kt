@@ -4,9 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cypressit.cyvault.core.presentation.MviViewModel
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
+import com.cypressit.cyvault.feature.vault.card.domain.model.CardInput
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
+import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
+import com.cypressit.cyvault.feature.vault.home.domain.repository.InvalidTransferException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.NoCardForPhoneNumberException
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
@@ -18,6 +22,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccount
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +32,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -44,6 +50,7 @@ class VaultHomeViewModel(
     private val saveBalance: SaveBalanceUseCase,
     private val deleteBalance: DeleteBalanceUseCase,
     private val deleteBalances: DeleteBalancesUseCase,
+    private val sendTransfer: SendTransferUseCase,
     /** Null unless :feature:vault-debug is loaded, which only debug builds do. */
     private val sampleBalancesSeeder: SampleBalancesSeeder? = null,
 ) : ViewModel(), MviViewModel<VaultHomeState, VaultHomeIntent, VaultHomeEffect> {
@@ -58,6 +65,10 @@ class VaultHomeViewModel(
 
     // The signed-in user's Entra object ID: names their cached photo on the device.
     private var userId: String? = null
+
+    // One ID per transfer: pressing Send again after a failure repeats the same transfer on the
+    // API instead of sending the money twice. Changing what's sent starts a new one.
+    private var pendingTransferId: String? = null
 
     init {
         loadUser()
@@ -76,30 +87,21 @@ class VaultHomeViewModel(
             VaultHomeIntent.OpenDrawer -> viewModelScope.launch { _effect.send(VaultHomeEffect.OpenDrawer) }
             is VaultHomeIntent.ChangeProfilePhoto -> updateProfilePhoto(intent.photo)
             VaultHomeIntent.TransferClicked -> openTransfer()
-            VaultHomeIntent.TransferDismissed -> _state.update {
-                it.copy(
-                    isTransferDialogVisible = false,
-                    transferPhoneNumber = "",
-                    transferAmount = "",
-                    isTransferCardMenuOpen = false,
-                    isTransferCurrencyMenuOpen = false,
-                )
-            }
+            VaultHomeIntent.TransferDismissed -> dismissTransfer()
             is VaultHomeIntent.TransferPhoneNumberChanged ->
-                _state.update { it.copy(transferPhoneNumber = intent.value) }
-            is VaultHomeIntent.TransferAmountChanged -> _state.update { it.copy(transferAmount = intent.value) }
+                editTransfer { it.copy(transferPhoneNumber = intent.value) }
+            is VaultHomeIntent.TransferAmountChanged -> editTransfer { it.copy(transferAmount = intent.value) }
             is VaultHomeIntent.TransferCardMenuOpenChanged ->
                 _state.update { it.copy(isTransferCardMenuOpen = intent.isOpen) }
-            is VaultHomeIntent.TransferCardSelected -> _state.update {
+            is VaultHomeIntent.TransferCardSelected -> editTransfer {
                 it.copy(transferCardId = intent.cardId, isTransferCardMenuOpen = false)
             }
             is VaultHomeIntent.TransferCurrencyMenuOpenChanged ->
                 _state.update { it.copy(isTransferCurrencyMenuOpen = intent.isOpen) }
-            is VaultHomeIntent.TransferCurrencySelected -> _state.update {
+            is VaultHomeIntent.TransferCurrencySelected -> editTransfer {
                 it.copy(transferCurrency = intent.currency, isTransferCurrencyMenuOpen = false)
             }
-            // Sending comes with the transfer API; until then Send does nothing.
-            VaultHomeIntent.TransferSubmitted -> Unit
+            VaultHomeIntent.TransferSubmitted -> submitTransfer()
             VaultHomeIntent.AddCardFromDrawer -> viewModelScope.launch {
                 _effect.send(VaultHomeEffect.CloseDrawer)
                 _effect.send(VaultHomeEffect.NavigateToAddCard)
@@ -163,14 +165,16 @@ class VaultHomeViewModel(
         val cardId = _state.value.itemCard?.id ?: return
         // Editing keeps the row's ID; a new balance gets a random one.
         val id = _state.value.editingBalance?.id ?: Uuid.random().toHexString()
+        // The dialog signs the value by its Purchase/Income choice; the balance keeps it above zero.
         val balance = Balance(
             id = id,
             name = title,
             description = description,
-            amount = value,
+            amount = abs(value),
             currency = currency,
             date = date,
             cardId = cardId,
+            type = if (value < 0) BalanceType.Purchase else BalanceType.Income,
         )
         viewModelScope.launch {
             _state.update { it.copy(isSavingBalance = true) }
@@ -298,6 +302,66 @@ class VaultHomeViewModel(
                 .onFailure {
                     _state.update { it.copy(isUpdatingPhoto = false) }
                     _effect.send(VaultHomeEffect.ProfilePhotoUpdateFailed)
+                }
+        }
+    }
+
+    // A change to what's sent makes it a new transfer, and the last error was about the old one.
+    private fun editTransfer(change: (VaultHomeState) -> VaultHomeState) {
+        if (_state.value.isSendingTransfer) return
+        pendingTransferId = null
+        _state.update { change(it).copy(transferError = null) }
+    }
+
+    // While sending, the dialog stays open, so the result has somewhere to show.
+    private fun dismissTransfer() {
+        if (_state.value.isSendingTransfer) return
+        pendingTransferId = null
+        _state.update {
+            it.copy(
+                isTransferDialogVisible = false,
+                transferPhoneNumber = "",
+                transferAmount = "",
+                isTransferCardMenuOpen = false,
+                isTransferCurrencyMenuOpen = false,
+                transferError = null,
+            )
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun submitTransfer() {
+        val current = _state.value
+        if (!current.isTransferEnabled) return
+        val cardId = current.transferCard?.id ?: return
+        val phoneNumber = CardInput.normalizePhoneNumber(current.transferPhoneNumber) ?: return
+        val amount = current.transferAmountValue ?: return
+        val transferId = pendingTransferId ?: Uuid.random().toHexString().also { pendingTransferId = it }
+
+        viewModelScope.launch {
+            _state.update { it.copy(isSendingTransfer = true, transferError = null) }
+            sendTransfer(transferId, cardId, phoneNumber, amount, current.transferCurrency)
+                .onSuccess { sent ->
+                    pendingTransferId = null
+                    _state.update { state ->
+                        state.copy(
+                            // The sender's Transfer row; the receiver's appears in their own list.
+                            balances = (state.balances.filterNot { it.id == sent.id } + sent).newestFirst(),
+                            isSendingTransfer = false,
+                            isTransferDialogVisible = false,
+                            transferPhoneNumber = "",
+                            transferAmount = "",
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    // Shown in the dialog, which stays open with what the user typed.
+                    val transferError = when (error) {
+                        is NoCardForPhoneNumberException -> TransferError.NoCardForPhoneNumber
+                        is InvalidTransferException -> TransferError.Invalid
+                        else -> TransferError.Failed
+                    }
+                    _state.update { it.copy(isSendingTransfer = false, transferError = transferError) }
                 }
         }
     }

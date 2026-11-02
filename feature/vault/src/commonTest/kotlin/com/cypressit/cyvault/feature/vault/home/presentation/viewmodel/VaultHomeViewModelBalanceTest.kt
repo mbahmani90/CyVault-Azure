@@ -9,6 +9,7 @@ import com.cypressit.cyvault.feature.vault.fake.succeedingSessionApi
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
+import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
@@ -20,6 +21,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccount
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +76,7 @@ class VaultHomeViewModelBalanceTest {
             saveBalance = SaveBalanceUseCase(balances),
             deleteBalance = DeleteBalanceUseCase(balances),
             deleteBalances = DeleteBalancesUseCase(balances),
+            sendTransfer = SendTransferUseCase(balances),
             sampleBalancesSeeder = sampleBalancesSeeder,
         )
     }
@@ -109,9 +112,9 @@ class VaultHomeViewModelBalanceTest {
     fun balanceTotals_addUpEachCurrencySeparately() {
         val state = VaultHomeState(
             balances = listOf(
-                main.copy(amount = -25.69),
+                main.copy(amount = 25.69, type = BalanceType.Purchase),
                 savings.copy(amount = 100.0),
-                Balance(id = "uk", name = "Tesco", amount = -12.5, currency = "GBP"),
+                Balance(id = "uk", name = "Tesco", amount = 12.5, currency = "GBP", type = BalanceType.Purchase),
             ),
         )
 
@@ -378,5 +381,37 @@ class VaultHomeViewModelBalanceTest {
 
         assertFalse(viewModel.state.value.canAddSampleBalances)
         assertFalse(viewModel.state.value.isAddingSampleBalances)
+    }
+
+    @Test
+    fun balanceTotals_subtractPurchasesAndTransfersAndAddIncomeAndReceives() {
+        fun balance(type: BalanceType, amount: Double) =
+            Balance(id = type.name, name = "", amount = amount, currency = "EUR", type = type)
+
+        val state = VaultHomeState(
+            balances = listOf(
+                balance(BalanceType.Income, 100.0),
+                balance(BalanceType.Purchase, 30.0),
+                balance(BalanceType.Transfer, 20.0),
+                balance(BalanceType.Receive, 5.0),
+            ),
+        )
+
+        assertEquals(listOf("EUR" to 55.0), state.balanceTotals)
+    }
+
+    @Test
+    fun saveItem_savesAPositiveAmountWithItsType() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.SaveItem("Lidl", "", -12.5, "EUR", "2026-10-28T09:00:00Z"))
+        advanceUntilIdle()
+
+        val saved = balances.saved.single()
+        assertEquals(12.5, saved.amount)
+        assertEquals(BalanceType.Purchase, saved.type)
     }
 }

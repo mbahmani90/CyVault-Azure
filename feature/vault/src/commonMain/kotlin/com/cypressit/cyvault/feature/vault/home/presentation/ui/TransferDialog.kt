@@ -17,6 +17,7 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
+import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.TransferError
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeIntent
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeState
 import com.cypressit.cyvault.systemdesign.components.exposeTestTags
@@ -39,11 +41,15 @@ import cyvault.vault.generated.resources.transfer_cancel
 import cyvault.vault.generated.resources.transfer_card
 import cyvault.vault.generated.resources.transfer_card_option
 import cyvault.vault.generated.resources.transfer_currency_description
+import cyvault.vault.generated.resources.transfer_error_failed
+import cyvault.vault.generated.resources.transfer_error_invalid
+import cyvault.vault.generated.resources.transfer_error_no_card
 import cyvault.vault.generated.resources.transfer_loading_cards
 import cyvault.vault.generated.resources.transfer_no_cards
 import cyvault.vault.generated.resources.transfer_phone_number
 import cyvault.vault.generated.resources.transfer_phone_number_placeholder
 import cyvault.vault.generated.resources.transfer_send
+import cyvault.vault.generated.resources.transfer_sending
 import cyvault.vault.generated.resources.transfer_title
 import org.jetbrains.compose.resources.stringResource
 
@@ -152,6 +158,21 @@ internal fun TransferDialog(
                         }
                     }
                 }
+
+                // Why the last Send failed; the dialog stays open so the user can fix it.
+                state.transferError?.let { error ->
+                    Text(
+                        text = stringResource(
+                            when (error) {
+                                TransferError.NoCardForPhoneNumber -> Res.string.transfer_error_no_card
+                                TransferError.Invalid -> Res.string.transfer_error_invalid
+                                TransferError.Failed -> Res.string.transfer_error_failed
+                            },
+                        ),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             }
         },
         confirmButton = {
@@ -160,12 +181,17 @@ internal fun TransferDialog(
                 enabled = state.isTransferEnabled,
                 modifier = Modifier.testTag(TransferDialogTags.SEND_BUTTON),
             ) {
-                Text(stringResource(Res.string.transfer_send))
+                Text(
+                    stringResource(
+                        if (state.isSendingTransfer) Res.string.transfer_sending else Res.string.transfer_send,
+                    ),
+                )
             }
         },
         dismissButton = {
             TextButton(
                 onClick = { onIntent(VaultHomeIntent.TransferDismissed) },
+                enabled = !state.isSendingTransfer,
                 modifier = Modifier.testTag(TransferDialogTags.CANCEL_BUTTON),
             ) {
                 Text(stringResource(Res.string.transfer_cancel))
