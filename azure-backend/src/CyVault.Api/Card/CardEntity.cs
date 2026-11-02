@@ -26,6 +26,18 @@ public sealed class CardEntity : ITableEntity
     /// <summary>The bank the user named for the card; empty when they didn't name one.</summary>
     public string BankName { get; set; } = "";
 
+    /// <summary>
+    /// The full card number, AES-GCM encrypted with its own data key: base64 of nonce, ciphertext
+    /// and tag. Empty on cards stored before encryption existed.
+    /// </summary>
+    public string EncryptedCardNumber { get; set; } = "";
+
+    /// <summary>That data key, wrapped by card-key in Key Vault (base64).</summary>
+    public string WrappedKey { get; set; } = "";
+
+    /// <summary>The card-key version that wrapped the data key, so it still unwraps after rotation.</summary>
+    public string KeyId { get; set; } = "";
+
     /// <summary>E.164, such as +351912345678: the same number always has the same form.</summary>
     public string PhoneNumber { get; set; } = "";
 

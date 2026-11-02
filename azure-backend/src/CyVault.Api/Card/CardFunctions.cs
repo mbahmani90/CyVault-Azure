@@ -14,7 +14,10 @@ namespace CyVault.Api.Card;
 /// The signed-in user's cards, each linked to a phone number. Like the balance routes, no user ID
 /// is in any route: the partition is always the oid from the validated access token.
 /// </summary>
-public sealed partial class CardFunctions(CardTables tables, ILogger<CardFunctions> logger)
+public sealed partial class CardFunctions(
+    CardTables tables,
+    CardEncryption encryption,
+    ILogger<CardFunctions> logger)
 {
     private const int MaxBankNameLength = 50;
 
@@ -94,6 +97,9 @@ public sealed partial class CardFunctions(CardTables tables, ILogger<CardFunctio
                 return new ConflictObjectResult("This phone number is already linked to a card.");
         }
 
+        // Only the encrypted number is stored; Last4 and Brand stay readable for the card list.
+        var encrypted = await encryption.EncryptAsync(cardNumber, cancellationToken);
+
         var entity = new CardEntity
         {
             PartitionKey = caller.ObjectId!,
@@ -101,6 +107,9 @@ public sealed partial class CardFunctions(CardTables tables, ILogger<CardFunctio
             Last4 = cardNumber[^4..],
             Brand = BrandOf(cardNumber),
             BankName = bankName,
+            EncryptedCardNumber = encrypted.Ciphertext,
+            WrappedKey = encrypted.WrappedKey,
+            KeyId = encrypted.KeyId,
             PhoneNumber = phoneNumber,
             CreatedAt = existing.HasValue ? existing.Value!.CreatedAt : DateTimeOffset.UtcNow,
         };
