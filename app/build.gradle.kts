@@ -47,6 +47,7 @@ kotlin {
             implementation(projects.feature.authentication)
             implementation(projects.feature.vault)
             implementation(projects.devicekey)
+            implementation(projects.push)
 
             // Compose — used directly in App.kt and MainViewController.kt
             implementation(libs.compose.runtime)

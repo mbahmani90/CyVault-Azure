@@ -37,6 +37,7 @@ kotlin {
             implementation(projects.core)
             implementation(projects.auth)
             implementation(projects.devicekey)
+            implementation(projects.push)
             implementation(projects.systemdesign)
             implementation(projects.testtags)
 
