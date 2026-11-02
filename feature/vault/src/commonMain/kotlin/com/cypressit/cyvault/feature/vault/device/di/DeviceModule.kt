@@ -19,11 +19,11 @@ internal val deviceModule = module {
     single<DeviceIdStore> { DataStoreDeviceIdStore(get()) }
 
     // Remote (AuthClient comes from :auth's authClientModule, DeviceKeyStore from :devicekey's
-    // deviceKeyModule)
+    // deviceKeyModule, PushTokens from :push's pushModule)
     single { DeviceApiService(get(), get(), apiConfig()) }
 
     // The keys belong to the device, one per account, so nothing here is kept per session.
-    single<DeviceRepository> { DeviceRepositoryImpl(get(), get(), get(), get(named(IO_DISPATCHER))) }
+    single<DeviceRepository> { DeviceRepositoryImpl(get(), get(), get(), get(), get(named(IO_DISPATCHER))) }
     factory { EnrollDeviceUseCase(get()) }
 }
 

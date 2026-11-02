@@ -4,9 +4,17 @@ package com.cypressit.cyvault.feature.vault.device.domain.repository
 interface DeviceRepository {
     /**
      * Makes sure the device has a signing key for the account and that the API knows its public
-     * key. Does nothing when both are already done, so it's cheap to call on every start.
+     * key, then sends the phone's push token so the account's pushes reach this phone. The key part
+     * does nothing when already done, so it's cheap to call on every start; a failed push token
+     * doesn't fail the enrollment.
      */
     suspend fun enroll(userId: String): Result<DeviceEnrollment>
+
+    /**
+     * Stops the account's pushes on this phone, before it signs out: the API forgets the token and
+     * the phone drops it. Best effort: it never fails, even offline.
+     */
+    suspend fun stopPushes(userId: String)
 
     /**
      * Shows the biometric prompt with [prompt]'s text and signs [message] with this device's key.

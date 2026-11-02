@@ -16,6 +16,7 @@ import com.cypressit.cyvault.feature.vault.device.domain.repository.DeviceReposi
 import com.cypressit.cyvault.feature.vault.device.domain.repository.DeviceSignature
 import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningCancelledException
 import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningUnavailableException
+import com.cypressit.cyvault.push.PushTokens
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlin.io.encoding.Base64
@@ -24,14 +25,34 @@ class DeviceRepositoryImpl(
     private val apiService: DeviceApiService,
     private val keyStore: DeviceKeyStore,
     private val idStore: DeviceIdStore,
+    private val pushTokens: PushTokens,
     private val ioDispatcher: CoroutineDispatcher,
 ) : DeviceRepository {
 
     override suspend fun enroll(userId: String): Result<DeviceEnrollment> = runSuspendCatching {
         try {
-            DeviceEnrollment.Enrolled(enrolledDeviceId(userId))
+            val deviceId = enrolledDeviceId(userId)
+            registerPushToken(deviceId)
+            DeviceEnrollment.Enrolled(deviceId)
         } catch (_: BiometricsUnavailableException) {
             DeviceEnrollment.BiometricsUnavailable
+        }
+    }
+
+    override suspend fun stopPushes(userId: String) {
+        // Each step on its own: offline, the API keeps the token, but the phone still drops it, and
+        // FCM then tells the API it's gone at the next push.
+        idStore.deviceId(userId)?.let { deviceId ->
+            runSuspendCatching { apiService.deletePushToken(deviceId) }
+        }
+        runSuspendCatching { pushTokens.delete() }
+    }
+
+    // Sent on every start: the API keeps one device per token, and FCM may have replaced the token
+    // since. A phone without a token (no Play services, iOS for now) just gets no pushes.
+    private suspend fun registerPushToken(deviceId: String) {
+        runSuspendCatching {
+            pushTokens.current()?.let { apiService.putPushToken(deviceId, it) }
         }
     }
 

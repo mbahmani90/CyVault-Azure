@@ -61,7 +61,7 @@ internal val homeModule = module {
         factory { ObserveCardsUseCase(get()) }
         factory { DeleteCardUseCase(get()) }
         factory { GetCurrentAccountUseCase(get()) }
-        factory { SignOutUseCase(get()) }
+        factory { SignOutUseCase(get(), get()) }
         factory { GetProfilePhotoUseCase(get()) }
         factory { ChangeProfilePhotoUseCase(get()) }
         factory { ClearProfilePhotoCacheUseCase(get()) }
