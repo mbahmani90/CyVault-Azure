@@ -48,6 +48,9 @@ data class VaultHomeState(
     val transferAmount: String = "",
     val transferCurrency: String = "EUR",
     val isTransferCurrencyMenuOpen: Boolean = false,
+    val isSendingTransfer: Boolean = false,
+    /** Why the last Send failed, shown in the dialog; null when it didn't, or the input changed since. */
+    val transferError: TransferError? = null,
 ) {
     val itemCard: Card?
         get() = itemCards.firstOrNull { it.id == itemCardId }
@@ -73,11 +76,12 @@ data class VaultHomeState(
     val isTransferPhoneNumberInvalid: Boolean
         get() = transferPhoneNumber.isNotBlank() && CardInput.normalizePhoneNumber(transferPhoneNumber) == null
 
-    /** Send needs a card, a valid phone number and an amount above zero. */
+    /** Send needs a card, a valid phone number and an amount above zero, and no send in flight. */
     val isTransferEnabled: Boolean
         get() = transferCard != null &&
             CardInput.normalizePhoneNumber(transferPhoneNumber) != null &&
-            transferAmountValue != null
+            transferAmountValue != null &&
+            !isSendingTransfer
 
     val isSelectionMode: Boolean
         get() = selectedBalanceIds.isNotEmpty()
@@ -97,5 +101,17 @@ data class VaultHomeState(
     val balanceTotals: List<Pair<String, Double>>
         get() = balances
             .groupBy { it.currency }
-            .map { (currency, items) -> currency to items.sumOf { it.amount } }
+            .map { (currency, items) -> currency to items.sumOf { it.signedAmount } }
+}
+
+/** Why sending money failed. */
+enum class TransferError {
+    /** No card is linked to the receiver's phone number. */
+    NoCardForPhoneNumber,
+
+    /** The API rejected it, such as sending to the card the money comes from. */
+    Invalid,
+
+    /** Anything else, such as no connection: the same transfer can be retried. */
+    Failed,
 }

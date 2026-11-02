@@ -8,6 +8,9 @@ import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
 import com.cypressit.cyvault.feature.vault.fake.succeedingSessionApi
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
+import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
+import com.cypressit.cyvault.feature.vault.home.domain.repository.InvalidTransferException
+import com.cypressit.cyvault.feature.vault.home.domain.repository.NoCardForPhoneNumberException
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
@@ -19,6 +22,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccount
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,13 +60,14 @@ class VaultHomeViewModelTransferTest {
 
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
+    private val balances = FakeBalanceRepository()
+
     private fun viewModel(
         cards: CardRepository = FakeCardRepository(cards = listOf(visa, mastercard)),
     ): VaultHomeViewModel {
         val authClient = FakeAuthClient()
         val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient))
         val photos = FakeProfilePhotoRepository()
-        val balances = FakeBalanceRepository()
         return VaultHomeViewModel(
             getCards = GetCardsUseCase(cards),
             observeCards = ObserveCardsUseCase(cards),
@@ -76,6 +81,7 @@ class VaultHomeViewModelTransferTest {
             saveBalance = SaveBalanceUseCase(balances),
             deleteBalance = DeleteBalanceUseCase(balances),
             deleteBalances = DeleteBalancesUseCase(balances),
+            sendTransfer = SendTransferUseCase(balances),
         )
     }
 
@@ -178,5 +184,88 @@ class VaultHomeViewModelTransferTest {
         assertFalse(state.isTransferDialogVisible)
         assertEquals("", state.transferPhoneNumber)
         assertEquals("", state.transferAmount)
+    }
+
+    private fun TestScope.filledTransfer(): VaultHomeViewModel {
+        val viewModel = openedTransfer()
+        viewModel.onIntent(VaultHomeIntent.TransferPhoneNumberChanged("912345678"))
+        viewModel.onIntent(VaultHomeIntent.TransferAmountChanged("20,50"))
+        return viewModel
+    }
+
+    @Test
+    fun send_sendsFromTheChosenCardAndAddsTheTransferRow() = runTest(dispatcher) {
+        val viewModel = filledTransfer()
+
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        val state = viewModel.state.value
+        val sent = state.balances.single()
+        assertEquals(BalanceType.Transfer, sent.type)
+        assertEquals(20.5, sent.amount)
+        assertEquals("visa", sent.cardId)
+        // The phone number goes to the API in E.164.
+        assertEquals("+351912345678", sent.counterparty)
+        assertFalse(state.isTransferDialogVisible)
+        assertFalse(state.isSendingTransfer)
+        assertEquals("", state.transferAmount)
+    }
+
+    @Test
+    fun send_noCardForThePhoneNumber_saysSoInTheDialog() = runTest(dispatcher) {
+        balances.transferFailure = NoCardForPhoneNumberException()
+        val viewModel = filledTransfer()
+
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        val state = viewModel.state.value
+        assertEquals(TransferError.NoCardForPhoneNumber, state.transferError)
+        assertTrue(state.isTransferDialogVisible)
+        assertEquals("20,50", state.transferAmount)
+    }
+
+    @Test
+    fun send_rejected_isInvalid() = runTest(dispatcher) {
+        balances.transferFailure = InvalidTransferException()
+        val viewModel = filledTransfer()
+
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        assertEquals(TransferError.Invalid, viewModel.state.value.transferError)
+    }
+
+    @Test
+    fun retryingAfterAFailure_repeatsTheSameTransfer() = runTest(dispatcher) {
+        balances.transferFailure = IllegalStateException("offline")
+        val viewModel = filledTransfer()
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+        assertEquals(TransferError.Failed, viewModel.state.value.transferError)
+
+        balances.transferFailure = null
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        assertEquals(1, balances.transferIds.toSet().size)
+        assertEquals(2, balances.transferIds.size)
+    }
+
+    @Test
+    fun changingTheAmountAfterAFailure_makesItANewTransferAndClearsTheError() = runTest(dispatcher) {
+        balances.transferFailure = IllegalStateException("offline")
+        val viewModel = filledTransfer()
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.TransferAmountChanged("30"))
+        assertNull(viewModel.state.value.transferError)
+        balances.transferFailure = null
+        viewModel.onIntent(VaultHomeIntent.TransferSubmitted)
+        advanceUntilIdle()
+
+        assertEquals(2, balances.transferIds.toSet().size)
     }
 }

@@ -11,6 +11,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
+import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
+import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
 import com.cypressit.cyvault.systemdesign.theme.CyTheme
 import com.cypressit.cyvault.testtags.AddItemDialogTags
 import org.junit.Test
@@ -27,10 +29,12 @@ class AddItemDialogTest {
 
     private val menuOpenChanges = mutableListOf<Boolean>()
 
-    private fun ComposeUiTest.show(card: Card?, isLoadingCards: Boolean = false) = setContent {
+    private var deleteClicks = 0
+
+    private fun ComposeUiTest.show(card: Card?, isLoadingCards: Boolean = false, item: Balance? = null) = setContent {
         CyTheme(darkTheme = false) {
             AddItemDialog(
-                item = null,
+                item = item,
                 isSaving = false,
                 cards = listOfNotNull(card),
                 card = card,
@@ -40,7 +44,7 @@ class AddItemDialogTest {
                 onCardSelected = {},
                 onDismiss = {},
                 onSave = { _, _, _, _, _ -> },
-                onDelete = {},
+                onDelete = { deleteClicks++ },
             )
         }
     }
@@ -88,5 +92,26 @@ class AddItemDialogTest {
         onNodeWithTag(AddItemDialogTags.CARD_FIELD).performClick()
 
         assertEquals(listOf(true), menuOpenChanges)
+    }
+
+    @Test
+    fun aTransfer_showsReadOnlyWithDelete() = runComposeUiTest {
+        val transfer = Balance(
+            id = "t1-sent",
+            name = "",
+            amount = 20.0,
+            currency = "EUR",
+            cardId = "visa",
+            type = BalanceType.Transfer,
+            counterparty = "+351912345678",
+        )
+        show(card = visa, item = transfer)
+
+        onNodeWithText("Sent to +351912345678").assertIsDisplayed()
+        onNodeWithText("20.00 €").assertIsDisplayed()
+        onNodeWithTag(AddItemDialogTags.TITLE_FIELD).assertDoesNotExist()
+        onNodeWithTag(AddItemDialogTags.SAVE_BUTTON).assertDoesNotExist()
+        onNodeWithText("Delete").performClick()
+        assertEquals(1, deleteClicks)
     }
 }

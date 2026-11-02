@@ -62,6 +62,7 @@ import cyvault.vault.generated.resources.vault_home_add_item_type_income
 import cyvault.vault.generated.resources.vault_home_add_item_type_purchase
 import cyvault.vault.generated.resources.vault_home_add_item_value
 import cyvault.vault.generated.resources.vault_home_balance_delete_confirm
+import cyvault.vault.generated.resources.vault_home_balance_transfer_close
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
@@ -82,6 +83,7 @@ internal fun currencySymbol(code: String): String = when (code) {
 /**
  * Asks for an item's title, description, type, card, value with its currency, and date and time,
  * and saves it as a balance: a purchase is saved as a negative amount, income as a positive one.
+ * A transfer or receive [item] can't be edited: it shows read-only, with Delete.
  * The date starts at now, or at the stored date when editing [item]. Save needs a title, a card
  * and a numeric value. The card list, the chosen card and its menu come from the ViewModel.
  */
@@ -103,11 +105,16 @@ internal fun AddItemDialog(
     /** Asks to delete [item]; the Delete button only shows when editing. */
     onDelete: () -> Unit,
 ) {
+    if (item != null && item.type.isFromTransfer) {
+        TransferDetailsDialog(item = item, card = card, onDismiss = onDismiss, onDelete = onDelete)
+        return
+    }
+
     var title by rememberSaveable { mutableStateOf(item?.name.orEmpty()) }
     var description by rememberSaveable { mutableStateOf(item?.description.orEmpty()) }
     // The field always shows a positive number; the type decides the sign that's saved.
     var value by rememberSaveable { mutableStateOf(item?.amount?.let { abs(it).toString() }.orEmpty()) }
-    var isIncome by rememberSaveable { mutableStateOf(item != null && item.amount >= 0) }
+    var isIncome by rememberSaveable { mutableStateOf(item != null && !item.type.isOutgoing) }
     var isTypeMenuOpen by rememberSaveable { mutableStateOf(false) }
     var currency by rememberSaveable { mutableStateOf(item?.currency ?: itemCurrencies.first()) }
     var isCurrencyMenuOpen by rememberSaveable { mutableStateOf(false) }
@@ -336,6 +343,49 @@ internal fun AddItemDialog(
                     modifier = Modifier.testTag(AddItemDialogTags.SAVE_BUTTON),
                 ) {
                     Text(stringResource(Res.string.vault_home_add_item_save))
+                }
+            }
+        },
+    )
+}
+
+/**
+ * A transfer or receive: who the money went to or came from, the amount, when, and the card. It
+ * can't be edited, only deleted from the user's own list.
+ */
+@Composable
+private fun TransferDetailsDialog(
+    item: Balance,
+    card: Card?,
+    onDismiss: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        // A dialog is its own window, so it needs exposeTestTags as well as the app root.
+        modifier = Modifier.exposeTestTags(),
+        title = { Text(balanceTitle(item)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = formatAmount(abs(item.amount), item.currency, symbolAfter = true),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                formatBalanceDate(item.date)?.let { Text(it) }
+                card?.let { Text(cardLabel(it)) }
+            }
+        },
+        confirmButton = {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text(stringResource(Res.string.vault_home_balance_delete_confirm))
+                }
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(Res.string.vault_home_balance_transfer_close))
                 }
             }
         },
