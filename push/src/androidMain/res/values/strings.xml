@@ -1,0 +1,5 @@
+<resources>
+    <string name="push_channel_transfers">Money received</string>
+    <string name="push_transfer_received_title">Money received</string>
+    <string name="push_transfer_received_body">%1$s %2$s from %3$s</string>
+</resources>
