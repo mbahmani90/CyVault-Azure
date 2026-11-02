@@ -108,21 +108,28 @@ internal class AndroidDeviceKeyStore(private val activityProvider: ActivityProvi
             }
 
             activity.runOnUiThread {
-                val builder = BiometricPrompt.Builder(activity)
-                    .setTitle(prompt.title)
-                    .setDescription(prompt.description)
-                    .setNegativeButton(prompt.cancelLabel, activity.mainExecutor) { _, _ ->
-                        fail(BiometricCancelledException())
+                // Starting the prompt can throw (a SecurityException without USE_BIOMETRIC, say).
+                // When this runs posted to the UI thread, an escaping exception would crash the
+                // app, so it fails the call instead.
+                try {
+                    val builder = BiometricPrompt.Builder(activity)
+                        .setTitle(prompt.title)
+                        .setDescription(prompt.description)
+                        .setNegativeButton(prompt.cancelLabel, activity.mainExecutor) { _, _ ->
+                            fail(BiometricCancelledException())
+                        }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        builder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
                     }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    builder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                    builder.build().authenticate(
+                        BiometricPrompt.CryptoObject(signature),
+                        cancellation,
+                        activity.mainExecutor,
+                        callback,
+                    )
+                } catch (e: RuntimeException) {
+                    fail(e)
                 }
-                builder.build().authenticate(
-                    BiometricPrompt.CryptoObject(signature),
-                    cancellation,
-                    activity.mainExecutor,
-                    callback,
-                )
             }
         }
 
