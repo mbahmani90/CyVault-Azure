@@ -7,6 +7,8 @@
     "principalId": { "value": "${AZURE_PRINCIPAL_ID}" },
     "entraInstance": { "value": "${ENTRA_INSTANCE=https://cyvault.ciamlogin.com/}" },
     "entraTenantId": { "value": "${ENTRA_TENANT_ID=e5cb5788-11bc-499b-82f2-095c6f201b40}" },
-    "entraApiClientId": { "value": "${ENTRA_API_CLIENT_ID}" }
+    "entraApiClientId": { "value": "${ENTRA_API_CLIENT_ID}" },
+    "googleProjectId": { "value": "${GOOGLE_PROJECT_ID=cyvault-512912}" },
+    "googleProjectNumber": { "value": "${GOOGLE_PROJECT_NUMBER=949572795462}" }
   }
 }

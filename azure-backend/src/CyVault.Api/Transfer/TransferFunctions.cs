@@ -6,6 +6,7 @@ using Azure.Data.Tables;
 using CyVault.Api.Auth;
 using CyVault.Api.Balance;
 using CyVault.Api.Card;
+using CyVault.Api.Push;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -24,6 +25,7 @@ public sealed partial class TransferFunctions(
     TableClient balances,
     CardTables cardTables,
     TransferSigning signing,
+    PushNotifications push,
     ILogger<TransferFunctions> logger)
 {
     private const string BodyShape =
@@ -107,6 +109,11 @@ public sealed partial class TransferFunctions(
 
         logger.LogInformation(
             "Transfer {Id} from {Sender} to {Receiver} completed", transfer.RowKey, senderOid, transfer.ReceiverOid);
+
+        // Only when the money first moves: a retry of a finished transfer returned above.
+        await push.TransferReceivedAsync(
+            transfer.ReceiverOid, transfer.RowKey, transfer.Amount, transfer.Currency, senderCard.PhoneNumber,
+            cancellationToken);
         var saved = await balances.GetEntityAsync<BalanceEntity>(sent.PartitionKey, sent.RowKey, cancellationToken: cancellationToken);
         return new OkObjectResult(BalanceFunctions.ToResponse(saved.Value));
     }

@@ -182,3 +182,45 @@ These steps are manual for now, once per environment, in its tenant:
    Both values are in `azd env get-values`. The Function's Managed Identity then signs in as the
    CyVault API app. If the tenant doesn't accept the federated credential, set the
    `Graph__ClientSecret` app setting on the Function App instead.
+
+## Push notifications
+
+When a transfer completes, the Function sends a push to each enrolled phone of the receiver
+through Firebase Cloud Messaging (HTTP v1). The push carries data only (`type`, `transferId`,
+`amount`, `currency`, `from`); the app turns it into a notification. The app saves its FCM token
+with `PUT /me/devices/{id}/push-token` (`{ "token": "…" }`) and removes it with `DELETE` on the same
+route. A token lives on one device row at a time: saving it clears it from any other account's
+device on the same phone. A push never fails the transfer, and a token FCM no longer knows is
+dropped.
+
+No Google key exists: Google trusts the Function's Managed Identity through **workload identity
+federation**. How the flow works, with a diagram, is in the
+[main README](../README.md#push-notifications-workload-identity-federation-with-google). The Google
+project is shared by all environments (`GOOGLE_PROJECT_ID` and `GOOGLE_PROJECT_NUMBER` in the azd
+environment override it); without a project, no push is sent, as in local runs. Set up once:
+
+1. In Google Cloud Shell, in the Firebase project:
+
+   ```bash
+   gcloud services enable fcm.googleapis.com iamcredentials.googleapis.com sts.googleapis.com
+   gcloud iam service-accounts create fcm-sender --display-name "CyVault push"
+   gcloud projects add-iam-policy-binding <PROJECT_ID> --member "serviceAccount:fcm-sender@<PROJECT_ID>.iam.gserviceaccount.com" --role roles/firebasecloudmessaging.admin --condition None
+   gcloud iam workload-identity-pools create azure --location global --display-name "Azure"
+   gcloud iam workload-identity-pools providers create-oidc cyvault --workload-identity-pool azure --location global --issuer-uri "https://sts.windows.net/<AZURE_TENANT_ID>/" --allowed-audiences "api://<AZURE_TENANT_ID>/cyvault-fcm" --attribute-mapping "google.subject=assertion.sub"
+   ```
+
+2. In the Azure subscription's tenant (`AZURE_TENANT_ID`, not the External ID tenant), an app
+   registration whose only job is to be the audience of the token Google checks. Entra only
+   accepts identifier URIs that contain the tenant ID:
+
+   ```bash
+   az ad app create --display-name "CyVault FCM audience" --identifier-uris api://<AZURE_TENANT_ID>/cyvault-fcm --sign-in-audience AzureADMyOrg
+   az ad sp create --id <its appId>
+   ```
+
+3. For each environment, after its first `azd up`, let its Function act as `fcm-sender`
+   (`FUNCTION_PRINCIPAL_ID` is in `azd env get-values`):
+
+   ```bash
+   gcloud iam service-accounts add-iam-policy-binding fcm-sender@<PROJECT_ID>.iam.gserviceaccount.com --role roles/iam.workloadIdentityUser --member "principal://iam.googleapis.com/projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/azure/subject/<FUNCTION_PRINCIPAL_ID>"
+   ```
