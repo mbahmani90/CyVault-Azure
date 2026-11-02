@@ -3,6 +3,7 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cypressit.cyvault.core.presentation.MviViewModel
+import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
@@ -15,6 +16,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCas
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.channels.Channel
@@ -31,6 +33,7 @@ import kotlin.uuid.Uuid
 
 class VaultHomeViewModel(
     private val getCards: GetCardsUseCase,
+    private val observeCards: ObserveCardsUseCase,
     private val deleteCard: DeleteCardUseCase,
     private val getCurrentAccount: GetCurrentAccountUseCase,
     private val signOutUser: SignOutUseCase,
@@ -58,10 +61,11 @@ class VaultHomeViewModel(
 
     init {
         loadUser()
-        // Cards aren't loaded on start: CardApiService still points to a placeholder host that
-        // doesn't exist, so every start showed an error. Load them again once cards move to Azure.
         loadBalances()
-        loadRowCards()
+        collectCards()
+        // Fetched once for the row names; the dialogs then use the shared list. Quietly leaves the
+        // names out on failure: a dialog fetches again, and reports it, when it opens.
+        viewModelScope.launch { getCards() }
     }
 
     override fun onIntent(intent: VaultHomeIntent) {
@@ -298,67 +302,52 @@ class VaultHomeViewModel(
         }
     }
 
-    // The cards the balance rows are named after. Quietly leaves the names out on failure: the
-    // rows still work without them, and the dialog reports it when it loads the cards again.
-    private fun loadRowCards() {
+    // Home's card lists come from the repository's shared one, so a card added or deleted on the
+    // Cards screen shows here at once. A chosen card that's gone falls back to the first.
+    private fun collectCards() {
         viewModelScope.launch {
-            getCards().onSuccess { cards -> _state.update { it.copy(itemCards = cards) } }
+            observeCards().collect { cards ->
+                _state.update { state ->
+                    state.copy(
+                        itemCards = cards,
+                        transferCards = cards,
+                        itemCardId = state.itemCardId.keptOrFirst(cards),
+                        transferCardId = state.transferCardId.keptOrFirst(cards),
+                    )
+                }
+            }
         }
     }
 
-    // Opens the add-item dialog for a new balance, or for [editing]. Like the transfer dialog, it
-    // loads the cards into a list of its own.
+    // Fetches the cards for a dialog that has none to show; collectCards takes the result.
+    private fun fetchDialogCards(setLoading: VaultHomeState.(Boolean) -> VaultHomeState) {
+        _state.update { it.setLoading(true) }
+        viewModelScope.launch {
+            val result = getCards()
+            _state.update { it.setLoading(false) }
+            if (result.isFailure) _effect.send(VaultHomeEffect.TransferCardsLoadFailed)
+        }
+    }
+
+    // Opens the add-item dialog for a new balance, on the first card, or for [editing], on its own
+    // card. Before the cards arrive the edited card's ID waits for them, and collectCards checks it.
     private fun openItemDialog(editing: Balance?) {
         _state.update {
             it.copy(
                 isAddItemDialogVisible = true,
                 editingBalance = editing,
-                isLoadingItemCards = true,
                 isItemCardMenuOpen = false,
+                itemCardId = editing?.cardId.keptOrFirst(it.itemCards) ?: editing?.cardId,
             )
         }
-        viewModelScope.launch {
-            getCards()
-                .onSuccess { cards ->
-                    _state.update { state ->
-                        state.copy(
-                            itemCards = cards,
-                            isLoadingItemCards = false,
-                            // An edited balance keeps its card if it still exists; else the first.
-                            itemCardId = editing?.cardId?.takeIf { id -> cards.any { it.id == id } }
-                                ?: cards.firstOrNull()?.id,
-                        )
-                    }
-                }
-                .onFailure {
-                    _state.update { it.copy(isLoadingItemCards = false, itemCardId = null) }
-                    _effect.send(VaultHomeEffect.TransferCardsLoadFailed)
-                }
-        }
+        if (_state.value.itemCards.isEmpty()) fetchDialogCards { copy(isLoadingItemCards = it) }
     }
 
-    // The dialog keeps its own card list and loading flag: Home's isLoading would replace the whole
-    // page with a spinner, and Home's cards would start showing as rows.
+    // The dialog keeps its own loading flag: Home's isLoading would replace the whole page with a
+    // spinner. It keeps the card chosen last time.
     private fun openTransfer() {
-        _state.update { it.copy(isTransferDialogVisible = true, isLoadingTransferCards = true) }
-        viewModelScope.launch {
-            getCards()
-                .onSuccess { cards ->
-                    _state.update { state ->
-                        state.copy(
-                            transferCards = cards,
-                            isLoadingTransferCards = false,
-                            // Keep the card chosen last time if it still exists; else the first.
-                            transferCardId = state.transferCardId?.takeIf { id -> cards.any { it.id == id } }
-                                ?: cards.firstOrNull()?.id,
-                        )
-                    }
-                }
-                .onFailure {
-                    _state.update { it.copy(isLoadingTransferCards = false) }
-                    _effect.send(VaultHomeEffect.TransferCardsLoadFailed)
-                }
-        }
+        _state.update { it.copy(isTransferDialogVisible = true) }
+        if (_state.value.transferCards.isEmpty()) fetchDialogCards { copy(isLoadingTransferCards = it) }
     }
 
     private fun loadCards() {
@@ -410,6 +399,10 @@ class VaultHomeViewModel(
         }
     }
 }
+
+/** This card ID if it's in [cards], else the first card's; null when there are no cards. */
+private fun String?.keptOrFirst(cards: List<Card>): String? =
+    this?.takeIf { id -> cards.any { it.id == id } } ?: cards.firstOrNull()?.id
 
 /**
  * Newest date first, like the API returns them; balances without a readable date go last, and
