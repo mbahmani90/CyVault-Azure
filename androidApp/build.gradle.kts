@@ -7,6 +7,14 @@ val localProperties =
         rootProject.file("local.properties").takeIf { it.exists() }?.reader()?.use { load(it) }
     }
 
+// CD (.github/workflows/cd.yml) passes the upload key in environment variables instead
+fun signingValue(
+    env: String,
+    property: String,
+): String? = System.getenv(env)?.takeIf { it.isNotBlank() } ?: localProperties.getProperty(property)
+
+val releaseStoreFile = signingValue("CYVAULT_KEYSTORE_FILE", "release.storeFile")
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
@@ -57,10 +65,10 @@ android {
     }
     signingConfigs {
         create("release") {
-            localProperties.getProperty("release.storeFile")?.let { storeFile = file(it) }
-            storePassword = localProperties.getProperty("release.storePassword")
-            keyAlias = localProperties.getProperty("release.keyAlias")
-            keyPassword = localProperties.getProperty("release.keyPassword")
+            releaseStoreFile?.let { storeFile = file(it) }
+            storePassword = signingValue("CYVAULT_KEYSTORE_PASSWORD", "release.storePassword")
+            keyAlias = signingValue("CYVAULT_KEY_ALIAS", "release.keyAlias")
+            keyPassword = signingValue("CYVAULT_KEY_PASSWORD", "release.keyPassword")
         }
     }
     packaging {
@@ -74,7 +82,7 @@ android {
             manifestPlaceholders["msalSignatureHash"] = "+6PpzKBqQ/0GponbMHq4NRPWiMc="
         }
         getByName("release") {
-            if (localProperties.getProperty("release.storeFile") != null) {
+            if (releaseStoreFile != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
             isMinifyEnabled = true
@@ -95,5 +103,19 @@ android {
         checkDependencies = true
         xmlReport = true
         htmlReport = true
+    }
+}
+
+// A release's version comes from its tag (cd.yml: v1.2.3 → -Pcyvault.versionName=1.2.3
+// -Pcyvault.versionCode=10203). The variant API runs after android {}, so it wins over defaultConfig;
+// without the properties, local builds keep defaultConfig's version.
+androidComponents {
+    val versionName = providers.gradleProperty("cyvault.versionName").orNull
+    val versionCode = providers.gradleProperty("cyvault.versionCode").orNull?.toInt()
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            versionName?.let { output.versionName.set(it) }
+            versionCode?.let { output.versionCode.set(it) }
+        }
     }
 }
