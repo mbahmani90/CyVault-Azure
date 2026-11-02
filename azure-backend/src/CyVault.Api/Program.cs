@@ -5,6 +5,7 @@ using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Storage.Blobs;
 using CyVault.Api.Card;
 using CyVault.Api.Session;
+using CyVault.Api.Transfer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Azure.Functions.Worker.OpenTelemetry;
@@ -41,6 +42,7 @@ builder.Services.AddSingleton(_ => CreateAvatarContainer(builder.Configuration.G
 builder.Services.AddSingleton(_ => CreateBalanceTable(builder.Configuration.GetSection("BalanceStorage")));
 builder.Services.AddSingleton(_ => CreateCardTables(builder.Configuration.GetSection("CardStorage")));
 builder.Services.AddSingleton(_ => CreateCardEncryption(builder.Configuration.GetSection("CardEncryption")));
+builder.Services.AddSingleton(_ => CreateTransferTable(builder.Configuration.GetSection("TransferStorage")));
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton(sp => new SignInSessions(
@@ -112,6 +114,25 @@ static CardTables CreateCardTables(IConfigurationSection config)
     return new CardTables(
         new TableClient(serviceUri, cardsTableName, credential),
         new TableClient(serviceUri, phonesTableName, credential));
+}
+
+static TransferTable CreateTransferTable(IConfigurationSection config)
+{
+    var tableName = config["TableName"] ?? "transfers";
+
+    // Local development against Azurite. In Azure the Managed Identity is used, and Bicep
+    // creates the table.
+    var connectionString = config["ConnectionString"];
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        var local = new TableClient(connectionString, tableName);
+        local.CreateIfNotExists();
+        return new TransferTable(local);
+    }
+
+    var serviceUri = config["TableServiceUri"]
+        ?? throw new InvalidOperationException("Set TransferStorage:TableServiceUri or TransferStorage:ConnectionString.");
+    return new TransferTable(new TableClient(new Uri(serviceUri), tableName, new DefaultAzureCredential()));
 }
 
 // The Managed Identity in Azure; locally, the developer's `az login`, which Bicep gives the same
