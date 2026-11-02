@@ -19,6 +19,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccount
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -70,6 +71,7 @@ class VaultHomeViewModelProfilePhotoTest {
         saveBalance = SaveBalanceUseCase(balances),
         deleteBalance = DeleteBalanceUseCase(balances),
         deleteBalances = DeleteBalancesUseCase(balances),
+        sendTransfer = SendTransferUseCase(balances),
     )
 
     @Test

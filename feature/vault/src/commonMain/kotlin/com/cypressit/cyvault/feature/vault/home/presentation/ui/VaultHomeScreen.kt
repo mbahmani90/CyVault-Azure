@@ -69,6 +69,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
+import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeIntent
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeState
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeViewModel
@@ -87,6 +88,8 @@ import cyvault.vault.generated.resources.vault_home_add_sample_balances
 import cyvault.vault.generated.resources.vault_home_balance_delete_confirm
 import cyvault.vault.generated.resources.vault_home_balance_delete_message
 import cyvault.vault.generated.resources.vault_home_balance_delete_title
+import cyvault.vault.generated.resources.vault_home_balance_received_from
+import cyvault.vault.generated.resources.vault_home_balance_sent_to
 import cyvault.vault.generated.resources.vault_home_balances_delete_message
 import cyvault.vault.generated.resources.vault_home_balances_delete_title
 import cyvault.vault.generated.resources.vault_home_balances_empty
@@ -132,6 +135,14 @@ internal fun formatAmount(
     val number = kotlin.math.abs(amount).fmt2dp()
     val symbol = currencySymbol(currency)
     return if (symbolAfter) "$sign$number $symbol" else "$sign$symbol $number"
+}
+
+/** A transfer's title says who the money went to or came from; the rest keep the user's title. */
+@Composable
+internal fun balanceTitle(balance: Balance): String = when (balance.type) {
+    BalanceType.Transfer -> stringResource(Res.string.vault_home_balance_sent_to, balance.counterparty.orEmpty())
+    BalanceType.Receive -> stringResource(Res.string.vault_home_balance_received_from, balance.counterparty.orEmpty())
+    BalanceType.Purchase, BalanceType.Income -> balance.name
 }
 
 private fun Double.fmt2dp(): String {
@@ -611,8 +622,8 @@ private fun HomeContent(
                 itemsIndexed(state.balances, key = { _, balance -> "balance-${balance.id}" }) { index, balance ->
                     // The same line between rows as after the last one.
                     if (index > 0) BalanceDivider()
-                    // Purchases are negative and income positive; the sign leads the symbol.
-                    val isIncome = balance.amount >= 0
+                    // The amount shows without a sign; its colour tells money in from money out.
+                    val isIncome = !balance.type.isOutgoing
                     val isSelected = state.isBalanceSelected(balance.id)
                     ListItem(
                         // A check box only in selection mode, so normal rows keep their full width.
@@ -629,7 +640,9 @@ private fun HomeContent(
                                 MaterialTheme.colorScheme.surface
                             },
                         ),
-                        headlineContent = { Text(balance.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        headlineContent = {
+                            Text(balanceTitle(balance), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        },
                         // Every row gets a second line, so rows without a description line up too.
                         supportingContent = {
                             Text(
@@ -657,9 +670,8 @@ private fun HomeContent(
                                     }
                                     Text(
                                         text = formatAmount(
-                                            balance.amount,
+                                            kotlin.math.abs(balance.amount),
                                             balance.currency,
-                                            plusSign = true,
                                             symbolAfter = true,
                                         ),
                                         style = MaterialTheme.typography.bodyLarge,
