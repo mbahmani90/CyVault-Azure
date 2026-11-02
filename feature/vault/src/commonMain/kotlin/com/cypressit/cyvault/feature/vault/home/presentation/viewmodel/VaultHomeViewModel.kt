@@ -99,10 +99,15 @@ class VaultHomeViewModel(
                 _effect.send(VaultHomeEffect.CloseDrawer)
                 _effect.send(VaultHomeEffect.NavigateToAddCard)
             }
-            VaultHomeIntent.ShowAddItemDialog ->
-                _state.update { it.copy(isAddItemDialogVisible = true, editingBalance = null) }
-            VaultHomeIntent.DismissAddItemDialog ->
-                _state.update { it.copy(isAddItemDialogVisible = false, editingBalance = null) }
+            VaultHomeIntent.ShowAddItemDialog -> openItemDialog(editing = null)
+            VaultHomeIntent.DismissAddItemDialog -> _state.update {
+                it.copy(isAddItemDialogVisible = false, editingBalance = null, isItemCardMenuOpen = false)
+            }
+            is VaultHomeIntent.ItemCardMenuOpenChanged ->
+                _state.update { it.copy(isItemCardMenuOpen = intent.isOpen) }
+            is VaultHomeIntent.ItemCardSelected -> _state.update {
+                it.copy(itemCardId = intent.cardId, isItemCardMenuOpen = false)
+            }
             is VaultHomeIntent.SaveItem ->
                 saveItem(intent.title, intent.description, intent.value, intent.currency, intent.date)
             is VaultHomeIntent.ClickBalance -> clickBalance(intent.balance)
@@ -149,6 +154,8 @@ class VaultHomeViewModel(
 
     @OptIn(ExperimentalUuidApi::class)
     private fun saveItem(title: String, description: String, value: Double, currency: String, date: String) {
+        // Save is disabled until a card is chosen; the API rejects a balance without one.
+        val cardId = _state.value.itemCard?.id ?: return
         // Editing keeps the row's ID; a new balance gets a random one.
         val id = _state.value.editingBalance?.id ?: Uuid.random().toHexString()
         val balance = Balance(
@@ -158,6 +165,7 @@ class VaultHomeViewModel(
             amount = value,
             currency = currency,
             date = date,
+            cardId = cardId,
         )
         viewModelScope.launch {
             _state.update { it.copy(isSavingBalance = true) }
@@ -202,7 +210,7 @@ class VaultHomeViewModel(
         if (_state.value.isSelectionMode) {
             toggleBalanceSelection(balance.id)
         } else {
-            _state.update { it.copy(isAddItemDialogVisible = true, editingBalance = balance) }
+            openItemDialog(editing = balance)
         }
     }
 
@@ -285,6 +293,37 @@ class VaultHomeViewModel(
                 .onFailure {
                     _state.update { it.copy(isUpdatingPhoto = false) }
                     _effect.send(VaultHomeEffect.ProfilePhotoUpdateFailed)
+                }
+        }
+    }
+
+    // Opens the add-item dialog for a new balance, or for [editing]. Like the transfer dialog, it
+    // loads the cards into a list of its own.
+    private fun openItemDialog(editing: Balance?) {
+        _state.update {
+            it.copy(
+                isAddItemDialogVisible = true,
+                editingBalance = editing,
+                isLoadingItemCards = true,
+                isItemCardMenuOpen = false,
+            )
+        }
+        viewModelScope.launch {
+            getCards()
+                .onSuccess { cards ->
+                    _state.update { state ->
+                        state.copy(
+                            itemCards = cards,
+                            isLoadingItemCards = false,
+                            // An edited balance keeps its card if it still exists; else the first.
+                            itemCardId = editing?.cardId?.takeIf { id -> cards.any { it.id == id } }
+                                ?: cards.firstOrNull()?.id,
+                        )
+                    }
+                }
+                .onFailure {
+                    _state.update { it.copy(isLoadingItemCards = false, itemCardId = null) }
+                    _effect.send(VaultHomeEffect.TransferCardsLoadFailed)
                 }
         }
     }

@@ -178,6 +178,12 @@ internal fun VaultHomeScreen(
         AddItemDialog(
             item = state.editingBalance,
             isSaving = state.isSavingBalance,
+            cards = state.itemCards,
+            card = state.itemCard,
+            isLoadingCards = state.isLoadingItemCards,
+            isCardMenuOpen = state.isItemCardMenuOpen,
+            onCardMenuOpenChanged = { viewModel.onIntent(VaultHomeIntent.ItemCardMenuOpenChanged(it)) },
+            onCardSelected = { viewModel.onIntent(VaultHomeIntent.ItemCardSelected(it)) },
             onDismiss = { viewModel.onIntent(VaultHomeIntent.DismissAddItemDialog) },
             onSave = { title, description, value, currency, date ->
                 viewModel.onIntent(VaultHomeIntent.SaveItem(title, description, value, currency, date))

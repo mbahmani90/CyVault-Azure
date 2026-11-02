@@ -1,5 +1,6 @@
 package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
+import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
@@ -42,7 +43,9 @@ class VaultHomeViewModelBalanceTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val photos = FakeProfilePhotoRepository()
-    private val cards = FakeCardRepository()
+    private val visa = Card("visa", "1111", "Visa", "CGD", "+351912345678", "")
+    private val mastercard = visa.copy(id = "mastercard", last4 = "4444", brand = "Mastercard")
+    private val cards = FakeCardRepository(cards = listOf(visa, mastercard))
     private val balances = FakeBalanceRepository()
 
     private val main =
@@ -136,6 +139,7 @@ class VaultHomeViewModelBalanceTest {
         advanceUntilIdle()
 
         viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
+        advanceUntilIdle()
         viewModel.onIntent(
             VaultHomeIntent.SaveItem("Main account", "Daily spending", 1250.5, "EUR", "2026-10-28T09:00:00Z"),
         )
@@ -143,6 +147,7 @@ class VaultHomeViewModelBalanceTest {
 
         val saved = balances.saved.single()
         assertTrue(saved.id.isNotBlank())
+        assertEquals("visa", saved.cardId)
         assertEquals("Daily spending", saved.description)
         assertEquals("2026-10-28T09:00:00Z", saved.date)
         val state = viewModel.state.value
@@ -159,11 +164,12 @@ class VaultHomeViewModelBalanceTest {
         advanceUntilIdle()
 
         viewModel.onIntent(VaultHomeIntent.ClickBalance(main))
+        advanceUntilIdle()
         viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "", 99.0, "EUR", "2026-10-20T00:00:00Z"))
         advanceUntilIdle()
 
         assertEquals("main", balances.saved.single().id)
-        assertEquals(listOf(main.copy(amount = 99.0)), viewModel.state.value.balances)
+        assertEquals(listOf(main.copy(amount = 99.0, cardId = "visa")), viewModel.state.value.balances)
         assertNull(viewModel.state.value.editingBalance)
     }
 
@@ -174,12 +180,72 @@ class VaultHomeViewModelBalanceTest {
         balances.failure = Exception("offline")
 
         viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
+        advanceUntilIdle()
         viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "", 1.0, "EUR", "2026-10-28T09:00:00Z"))
         advanceUntilIdle()
 
         assertTrue(viewModel.state.value.isAddItemDialogVisible)
         assertFalse(viewModel.state.value.isSavingBalance)
         assertEquals(VaultHomeEffect.BalanceRequestFailed, viewModel.effect.first())
+    }
+
+    @Test
+    fun showAddItemDialog_loadsTheCardsAndPicksTheFirst() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
+        assertTrue(viewModel.state.value.isLoadingItemCards)
+        advanceUntilIdle()
+
+        val state = viewModel.state.value
+        assertFalse(state.isLoadingItemCards)
+        assertEquals(listOf(visa, mastercard), state.itemCards)
+        assertEquals(visa, state.itemCard)
+    }
+
+    @Test
+    fun clickBalance_keepsTheBalancesCard() = runTest(dispatcher) {
+        val onMastercard = main.copy(cardId = "mastercard")
+        balances.balances = listOf(onMastercard)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.ClickBalance(onMastercard))
+        advanceUntilIdle()
+
+        assertEquals(mastercard, viewModel.state.value.itemCard)
+    }
+
+    @Test
+    fun itemCardSelected_choosesTheCardAndClosesTheMenu() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.ItemCardMenuOpenChanged(true))
+        assertTrue(viewModel.state.value.isItemCardMenuOpen)
+        viewModel.onIntent(VaultHomeIntent.ItemCardSelected("mastercard"))
+
+        assertEquals(mastercard, viewModel.state.value.itemCard)
+        assertFalse(viewModel.state.value.isItemCardMenuOpen)
+    }
+
+    @Test
+    fun saveItem_withoutACard_savesNothing() = runTest(dispatcher) {
+        cards.cards = emptyList()
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "", 1.0, "EUR", "2026-10-28T09:00:00Z"))
+        advanceUntilIdle()
+
+        assertNull(viewModel.state.value.itemCard)
+        assertTrue(balances.saved.isEmpty())
+        assertTrue(viewModel.state.value.isAddItemDialogVisible)
     }
 
     @Test
