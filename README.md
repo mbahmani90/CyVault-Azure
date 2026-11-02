@@ -239,7 +239,8 @@ The backend's requirements, environments, local run and deployment are in
 
 ### 4. Publish
 
-Publishing to Google Play is described in [`docs/google-play.md`](docs/google-play.md).
+Publishing to Google Play is described in [`docs/google-play.md`](docs/google-play.md); after the first
+release, a version tag publishes through [Continuous delivery](#continuous-delivery).
 
 ## Continuous integration
 
@@ -287,6 +288,60 @@ To set it up:
 
 To run the E2E tests locally, start an emulator or connect a phone, start `appium` (with `ANDROID_HOME`
 and `JAVA_HOME` set), put the test account in the git-ignored `e2e/.env`, then run `./e2e/run-e2e.sh`.
+
+## Continuous delivery
+
+Pushing a version tag releases the app: [`.github/workflows/cd.yml`](.github/workflows/cd.yml) builds
+a signed AAB and APK, uploads the AAB (with R8's mapping file) to Google Play's **internal** track, and
+publishes the APK as a GitHub Release. Promoting a build to production stays a manual step in Play Console.
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+The tag sets the version: `v1.2.3` → versionName `1.2.3`, versionCode `10203` (major·10000 + minor·100 +
+patch, minor and patch below 100). Local builds keep `defaultConfig`'s version. The build job alone holds
+the upload key, the Play job alone reaches Google Play, and only the release job may write to the
+repository. Google Play is reached through **workload identity federation**, like the backend's pushes:
+Google trusts this repository's GitHub token, so no service account key exists.
+
+To set it up, once:
+
+1. **Upload key.** The keystore `local.properties` points to (`release.storeFile`):
+
+   ```bash
+   base64 -w0 <keystore.jks> | gh secret set CYVAULT_KEYSTORE_BASE64 --repo mbahmani90/CyVault-Azure
+   gh secret set CYVAULT_KEYSTORE_PASSWORD --repo mbahmani90/CyVault-Azure
+   gh secret set CYVAULT_KEY_PASSWORD --repo mbahmani90/CyVault-Azure
+   gh variable set CYVAULT_KEY_ALIAS --body <key alias> --repo mbahmani90/CyVault-Azure
+   ```
+
+2. **Google Cloud** (Cloud Shell, project `cyvault-512912`): a `play-publisher` service account that
+   only this repository's workflows can act as:
+
+   ```bash
+   gcloud services enable androidpublisher.googleapis.com
+   gcloud iam service-accounts create play-publisher --display-name "CyVault Play uploads"
+   gcloud iam workload-identity-pools create github --location global --display-name "GitHub"
+   gcloud iam workload-identity-pools providers create-oidc cyvault-repo --workload-identity-pool github --location global --issuer-uri "https://token.actions.githubusercontent.com" --attribute-mapping "google.subject=assertion.sub,attribute.repository=assertion.repository" --attribute-condition "assertion.repository == 'mbahmani90/CyVault-Azure'"
+   gcloud iam service-accounts add-iam-policy-binding play-publisher@cyvault-512912.iam.gserviceaccount.com --role roles/iam.workloadIdentityUser --member "principalSet://iam.googleapis.com/projects/949572795462/locations/global/workloadIdentityPools/github/attribute.repository/mbahmani90/CyVault-Azure"
+   ```
+
+   Then the two repository variables:
+
+   ```bash
+   gh variable set PLAY_WORKLOAD_IDENTITY_PROVIDER --body projects/949572795462/locations/global/workloadIdentityPools/github/providers/cyvault-repo --repo mbahmani90/CyVault-Azure
+   gh variable set PLAY_SERVICE_ACCOUNT --body play-publisher@cyvault-512912.iam.gserviceaccount.com --repo mbahmani90/CyVault-Azure
+   ```
+
+3. **Play Console → Users and permissions → Invite new users:** `play-publisher@cyvault-512912.iam.gserviceaccount.com`,
+   with *Release apps to testing tracks* for CyVault. The API may take up to a day to accept it.
+4. Optional: in the repository settings, add required reviewers to the `google-play` environment, so each
+   upload waits for an approval.
+
+The Play API can't create an app's first release: that one is uploaded by hand
+([`docs/google-play.md`](docs/google-play.md)).
 
 ## Security notes & roadmap
 
