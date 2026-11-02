@@ -8,6 +8,7 @@
     }
   ],
   "challenge_types": ["password", "oob"],
+  "capabilities": ["mfa_required", "registration_required"],
   "logging": {
     "pii_enabled": false,
     "log_level": "INFO",

@@ -15,12 +15,15 @@ val buildTypeModules: List<Module> = listOf(
     module {
         // Unfinished: shown in debug builds only
         single { ForgotPasswordPreview }
-        // azd environment "debug" (azure-backend: azd env get-values -e debug).
-        single {
-            CyVaultApiConfig(
-                baseUrl = "https://func-cyvault-5zvntav5rsyeq.azurewebsites.net/api",
-                appIdUri = "api://7b114a03-12d1-4c35-842f-861308111286",
-            )
-        }
+        single { debugApiConfig }
     },
 )
+
+// azd environment "debug" (azure-backend: azd env get-values -e debug).
+private val debugApiConfig = CyVaultApiConfig(
+    baseUrl = "https://func-cyvault-5zvntav5rsyeq.azurewebsites.net/api",
+    appIdUri = "api://7b114a03-12d1-4c35-842f-861308111286",
+)
+
+/** A debug API scope for email sign-in, so the debug tenant's MFA policy on the API runs. */
+val signInScope = "${debugApiConfig.appIdUri}/Profile.ReadWrite"

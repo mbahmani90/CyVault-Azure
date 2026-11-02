@@ -6,8 +6,20 @@ package com.cypressit.cyvault.auth
  * implemented in Swift. Calls throw with a user-readable message when they fail.
  */
 interface AuthClient {
-    /** Signs in with email and password. */
-    suspend fun signIn(email: String, password: String): AuthUser
+    /**
+     * Signs in with email and password. When the tenant requires MFA, the user isn't signed in
+     * yet: the returned [SignInStep] says what to ask for next.
+     */
+    suspend fun signIn(email: String, password: String): SignInStep
+
+    /**
+     * Registers [phoneNumber] (international format, e.g. +351912345678) as the account's MFA
+     * phone, after [SignInStep.PhoneNumberRequired]. A code is texted to it for [submitMfaCode].
+     */
+    suspend fun submitMfaPhoneNumber(phoneNumber: String): SignInStep
+
+    /** Completes the sign-in with the code from [SignInStep.CodeRequired]. */
+    suspend fun submitMfaCode(code: String): AuthUser
 
     /** Starts sign-up; a verification code is sent to [email] for [confirmSignUp]. */
     suspend fun signUp(name: String, email: String, password: String)
@@ -32,6 +44,17 @@ interface AuthClient {
     suspend fun accessToken(scopes: List<String>): String
 
     suspend fun signOut()
+}
+
+/** Where an email and password sign-in stands. */
+sealed interface SignInStep {
+    data class SignedIn(val user: AuthUser) : SignInStep
+
+    /** MFA is required and the account has no phone yet (its first sign-in since MFA). */
+    data object PhoneNumberRequired : SignInStep
+
+    /** MFA is required and a code was texted to [sentTo], a masked phone number. */
+    data class CodeRequired(val sentTo: String, val codeLength: Int) : SignInStep
 }
 
 data class AuthUser(

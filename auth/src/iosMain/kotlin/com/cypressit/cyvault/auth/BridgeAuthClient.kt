@@ -11,16 +11,24 @@ internal class BridgeAuthClient : AuthClient {
         get() = IosAuthBridgeHolder.bridge
             ?: error("IosAuthBridge not set. Call IosAuthBridgeHolder.bridge = ... before using auth.")
 
-    override suspend fun signIn(email: String, password: String): AuthUser =
+    override suspend fun signIn(email: String, password: String): SignInStep =
         suspendCancellableCoroutine { continuation ->
             bridge.signIn(email, password) { userId, name, error ->
                 if (error != null) {
                     continuation.resumeWithException(Exception(error))
                 } else {
-                    continuation.resume(AuthUser(id = userId ?: "", name = name ?: "", email = email))
+                    val user = AuthUser(id = userId ?: "", name = name ?: "", email = email)
+                    continuation.resume(SignInStep.SignedIn(user))
                 }
             }
         }
+
+    // The bridge has no MFA: signIn() never asks for a phone number or a code.
+    override suspend fun submitMfaPhoneNumber(phoneNumber: String): SignInStep =
+        throw UnsupportedOperationException("MFA isn't supported by the iOS bridge yet")
+
+    override suspend fun submitMfaCode(code: String): AuthUser =
+        throw UnsupportedOperationException("MFA isn't supported by the iOS bridge yet")
 
     override suspend fun signUp(name: String, email: String, password: String) =
         suspendCancellableCoroutine { continuation ->

@@ -17,4 +17,27 @@ data class AuthState(
     val passwordError: String? = null,
     val confirmPasswordError: String? = null,
     val verificationCodeError: String? = null,
-)
+    /** Set while a password sign-in waits for SMS MFA. */
+    val mfaStep: MfaStep? = null,
+    val mfaPhoneNumber: String = "",
+    val mfaCode: String = "",
+    /** The masked phone number the code was texted to. */
+    val mfaSentTo: String = "",
+    val mfaCodeLength: Int = DEFAULT_MFA_CODE_LENGTH,
+    val mfaPhoneNumberError: MfaInputError? = null,
+    val mfaCodeError: MfaInputError? = null,
+) {
+    companion object {
+        const val DEFAULT_MFA_CODE_LENGTH = 6
+    }
+}
+
+enum class MfaStep {
+    /** The account's first MFA sign-in: ask for the phone number codes go to. */
+    PhoneNumber,
+
+    /** A code was texted: ask for it. */
+    Code,
+}
+
+enum class MfaInputError { InvalidPhoneNumber, IncompleteCode }

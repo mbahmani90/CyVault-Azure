@@ -2,6 +2,7 @@ package com.cypressit.cyvault.feature.vault.fake
 
 import com.cypressit.cyvault.auth.AuthClient
 import com.cypressit.cyvault.auth.AuthUser
+import com.cypressit.cyvault.auth.SignInStep
 
 /** The vault only reads the user, gets tokens and signs out; sign-in flows aren't faked. */
 class FakeAuthClient(
@@ -27,7 +28,9 @@ class FakeAuthClient(
         signOutCount++
     }
 
-    override suspend fun signIn(email: String, password: String): AuthUser = throw NotImplementedError()
+    override suspend fun signIn(email: String, password: String): SignInStep = throw NotImplementedError()
+    override suspend fun submitMfaPhoneNumber(phoneNumber: String): SignInStep = throw NotImplementedError()
+    override suspend fun submitMfaCode(code: String): AuthUser = throw NotImplementedError()
     override suspend fun signUp(name: String, email: String, password: String) = throw NotImplementedError()
     override suspend fun confirmSignUp(email: String, code: String) = throw NotImplementedError()
     override suspend fun resetPassword(email: String) = throw NotImplementedError()

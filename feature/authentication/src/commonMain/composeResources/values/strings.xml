@@ -11,4 +11,22 @@
     <string name="login_password_show_description">Show password</string>
     <string name="login_password_hide_description">Hide password</string>
     <string name="login_logo_description">CyVault logo</string>
+
+    <!-- SMS MFA: phone number (first MFA sign-in) -->
+    <string name="mfa_phone_title">Add your phone number</string>
+    <string name="mfa_phone_subtitle">We\'ll text you a code to confirm it\'s you each time you sign in.</string>
+    <string name="mfa_phone_label">Phone number</string>
+    <string name="mfa_phone_placeholder">+351 912 345 678</string>
+    <string name="mfa_phone_invalid">Enter the number with + and the country code, e.g. +351 912 345 678</string>
+    <string name="mfa_phone_send_code">Send code</string>
+
+    <!-- SMS MFA: code -->
+    <string name="mfa_code_title">Enter the code</string>
+    <string name="mfa_code_subtitle">We texted a code to\n%1$s</string>
+    <string name="mfa_code_label">Code</string>
+    <string name="mfa_code_incomplete">Enter all %1$d digits</string>
+    <string name="mfa_code_verify">Verify</string>
+
+    <string name="mfa_back_to_sign_in">Back to Sign In</string>
+    <string name="mfa_failed">Something went wrong. Please try again.</string>
 </resources>

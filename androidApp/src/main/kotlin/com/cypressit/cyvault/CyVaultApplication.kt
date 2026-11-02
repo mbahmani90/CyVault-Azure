@@ -13,8 +13,15 @@ class CyVaultApplication : Application() {
         super.onCreate()
         initKoin {
             androidContext(this@CyVaultApplication)
-            // The app's Entra registration (client ID, tenant, redirect URI) for :auth.
-            modules(module { single { MsalConfig(R.raw.auth_config_native_auth) } })
+            // The app's Entra registration (client ID, tenant, redirect URI) for :auth. Sign-in
+            // asks for an API scope so the API's Conditional Access (MFA) runs during sign-in.
+            modules(
+                module {
+                    single {
+                        MsalConfig(R.raw.auth_config_native_auth, signInScopes = listOf(signInScope))
+                    }
+                },
+            )
             // Debug or release extras, from src/debug or src/release.
             modules(buildTypeModules)
         }
