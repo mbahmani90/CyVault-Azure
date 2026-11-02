@@ -137,13 +137,17 @@ internal fun formatAmount(
     return if (symbolAfter) "$sign$number $symbol" else "$sign$symbol $number"
 }
 
-/** A transfer's title says who the money went to or came from; the rest keep the user's title. */
+/** A transfer's title says which way the money went; the rest keep the user's title. */
 @Composable
 internal fun balanceTitle(balance: Balance): String = when (balance.type) {
-    BalanceType.Transfer -> stringResource(Res.string.vault_home_balance_sent_to, balance.counterparty.orEmpty())
-    BalanceType.Receive -> stringResource(Res.string.vault_home_balance_received_from, balance.counterparty.orEmpty())
+    BalanceType.Transfer -> stringResource(Res.string.vault_home_balance_sent_to)
+    BalanceType.Receive -> stringResource(Res.string.vault_home_balance_received_from)
     BalanceType.Purchase, BalanceType.Income -> balance.name
 }
+
+/** The second line: a transfer's other side, or the user's description. */
+internal fun balanceSubtitle(balance: Balance): String =
+    if (balance.type.isFromTransfer) balance.counterparty.orEmpty() else balance.description
 
 private fun Double.fmt2dp(): String {
     // Round, not truncate: 25.69 + 5.98 is 31.669999… as a Double and must show as 31.67.
@@ -646,7 +650,7 @@ private fun HomeContent(
                         // Every row gets a second line, so rows without a description line up too.
                         supportingContent = {
                             Text(
-                                text = balance.description.ifBlank { "-" },
+                                text = balanceSubtitle(balance).ifBlank { "-" },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
