@@ -16,6 +16,13 @@ class FakeDeviceRepository(
         return result
     }
 
+    /** The accounts whose pushes were stopped, in order. */
+    val stoppedPushUserIds = mutableListOf<String>()
+
+    override suspend fun stopPushes(userId: String) {
+        stoppedPushUserIds += userId
+    }
+
     /** When set, sign fails with this instead of signing. */
     var signFailure: Exception? = null
 

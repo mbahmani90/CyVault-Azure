@@ -55,7 +55,7 @@ class VaultHomeViewModelAddCardTest {
             observeCards = ObserveCardsUseCase(cards),
             deleteCard = DeleteCardUseCase(cards),
             getCurrentAccount = GetCurrentAccountUseCase(accounts),
-            signOutUser = SignOutUseCase(accounts),
+            signOutUser = SignOutUseCase(accounts, FakeDeviceRepository()),
             getProfilePhoto = GetProfilePhotoUseCase(photos),
             changeProfilePhoto = ChangeProfilePhotoUseCase(photos),
             clearProfilePhotoCache = ClearProfilePhotoCacheUseCase(photos),

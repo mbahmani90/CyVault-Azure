@@ -9,6 +9,7 @@ import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningUnava
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeDeviceIdStore
 import com.cypressit.cyvault.feature.vault.fake.FakeDeviceKeyStore
+import com.cypressit.cyvault.feature.vault.fake.FakePushTokens
 import com.cypressit.cyvault.feature.vault.home.data.remote.CyVaultApiConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -41,6 +42,7 @@ class DeviceRepositoryImplTest {
     private val authClient = FakeAuthClient()
     private val keyStore = FakeDeviceKeyStore()
     private val idStore = FakeDeviceIdStore()
+    private val pushTokens = FakePushTokens()
 
     private fun TestScope.repository(handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
         DeviceRepositoryImpl(
@@ -58,6 +60,7 @@ class DeviceRepositoryImplTest {
             ),
             keyStore = keyStore,
             idStore = idStore,
+            pushTokens = pushTokens,
             ioDispatcher = StandardTestDispatcher(testScheduler),
         )
 
@@ -209,5 +212,61 @@ class DeviceRepositoryImplTest {
         val result = repository { error("No request expected") }.sign(userId, "payload", prompt)
 
         assertIs<SigningUnavailableException>(result.exceptionOrNull())
+    }
+
+    @Test
+    fun enroll_withPushToken_sendsItForTheDevice() = runTest {
+        keyStore.createKey(userId)
+        idStore.ids[userId] = "device-1"
+        pushTokens.token = "fcm-token"
+
+        val result = repository { respond("", HttpStatusCode.NoContent) }.enroll(userId)
+
+        assertEquals(DeviceEnrollment.Enrolled("device-1"), result.getOrThrow())
+        val request = requests.single()
+        assertEquals(HttpMethod.Put, request.method)
+        assertEquals("https://api.test/api/me/devices/device-1/push-token", request.url.toString())
+        assertEquals("fcm-token", request.jsonBody()["token"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun enroll_pushTokenRejected_stillEnrolls() = runTest {
+        keyStore.createKey(userId)
+        idStore.ids[userId] = "device-1"
+        pushTokens.token = "fcm-token"
+
+        val result = repository { respond("", HttpStatusCode.InternalServerError) }.enroll(userId)
+
+        assertEquals(DeviceEnrollment.Enrolled("device-1"), result.getOrThrow())
+    }
+
+    @Test
+    fun stopPushes_removesTheTokenOnTheApiAndThePhone() = runTest {
+        idStore.ids[userId] = "device-1"
+        pushTokens.token = "fcm-token"
+
+        repository { respond("", HttpStatusCode.NoContent) }.stopPushes(userId)
+
+        val request = requests.single()
+        assertEquals(HttpMethod.Delete, request.method)
+        assertEquals("https://api.test/api/me/devices/device-1/push-token", request.url.toString())
+        assertEquals(1, pushTokens.deleteCount)
+    }
+
+    @Test
+    fun stopPushes_apiFails_stillDropsThePhonesToken() = runTest {
+        idStore.ids[userId] = "device-1"
+        pushTokens.token = "fcm-token"
+
+        repository { respond("", HttpStatusCode.InternalServerError) }.stopPushes(userId)
+
+        assertEquals(1, pushTokens.deleteCount)
+    }
+
+    @Test
+    fun stopPushes_notEnrolled_onlyDropsThePhonesToken() = runTest {
+        repository { error("No request expected") }.stopPushes(userId)
+
+        assertEquals(1, pushTokens.deleteCount)
     }
 }
