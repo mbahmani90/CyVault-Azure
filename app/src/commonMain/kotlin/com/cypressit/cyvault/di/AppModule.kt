@@ -7,6 +7,7 @@ import com.cypressit.cyvault.core.di.platformModule
 import com.cypressit.cyvault.devicekey.di.deviceKeyModule
 import com.cypressit.cyvault.feature.authentication.di.authModule
 import com.cypressit.cyvault.feature.vault.di.vaultFeatureModule
+import com.cypressit.cyvault.push.di.pushModule
 import org.koin.core.module.Module
 
 /**
@@ -20,6 +21,7 @@ val appModules: List<Module>
         networkModule,
         authClientModule,
         deviceKeyModule,
+        pushModule,
         authModule,
         vaultFeatureModule,
     )
