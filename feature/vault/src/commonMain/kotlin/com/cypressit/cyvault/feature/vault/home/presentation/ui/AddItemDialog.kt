@@ -371,6 +371,7 @@ private fun TransferDetailsDialog(
                     text = formatAmount(abs(item.amount), item.currency, symbolAfter = true),
                     style = MaterialTheme.typography.headlineSmall,
                 )
+                item.counterparty?.let { Text(it) }
                 formatBalanceDate(item.date)?.let { Text(it) }
                 card?.let { Text(cardLabel(it)) }
             }
