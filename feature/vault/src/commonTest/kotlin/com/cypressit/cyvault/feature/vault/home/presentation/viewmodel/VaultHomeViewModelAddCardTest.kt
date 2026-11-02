@@ -6,7 +6,6 @@ import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
 import com.cypressit.cyvault.feature.vault.fake.succeedingSessionApi
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
-import com.cypressit.cyvault.feature.vault.home.domain.debug.AddCardPreview
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.DeleteBalanceUseCase
@@ -26,15 +25,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class) // setMain, resetMain, advanceUntilIdle
 class VaultHomeViewModelAddCardTest {
@@ -48,7 +42,7 @@ class VaultHomeViewModelAddCardTest {
 
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel(addCardPreview: AddCardPreview?): VaultHomeViewModel {
+    private fun viewModel(): VaultHomeViewModel {
         val authClient = FakeAuthClient()
         val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient))
         return VaultHomeViewModel(
@@ -63,24 +57,13 @@ class VaultHomeViewModelAddCardTest {
             saveBalance = SaveBalanceUseCase(balances),
             deleteBalance = DeleteBalanceUseCase(balances),
             deleteBalances = DeleteBalancesUseCase(balances),
-            addCardPreview = addCardPreview,
         )
     }
 
+    // Cards is in every build, release included.
     @Test
-    fun releaseBuild_hidesAddCardAndIgnoresTheIntent() = runTest(dispatcher) {
-        val viewModel = viewModel(addCardPreview = null).also { advanceUntilIdle() }
-        assertFalse(viewModel.state.value.canAddCard)
-
-        viewModel.onIntent(VaultHomeIntent.AddCardFromDrawer)
-
-        assertNull(withTimeoutOrNull(1.seconds) { viewModel.effect.first() })
-    }
-
-    @Test
-    fun debugBuild_closesTheDrawerAndOpensAddCard() = runTest(dispatcher) {
-        val viewModel = viewModel(addCardPreview = AddCardPreview).also { advanceUntilIdle() }
-        assertTrue(viewModel.state.value.canAddCard)
+    fun cardsFromDrawer_closesTheDrawerAndOpensCards() = runTest(dispatcher) {
+        val viewModel = viewModel().also { advanceUntilIdle() }
 
         viewModel.onIntent(VaultHomeIntent.AddCardFromDrawer)
 
