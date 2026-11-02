@@ -20,6 +20,12 @@ data class VaultHomeState(
     /** The balance being edited in the add-item dialog, or null when adding a new one. */
     val editingBalance: Balance? = null,
     val isSavingBalance: Boolean = false,
+    /** The user's cards for the add-item dialog; loaded when it opens. */
+    val itemCards: List<Card> = emptyList(),
+    val isLoadingItemCards: Boolean = false,
+    /** The card the item goes on: required to save. */
+    val itemCardId: String? = null,
+    val isItemCardMenuOpen: Boolean = false,
     /** True in debug builds, where :feature:vault-debug can add sample balances. */
     val canAddSampleBalances: Boolean = false,
     val isAddingSampleBalances: Boolean = false,
@@ -43,6 +49,9 @@ data class VaultHomeState(
     val transferCurrency: String = "EUR",
     val isTransferCurrencyMenuOpen: Boolean = false,
 ) {
+    val itemCard: Card?
+        get() = itemCards.firstOrNull { it.id == itemCardId }
+
     val transferCard: Card?
         get() = transferCards.firstOrNull { it.id == transferCardId }
 

@@ -176,7 +176,7 @@ internal fun TransferDialog(
 
 /** "CGD · Visa **** 1111": the bank and brand when the card has them, then its last four digits. */
 @Composable
-private fun cardLabel(card: Card): String {
+internal fun cardLabel(card: Card): String {
     val name = listOf(card.bankName, card.brand).filter { it.isNotBlank() }.joinToString(" · ")
     return stringResource(Res.string.transfer_card_option, name, card.last4).trim()
 }
