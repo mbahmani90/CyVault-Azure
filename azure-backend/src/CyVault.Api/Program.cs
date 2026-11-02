@@ -45,6 +45,8 @@ builder.Services.AddSingleton(_ => CreateCardTables(builder.Configuration.GetSec
 builder.Services.AddSingleton(_ => CreateCardEncryption(builder.Configuration.GetSection("CardEncryption")));
 builder.Services.AddSingleton(_ => CreateTransferTable(builder.Configuration.GetSection("TransferStorage")));
 builder.Services.AddSingleton(_ => CreateDeviceTable(builder.Configuration.GetSection("DeviceStorage")));
+builder.Services.AddSingleton(_ => CreateChallengeTable(builder.Configuration.GetSection("ChallengeStorage")));
+builder.Services.AddSingleton<TransferSigning>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton(sp => new SignInSessions(
@@ -135,6 +137,25 @@ static TransferTable CreateTransferTable(IConfigurationSection config)
     var serviceUri = config["TableServiceUri"]
         ?? throw new InvalidOperationException("Set TransferStorage:TableServiceUri or TransferStorage:ConnectionString.");
     return new TransferTable(new TableClient(new Uri(serviceUri), tableName, new DefaultAzureCredential()));
+}
+
+static ChallengeTable CreateChallengeTable(IConfigurationSection config)
+{
+    var tableName = config["TableName"] ?? "challenges";
+
+    // Local development against Azurite. In Azure the Managed Identity is used, and Bicep
+    // creates the table.
+    var connectionString = config["ConnectionString"];
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        var local = new TableClient(connectionString, tableName);
+        local.CreateIfNotExists();
+        return new ChallengeTable(local);
+    }
+
+    var serviceUri = config["TableServiceUri"]
+        ?? throw new InvalidOperationException("Set ChallengeStorage:TableServiceUri or ChallengeStorage:ConnectionString.");
+    return new ChallengeTable(new TableClient(new Uri(serviceUri), tableName, new DefaultAzureCredential()));
 }
 
 static DeviceTable CreateDeviceTable(IConfigurationSection config)
