@@ -292,8 +292,8 @@ and `JAVA_HOME` set), put the test account in the git-ignored `e2e/.env`, then r
 ## Continuous delivery
 
 Pushing a version tag releases the app: [`.github/workflows/cd.yml`](.github/workflows/cd.yml) builds
-a signed AAB and APK, uploads the AAB (with R8's mapping file) to Google Play's **internal** track, and
-publishes the APK as a GitHub Release. Promoting a build to production stays a manual step in Play Console.
+a signed AAB and APK, uploads the AAB (with R8's mapping file) to Google Play's **production** track, and
+publishes the APK as a GitHub Release. Google reviews each production release before it goes live.
 
 ```bash
 git tag v1.1.0
@@ -336,7 +336,8 @@ To set it up, once:
    ```
 
 3. **Play Console → Users and permissions → Invite new users:** `play-publisher@cyvault-512912.iam.gserviceaccount.com`,
-   with *Release apps to testing tracks* for CyVault. The API may take up to a day to accept it.
+   with *Release to production, exclude devices, and use Play App Signing* and *View app information* for
+   CyVault. The API may take up to a day to accept it.
 4. Optional: in the repository settings, add required reviewers to the `google-play` environment, so each
    upload waits for an approval.
 
