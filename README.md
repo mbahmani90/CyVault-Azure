@@ -147,6 +147,14 @@ When money arrives, the receiver gets a push through Firebase Cloud Messaging (F
 
 ![Sending a push to the receiver through workload identity federation](docs/push-token-flow.svg)
 
+FCM knows app installs, not users. After sign-in, the app sends its FCM token to `PUT /api/me/push-tokens`, and the Function saves it under the caller's `oid`, first removing it from any other account that used the phone before. To push, the Function sends to every token saved for the receiver. Sign-out removes the phone's token, and a token FCM reports as unregistered is dropped.
+
+![Linking a phone's FCM token to the signed-in account](docs/push-registration-flow.svg)
+
+On the phone, FCM sends the push down the single connection Google Play services keeps open for every app. Play services hands it to CyVault over Binder IPC, and Android starts the app's process if needed (high priority works even in Doze). `CyVaultMessagingService.onMessageReceived` builds the notification, which is shown only if the user allowed notifications.
+
+![Delivering a push from FCM to a notification on the phone](docs/push-delivery-flow.svg)
+
 ### MVI
 
 Every screen has three types:
