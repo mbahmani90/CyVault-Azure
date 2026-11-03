@@ -73,7 +73,9 @@ jobs:
         run: |
           APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
           "$APKSIGNER" verify androidApp/build/outputs/apk/release/androidApp-release.apk
-          jarsigner -verify -strict androidApp/build/outputs/bundle/release/androidApp-release.aab
+          # No -strict: an upload key is self-signed, so its chain never leads to a trusted CA,
+          # which -strict counts as an error (exit 4) though the bundle is signed.
+          jarsigner -verify androidApp/build/outputs/bundle/release/androidApp-release.aab
 
       - name: Collect release files
         env: { VERSION: "${{ steps.version.outputs.name }}" }
