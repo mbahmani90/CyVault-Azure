@@ -1,12 +1,12 @@
-# Push a version tag → a signed release on Google Play's internal track and a GitHub Release:
+# Push a version tag → a signed release on Google Play's production track and a GitHub Release:
 #   git tag v1.2.3 && git push origin v1.2.3
 #
-#   Build signed AAB + APK ─┬─► Upload to Google Play (internal)
+#   Build signed AAB + APK ─┬─► Upload to Google Play (production)
 #                           └─► Publish GitHub Release
 #
 # The version comes from the tag: v1.2.3 → versionName 1.2.3, versionCode 10203
 # (major·10000 + minor·100 + patch, so it always grows; minor and patch < 100).
-# Promoting a build from internal to production stays a manual step in Play Console.
+# Google still reviews each production release before it goes live.
 #
 # Needs (setup in README → Continuous delivery):
 #   secrets   CYVAULT_KEYSTORE_BASE64, CYVAULT_KEYSTORE_PASSWORD, CYVAULT_KEY_PASSWORD (the upload key)
@@ -98,7 +98,7 @@ jobs:
         run: rm -f "$RUNNER_TEMP/upload.jks"
 
   play:
-    name: Upload to Google Play (internal)
+    name: Upload to Google Play (production)
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -125,7 +125,7 @@ jobs:
           packageName: com.cypressit.cyvault
           releaseFiles: bundle/*.aab
           mappingFile: bundle/mapping.txt
-          tracks: internal
+          tracks: production
           status: completed
 
   publish:
