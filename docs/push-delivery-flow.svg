@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 720" width="1180" height="720" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title>CyVault — Delivering a push to the phone</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0284C7"/>
+    </marker>
+    <style>
+      .t-title { font-size: 22px; font-weight: 700; fill: #0F172A; }
+      .t-sub { font-size: 12.5px; fill: #64748B; }
+      .t-actor { font-size: 14px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-actorsub { font-size: 10.5px; fill: #475569; text-anchor: middle; }
+      .t-msg { font-size: 12.5px; font-weight: 700; fill: #0F172A; }
+      .t-body { font-size: 11.5px; fill: #334155; font-family: Consolas, 'SFMono-Regular', Menlo, monospace; }
+      .t-small { font-size: 11px; fill: #475569; }
+      .t-note { font-size: 12px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-notesub { font-size: 10.5px; fill: #475569; text-anchor: middle; }
+      .t-panel { font-size: 13px; font-weight: 700; fill: #0F172A; }
+      .t-num { font-size: 11px; font-weight: 700; fill: #FFFFFF; text-anchor: middle; }
+      .life { stroke: #94A3B8; stroke-width: 1.5; stroke-dasharray: 5 5; }
+      .req { stroke: #475569; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .res { stroke: #0284C7; stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; marker-end: url(#arrowBlue); }
+      .note { fill: #FFFFFF; stroke: #CBD5E1; stroke-width: 1.2; }
+      .panel { fill: #FFFFFF; stroke: #CBD5E1; stroke-width: 1.2; }
+      .phone { fill: #EEF2FF; stroke: #A5B4FC; stroke-width: 1.2; stroke-dasharray: 6 4; }
+    </style>
+  </defs>
+
+  <rect width="1180" height="720" fill="#F8FAFC"/>
+
+  <!-- Title -->
+  <text x="40" y="36" class="t-title">Delivering a push: from FCM to the notification</text>
+  <text x="40" y="58" class="t-sub">The token tells FCM which phone and which app. On the phone, Play services hands the message to the app over IPC; Android starts the app only to show it.</text>
+
+  <!-- The phone -->
+  <rect x="470" y="72" width="700" height="560" rx="12" class="phone"/>
+  <text x="1158" y="90" class="t-small" text-anchor="end">The phone</text>
+
+  <!-- Actors -->
+  <rect x="30" y="98" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#D97706" stroke-width="1.5"/>
+  <text x="120" y="119" class="t-actor">CyVault API</text>
+  <text x="120" y="136" class="t-actorsub">Azure Function</text>
+  <rect x="260" y="98" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="350" y="119" class="t-actor">FCM</text>
+  <text x="350" y="136" class="t-actorsub">Firebase · Google servers</text>
+  <rect x="500" y="98" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="590" y="119" class="t-actor">Google Play services</text>
+  <text x="590" y="136" class="t-actorsub">one connection for the whole phone</text>
+  <rect x="740" y="98" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="830" y="119" class="t-actor">Android system</text>
+  <text x="830" y="136" class="t-actorsub">processes · NotificationManager</text>
+  <rect x="970" y="98" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="1060" y="119" class="t-actor">CyVault app</text>
+  <text x="1060" y="136" class="t-actorsub">CyVaultMessagingService</text>
+
+  <!-- Lifelines -->
+  <line x1="120" y1="148" x2="120" y2="615" class="life"/>
+  <line x1="350" y1="148" x2="350" y2="615" class="life"/>
+  <line x1="590" y1="148" x2="590" y2="615" class="life"/>
+  <line x1="830" y1="148" x2="830" y2="615" class="life"/>
+  <line x1="1060" y1="148" x2="1060" y2="615" class="life"/>
+
+  <!-- 1. Send -->
+  <line x1="120" y1="200" x2="348" y2="200" class="req"/>
+  <circle cx="120" cy="200" r="10" fill="#D97706"/><text x="120" y="204" class="t-num">1</text>
+  <text x="138" y="176" class="t-msg">POST messages:send</text>
+  <text x="138" y="192" class="t-body">{ token, data, high }</text>
+
+  <!-- FCM answers -->
+  <line x1="350" y1="238" x2="122" y2="238" class="res"/>
+  <text x="138" y="230" class="t-small">200 OK · 404 → delete the token row</text>
+
+  <!-- 2. Push down the connection -->
+  <line x1="350" y1="290" x2="588" y2="290" class="req"/>
+  <circle cx="350" cy="290" r="10" fill="#DC2626"/><text x="350" y="294" class="t-num">2</text>
+  <text x="368" y="266" class="t-msg">Push down the open connection</text>
+  <text x="368" y="282" class="t-small">token → which phone + which app</text>
+
+  <!-- 3. IPC to the app -->
+  <line x1="590" y1="360" x2="828" y2="360" class="req"/>
+  <circle cx="590" cy="360" r="10" fill="#16A34A"/><text x="590" y="364" class="t-num">3</text>
+  <text x="608" y="336" class="t-msg">Binder IPC (broadcast)</text>
+  <text x="608" y="352" class="t-small">to com.cypressit.cyvault</text>
+
+  <!-- 4. Start the app process -->
+  <line x1="830" y1="430" x2="1058" y2="430" class="req"/>
+  <circle cx="830" cy="430" r="10" fill="#2563EB"/><text x="830" y="434" class="t-num">4</text>
+  <text x="848" y="406" class="t-msg">Start the app's process</text>
+  <text x="848" y="422" class="t-small">if not running · even in Doze</text>
+
+  <!-- 5. onMessageReceived -->
+  <rect x="955" y="452" width="210" height="44" rx="8" class="note"/>
+  <circle cx="955" cy="474" r="10" fill="#7C3AED"/><text x="955" y="478" class="t-num">5</text>
+  <text x="1062" y="471" class="t-note">onMessageReceived(data)</text>
+  <text x="1062" y="487" class="t-notesub">builds the text in the phone's language</text>
+
+  <!-- 6. notify -->
+  <line x1="1060" y1="540" x2="832" y2="540" class="req"/>
+  <circle cx="1060" cy="540" r="10" fill="#7C3AED"/><text x="1060" y="544" class="t-num">6</text>
+  <text x="848" y="516" class="t-msg">NotificationManager.notify()</text>
+  <text x="848" y="532" class="t-small">only if POST_NOTIFICATIONS is granted</text>
+
+  <!-- 7. Shown -->
+  <rect x="725" y="562" width="210" height="44" rx="8" class="note"/>
+  <circle cx="725" cy="584" r="10" fill="#2563EB"/><text x="725" y="588" class="t-num">7</text>
+  <text x="832" y="581" class="t-note">Notification shown</text>
+  <text x="832" y="597" class="t-notesub">the app's process can be stopped again</text>
+
+  <!-- Notes -->
+  <rect x="30" y="646" width="1120" height="62" rx="10" class="panel"/>
+  <text x="48" y="668" class="t-panel">Good to know</text>
+  <text x="48" y="688" class="t-small">• One API call per token: the server loops over the user's tokens.   • Play services keeps one connection open for every app on the phone.</text>
+  <text x="48" y="703" class="t-small">• The token belongs to the app install, not the account.   • Messages arrive even without the notification permission; they just aren't shown.</text>
+</svg>
