@@ -14,6 +14,7 @@ sealed interface VaultHomeEffect {
     /** The money left: [amount] as the user typed it, in [currency], to [phoneNumber] (E.164). */
     data class TransferSent(val amount: String, val currency: String, val phoneNumber: String) : VaultHomeEffect
     data class SampleBalancesAdded(val count: Int) : VaultHomeEffect
+    data object SampleBalancesNeedACard : VaultHomeEffect
     data object NavigateToLogin : VaultHomeEffect
     data object NavigateToAddCard : VaultHomeEffect
     data object OpenDrawer : VaultHomeEffect

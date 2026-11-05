@@ -8,6 +8,7 @@ import com.cypressit.cyvault.feature.vault.card.domain.model.CardInput
 import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningCancelledException
 import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningUnavailableException
 import com.cypressit.cyvault.feature.vault.device.domain.usecase.EnrollDeviceUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.debug.NoCardsForSamplesException
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
@@ -297,7 +298,15 @@ class VaultHomeViewModel(
             loadBalances()
             result
                 .onSuccess { _effect.send(VaultHomeEffect.SampleBalancesAdded(it)) }
-                .onFailure { _effect.send(VaultHomeEffect.BalanceRequestFailed) }
+                .onFailure {
+                    _effect.send(
+                        if (it is NoCardsForSamplesException) {
+                            VaultHomeEffect.SampleBalancesNeedACard
+                        } else {
+                            VaultHomeEffect.BalanceRequestFailed
+                        },
+                    )
+                }
         }
     }
 

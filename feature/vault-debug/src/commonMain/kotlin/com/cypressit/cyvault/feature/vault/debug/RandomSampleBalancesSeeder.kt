@@ -1,6 +1,7 @@
 package com.cypressit.cyvault.feature.vault.debug
 
 import com.cypressit.cyvault.feature.vault.card.domain.repository.CardRepository
+import com.cypressit.cyvault.feature.vault.home.domain.debug.NoCardsForSamplesException
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.repository.BalanceRepository
@@ -49,7 +50,7 @@ class RandomSampleBalancesSeeder(
     override suspend fun addSampleBalances(): Result<Int> {
         // A balance needs a card, so there's nothing to add without one.
         val cardIds = cardRepository.getCards().getOrElse { return Result.failure(it) }.map { it.id }
-        if (cardIds.isEmpty()) return Result.failure(IllegalStateException("Add a card first."))
+        if (cardIds.isEmpty()) return Result.failure(NoCardsForSamplesException())
         val samples = List(count) { sample(cardIds.random(random)) }
         val results = coroutineScope {
             samples.chunked(PARALLEL_SAVES).flatMap { chunk ->
