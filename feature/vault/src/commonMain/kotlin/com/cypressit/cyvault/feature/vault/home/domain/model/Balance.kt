@@ -9,7 +9,7 @@ data class Balance(
     /** Above zero: [type] gives the direction, and [signedAmount] the effect on a total. */
     val amount: Double,
     val currency: String, // ISO 4217, e.g. EUR
-    /** ISO 8601: when the purchase or income happened; null lets the API choose when saving. */
+    /** ISO 8601: when the purchase or income happened. Required to create; null keeps it on an edit. */
     val date: String? = null,
     /** The card it belongs to; required when saving, null only on balances stored before cards. */
     val cardId: String? = null,

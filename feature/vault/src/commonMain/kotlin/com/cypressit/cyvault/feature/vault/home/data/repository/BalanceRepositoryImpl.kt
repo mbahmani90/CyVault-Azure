@@ -17,7 +17,10 @@ class BalanceRepositoryImpl(
     override suspend fun getBalances(): Result<List<Balance>> =
         runSuspendCatching { apiService.getBalances().map { it.toDomain() } }
 
-    override suspend fun saveBalance(balance: Balance): Result<Balance> =
+    override suspend fun createBalance(balance: Balance): Result<Balance> =
+        runSuspendCatching { apiService.postBalance(balance.toRequest().copy(id = balance.id)).toDomain() }
+
+    override suspend fun updateBalance(balance: Balance): Result<Balance> =
         runSuspendCatching { apiService.putBalance(balance.id, balance.toRequest()).toDomain() }
 
     override suspend fun deleteBalance(id: String): Result<Unit> =

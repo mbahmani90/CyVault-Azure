@@ -54,7 +54,7 @@ class RandomSampleBalancesSeeder(
         val samples = List(count) { sample(cardIds.random(random)) }
         val results = coroutineScope {
             samples.chunked(PARALLEL_SAVES).flatMap { chunk ->
-                chunk.map { async { repository.saveBalance(it) } }.awaitAll()
+                chunk.map { async { repository.createBalance(it) } }.awaitAll()
             }
         }
         return results.firstOrNull { it.isFailure }?.let { Result.failure(it.exceptionOrNull()!!) }

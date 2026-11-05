@@ -32,11 +32,11 @@ class BalanceRepositoryImplTest {
     )
 
     @Test
-    fun saveBalance_returnsTheBalanceAsTheServerStoredIt() = runTest {
+    fun createBalance_returnsTheBalanceAsTheServerStoredIt() = runTest {
         val result = repository(
             HttpStatusCode.OK,
             """{"id":"main","name":"Main account","amount":1250.5,"currency":"EUR"}""",
-        ).saveBalance(Balance(id = "main", name = " Main account ", amount = 1250.5, currency = "eur"))
+        ).createBalance(Balance(id = "main", name = " Main account ", amount = 1250.5, currency = "eur"))
 
         assertEquals(
             Balance(id = "main", name = "Main account", amount = 1250.5, currency = "EUR"),

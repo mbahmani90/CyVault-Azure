@@ -1,11 +1,13 @@
+using System.Globalization;
 using Azure;
 using Azure.Data.Tables;
 
 namespace CyVault.Api.Balance;
 
 /// <summary>
-/// One row of the balances table. PartitionKey is the owner's oid and RowKey the balance ID, so
-/// all of a user's balances sit in one partition that only their own token can reach.
+/// One row of the balances table. PartitionKey is the owner's oid, so all of a user's balances sit
+/// in one partition that only their own token can reach. RowKey is the balance ID, built by
+/// <see cref="BalanceKey"/> so the table itself keeps each partition newest first.
 /// </summary>
 public sealed class BalanceEntity : ITableEntity
 {
@@ -49,6 +51,23 @@ public sealed class BalanceEntity : ITableEntity
 }
 
 /// <summary>
+/// Builds a balance's RowKey: inverted ticks, then a unique ID. Table Storage sorts RowKeys as text
+/// from low to high, so with the ticks at a fixed width and a later date giving a smaller number,
+/// a partition reads newest first. Balances dated the same instant keep a stable order by ID.
+/// </summary>
+public static class BalanceKey
+{
+    public static string For(DateTimeOffset date, string uniqueId)
+    {
+        var invertedTicks = DateTimeOffset.MaxValue.UtcTicks - date.UtcTicks;
+        return $"{invertedTicks.ToString("D19", CultureInfo.InvariantCulture)}_{uniqueId}";
+    }
+
+    /// <summary>The unique ID a RowKey was built from: what's kept when the date changes.</summary>
+    public static string UniqueIdOf(string rowKey) => rowKey[(rowKey.IndexOf('_') + 1)..];
+}
+
+/// <summary>
 /// What a balance row is. The user adds purchases and income; transfers and receives are written
 /// only by POST /me/transfers, and can be deleted but not edited.
 /// </summary>
@@ -66,7 +85,8 @@ public static class BalanceTypes
 }
 
 /// <summary>What the client sends to create or replace a balance.</summary>
-/// Without a date, a new balance gets the current time and an edited one keeps its date.
+/// Creating needs the ID and date: the row's key is built from them, so sending the same ones again
+/// reaches the same row instead of adding another. Without a date, an edit keeps the row's date.
 /// Without a type, the amount's sign gives it (negative is a purchase), as older apps send it.
 public sealed record BalanceRequest(
     string? Name,
@@ -75,7 +95,8 @@ public sealed record BalanceRequest(
     string? Currency,
     DateTimeOffset? Date,
     string? CardId,
-    string? Type);
+    string? Type,
+    string? Id = null);
 
 /// <summary>What the API returns for a balance: the amount is always above zero.</summary>
 public sealed record BalanceResponse(
@@ -90,3 +111,6 @@ public sealed record BalanceResponse(
     string Type,
     string Counterparty,
     string TransferId);
+
+/// <summary>One page of balances, newest first; a null token means there are no more.</summary>
+public sealed record BalancePageResponse(List<BalanceResponse> Items, string? ContinuationToken);
