@@ -8,6 +8,7 @@ import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHome
 import cyvault.vault.generated.resources.Res
 import cyvault.vault.generated.resources.transfer_cards_load_failed
 import cyvault.vault.generated.resources.transfer_sent
+import cyvault.vault.generated.resources.vault_home_add_item_no_cards
 import cyvault.vault.generated.resources.vault_home_balance_deleted
 import cyvault.vault.generated.resources.vault_home_balance_request_failed
 import cyvault.vault.generated.resources.vault_home_balance_saved
@@ -54,6 +55,8 @@ internal fun VaultHomeScreenEffect(
                 )
                 is VaultHomeEffect.SampleBalancesAdded ->
                     snackBarHostState.showSnackbar(getString(Res.string.vault_home_sample_balances_added, effect.count))
+                VaultHomeEffect.SampleBalancesNeedACard ->
+                    snackBarHostState.showSnackbar(getString(Res.string.vault_home_add_item_no_cards))
                 VaultHomeEffect.OpenDrawer -> drawerState.open()
                 VaultHomeEffect.CloseDrawer -> drawerState.close()
             }

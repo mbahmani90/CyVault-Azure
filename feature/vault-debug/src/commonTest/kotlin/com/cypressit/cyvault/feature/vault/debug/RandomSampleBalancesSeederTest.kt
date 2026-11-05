@@ -2,6 +2,7 @@ package com.cypressit.cyvault.feature.vault.debug
 
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.repository.CardRepository
+import com.cypressit.cyvault.feature.vault.home.domain.debug.NoCardsForSamplesException
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.model.TransferApproval
 import com.cypressit.cyvault.feature.vault.home.domain.model.TransferChallenge
@@ -12,6 +13,7 @@ import kotlin.math.round
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -113,7 +115,7 @@ class RandomSampleBalancesSeederTest {
     fun withoutCards_failsAndSavesNothing() = runTest {
         cards.serverCards = emptyList()
 
-        assertTrue(seeder(count = 5).addSampleBalances().isFailure)
+        assertIs<NoCardsForSamplesException>(seeder(count = 5).addSampleBalances().exceptionOrNull())
         assertTrue(repository.saved.isEmpty())
     }
 

@@ -10,6 +10,7 @@ import com.cypressit.cyvault.feature.vault.fake.FakeProfilePhotoRepository
 import com.cypressit.cyvault.feature.vault.fake.fixedTransferPromptTexts
 import com.cypressit.cyvault.feature.vault.fake.succeedingSessionApi
 import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositoryImpl
+import com.cypressit.cyvault.feature.vault.home.domain.debug.NoCardsForSamplesException
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
@@ -422,6 +423,30 @@ class VaultHomeViewModelBalanceTest {
         assertFalse(viewModel.state.value.isAddingSampleBalances)
         assertEquals(VaultHomeEffect.CloseDrawer, viewModel.effect.first())
         assertEquals(VaultHomeEffect.SampleBalancesAdded(50), viewModel.effect.first())
+    }
+
+    @Test
+    fun addSampleBalances_withoutACard_saysACardIsNeeded() = runTest(dispatcher) {
+        val viewModel = viewModel(sampleBalancesSeeder = { Result.failure(NoCardsForSamplesException()) })
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.AddSampleBalances)
+        advanceUntilIdle()
+
+        assertEquals(VaultHomeEffect.CloseDrawer, viewModel.effect.first())
+        assertEquals(VaultHomeEffect.SampleBalancesNeedACard, viewModel.effect.first())
+    }
+
+    @Test
+    fun addSampleBalances_whenASaveFails_reportsARequestFailure() = runTest(dispatcher) {
+        val viewModel = viewModel(sampleBalancesSeeder = { Result.failure(Exception("offline")) })
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.AddSampleBalances)
+        advanceUntilIdle()
+
+        assertEquals(VaultHomeEffect.CloseDrawer, viewModel.effect.first())
+        assertEquals(VaultHomeEffect.BalanceRequestFailed, viewModel.effect.first())
     }
 
     @Test
