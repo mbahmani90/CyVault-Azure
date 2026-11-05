@@ -79,6 +79,10 @@ class VaultHomeViewModel(
     // API instead of sending the money twice. Changing what's sent starts a new one.
     private var pendingTransferId: String? = null
 
+    // The ID of the new balance in the open dialog, kept until it saves: after a failure the first
+    // try may still have reached the API, and saving again then replaces that row.
+    private var pendingBalanceId: String? = null
+
     init {
         loadUser()
         loadBalances()
@@ -189,8 +193,8 @@ class VaultHomeViewModel(
     private fun saveItem(title: String, description: String, value: Double, currency: String, date: String) {
         // Save is disabled until a card is chosen; the API rejects a balance without one.
         val cardId = _state.value.itemCard?.id ?: return
-        // Editing keeps the row's ID; a new balance gets a random one.
-        val id = _state.value.editingBalance?.id ?: Uuid.random().toHexString()
+        val editingId = _state.value.editingBalance?.id
+        val id = editingId ?: pendingBalanceId ?: Uuid.random().toHexString().also { pendingBalanceId = it }
         // The dialog signs the value by its Purchase/Income choice; the balance keeps it above zero.
         val balance = Balance(
             id = id,
@@ -204,10 +208,12 @@ class VaultHomeViewModel(
         )
         viewModelScope.launch {
             _state.update { it.copy(isSavingBalance = true) }
-            saveBalance(balance)
+            saveBalance(balance, isNew = editingId == null)
                 .onSuccess { saved ->
+                    pendingBalanceId = null
                     _state.update { state ->
-                        val others = state.balances.filterNot { it.id == saved.id }
+                        // A new date gives the balance a new ID, so the old row goes by its old one.
+                        val others = state.balances.filterNot { it.id == editingId || it.id == saved.id }
                         state.copy(
                             balances = (others + saved).newestFirst(),
                             isSavingBalance = false,
@@ -452,6 +458,7 @@ class VaultHomeViewModel(
     // Opens the add-item dialog for a new balance, on the first card, or for [editing], on its own
     // card. Before the cards arrive the edited card's ID waits for them, and collectCards checks it.
     private fun openItemDialog(editing: Balance?) {
+        pendingBalanceId = null
         _state.update {
             it.copy(
                 isAddItemDialogVisible = true,

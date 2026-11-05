@@ -44,7 +44,18 @@ class BalanceApiService(
     suspend fun getBalances(): List<BalanceResponseDto> =
         client.get(balancesUrl) { bearerAuth(accessToken()) }.requireSuccess().body()
 
-    /** Creates the balance, or replaces it when [id] already exists; returns it as stored. */
+    /**
+     * Creates the balance, sent with its ID and date; returns it as stored, under the ID the API
+     * built from them. Sending the same ones again replaces the row instead of adding another.
+     */
+    suspend fun postBalance(request: BalanceRequestDto): BalanceResponseDto =
+        client.post(balancesUrl) {
+            bearerAuth(accessToken())
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.requireSuccess().body()
+
+    /** Replaces the balance [id]; returns it as stored, under a new ID when its date changed. */
     suspend fun putBalance(id: String, request: BalanceRequestDto): BalanceResponseDto =
         client.put(urlFor(id)) {
             bearerAuth(accessToken())

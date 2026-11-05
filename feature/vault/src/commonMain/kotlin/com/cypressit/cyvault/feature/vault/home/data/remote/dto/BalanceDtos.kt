@@ -27,12 +27,14 @@ data class BalanceRequestDto(
     @SerialName("description") val description: String,
     @SerialName("amount") val amount: Double,
     @SerialName("currency") val currency: String,
-    /** ISO 8601, or null to let the API date a new balance now and keep an edited one's date. */
+    /** ISO 8601. Required when creating; without it, an edit keeps the balance's date. */
     @SerialName("date") val date: String? = null,
     /** Required: one of the user's cards. */
     @SerialName("cardId") val cardId: String? = null,
     /** Purchase or Income: transfers are only made with [TransferRequestDto]. */
     @SerialName("type") val type: String? = null,
+    /** Required when creating: picked once per new balance, so a retry reaches the same row. */
+    @SerialName("id") val id: String? = null,
 )
 
 /** Sends money from one of the user's cards to the card linked to [phoneNumber]. */

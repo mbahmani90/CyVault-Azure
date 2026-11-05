@@ -7,8 +7,15 @@ import com.cypressit.cyvault.feature.vault.home.domain.model.TransferChallenge
 interface BalanceRepository {
     suspend fun getBalances(): Result<List<Balance>>
 
-    /** Creates the balance, or replaces the one with the same ID; returns it as the server stored it. */
-    suspend fun saveBalance(balance: Balance): Result<Balance>
+    /**
+     * Creates the balance, which needs a date; returns it as the server stored it, under the ID the
+     * server built. The caller picks [Balance.id] once per new balance, so a retry after a lost
+     * response replaces the row instead of adding another.
+     */
+    suspend fun createBalance(balance: Balance): Result<Balance>
+
+    /** Replaces the balance [Balance.id]; returns it as stored, under a new ID when its date changed. */
+    suspend fun updateBalance(balance: Balance): Result<Balance>
 
     suspend fun deleteBalance(id: String): Result<Unit>
 

@@ -233,6 +233,70 @@ class VaultHomeViewModelBalanceTest {
     }
 
     @Test
+    fun saveBalance_edit_whenTheServerGivesANewId_replacesTheOldRow() = runTest(dispatcher) {
+        balances.balances = listOf(main)
+        balances.idAfterUpdate = "moved"
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.ClickBalance(main))
+        advanceUntilIdle()
+        viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "", 99.0, "EUR", "2026-10-20T00:00:00Z"))
+        advanceUntilIdle()
+
+        assertEquals("main", balances.attemptedIds.single())
+        assertEquals(listOf("moved"), viewModel.state.value.balances.map { it.id })
+    }
+
+    @Test
+    fun saveBalance_new_savedAgainAfterAFailure_keepsItsIdUntilItSaves() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        fun save() = viewModel.onIntent(
+            VaultHomeIntent.SaveItem("Main account", "", 1.0, "EUR", "2026-10-28T09:00:00Z"),
+        )
+
+        viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
+        advanceUntilIdle()
+        balances.failure = Exception("offline")
+        save()
+        advanceUntilIdle()
+        assertEquals(VaultHomeEffect.BalanceRequestFailed, viewModel.effect.first())
+        balances.failure = null
+        save()
+        advanceUntilIdle()
+        assertEquals(VaultHomeEffect.BalanceSaved, viewModel.effect.first())
+
+        // The next new balance is another one.
+        viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
+        advanceUntilIdle()
+        save()
+        advanceUntilIdle()
+
+        val (failed, retried, next) = balances.attemptedIds
+        assertEquals(failed, retried)
+        assertTrue(next != retried)
+    }
+
+    @Test
+    fun saveBalance_new_dismissedAfterAFailure_getsANewIdNextTime() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        balances.failure = Exception("offline")
+
+        repeat(2) {
+            viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog)
+            advanceUntilIdle()
+            viewModel.onIntent(VaultHomeIntent.SaveItem("Main account", "", 1.0, "EUR", "2026-10-28T09:00:00Z"))
+            advanceUntilIdle()
+            assertEquals(VaultHomeEffect.BalanceRequestFailed, viewModel.effect.first())
+            viewModel.onIntent(VaultHomeIntent.DismissAddItemDialog)
+        }
+
+        assertEquals(2, balances.attemptedIds.toSet().size)
+    }
+
+    @Test
     fun saveBalance_whenItFails_keepsTheDialogOpen() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()

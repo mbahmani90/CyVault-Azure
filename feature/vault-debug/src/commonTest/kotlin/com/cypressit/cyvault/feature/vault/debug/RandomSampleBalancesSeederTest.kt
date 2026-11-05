@@ -27,11 +27,13 @@ class RandomSampleBalancesSeederTest {
 
         override suspend fun getBalances(): Result<List<Balance>> = Result.success(saved)
 
-        override suspend fun saveBalance(balance: Balance): Result<Balance> {
+        override suspend fun createBalance(balance: Balance): Result<Balance> {
             failure?.let { return Result.failure(it) }
             saved += balance
             return Result.success(balance)
         }
+
+        override suspend fun updateBalance(balance: Balance): Result<Balance> = error("Not used")
 
         override suspend fun deleteBalance(id: String): Result<Unit> = Result.success(Unit)
 

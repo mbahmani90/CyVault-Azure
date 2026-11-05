@@ -22,6 +22,12 @@ class FakeBalanceRepository(var balances: List<Balance> = emptyList()) : Balance
     /** When set, getBalances waits for it, so a test can see the loading state. */
     var gate: CompletableDeferred<Unit>? = null
     val saved = mutableListOf<Balance>()
+
+    /** The IDs creating and updating were called with, in order, including the ones that failed. */
+    val attemptedIds = mutableListOf<String>()
+
+    /** When set, an update returns this ID, as the API does when the date changes. */
+    var idAfterUpdate: String? = null
     val deletedIds = mutableListOf<String>()
 
     /** When set, sendTransfer fails with this instead of sending. */
@@ -53,10 +59,15 @@ class FakeBalanceRepository(var balances: List<Balance> = emptyList()) : Balance
         return failure?.let { Result.failure(it) } ?: Result.success(balances)
     }
 
-    override suspend fun saveBalance(balance: Balance): Result<Balance> {
+    override suspend fun createBalance(balance: Balance): Result<Balance> = save(balance)
+
+    override suspend fun updateBalance(balance: Balance): Result<Balance> =
+        save(balance).map { it.copy(id = idAfterUpdate ?: it.id) }
+
+    private fun save(balance: Balance): Result<Balance> {
+        attemptedIds += balance.id
         failure?.let { return Result.failure(it) }
         saved += balance
-        // Like the API, a new balance without a date gets one.
         return Result.success(
             balance.copy(
                 name = balance.name.trim(),

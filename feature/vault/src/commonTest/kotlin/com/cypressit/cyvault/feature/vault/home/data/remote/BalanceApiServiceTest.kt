@@ -72,6 +72,30 @@ class BalanceApiServiceTest {
     }
 
     @Test
+    fun postBalance_postsTheIdAndDateAndParsesTheStoredBalance() = runTest {
+        val saved = api { respondJson(mainJson) }
+            .postBalance(
+                BalanceRequestDto(
+                    name = "Main account",
+                    description = "",
+                    amount = 1250.5,
+                    currency = "EUR",
+                    date = "2026-10-27T09:30:00Z",
+                    cardId = "card-1",
+                    id = "uuid-1",
+                ),
+            )
+
+        val request = requests.single()
+        assertEquals(HttpMethod.Post, request.method)
+        assertEquals("https://api.test/api/me/balances", request.url.toString())
+        val json = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+        assertEquals("uuid-1", json["id"]?.jsonPrimitive?.content)
+        assertEquals("2026-10-27T09:30:00Z", json["date"]?.jsonPrimitive?.content)
+        assertEquals("main", saved.id)
+    }
+
+    @Test
     fun putBalance_sendsTheJsonBodyToTheBalanceUrl() = runTest {
         val saved = api { respondJson(mainJson) }
             .putBalance(

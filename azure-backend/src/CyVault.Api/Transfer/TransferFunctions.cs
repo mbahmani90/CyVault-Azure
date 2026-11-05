@@ -92,7 +92,8 @@ public sealed partial class TransferFunctions(
             Nonce = body.Nonce!,
             Signature = body.Signature!,
             Status = TransferStatus.Pending,
-            CreatedAt = DateTimeOffset.UtcNow,
+            // Whole milliseconds, so a retry reading it back builds the same balance keys.
+            CreatedAt = DateTimeOffset.FromUnixTimeMilliseconds(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()),
         }, cancellationToken);
         if (transfer is null)
             return new ConflictObjectResult("This transferId was already used for a different transfer.");
@@ -188,10 +189,10 @@ public sealed partial class TransferFunctions(
     // The sender's Transfer row and the receiver's Receive row, dated when the transfer was made.
     private static (BalanceEntity Sent, BalanceEntity Received) Rows(TransferEntity transfer, string senderPhone)
     {
-        BalanceEntity Row(string oid, string rowKey, string type, string cardId, string counterparty) => new()
+        BalanceEntity Row(string oid, string uniqueId, string type, string cardId, string counterparty) => new()
         {
             PartitionKey = oid,
-            RowKey = rowKey,
+            RowKey = BalanceKey.For(transfer.CreatedAt, uniqueId),
             Amount = transfer.Amount,
             Currency = transfer.Currency,
             Date = transfer.CreatedAt,
@@ -209,7 +210,7 @@ public sealed partial class TransferFunctions(
     private static string? Validate(TransferRequest? body)
     {
         if (body is null) return BodyShape;
-        // Short enough that "-received" still fits a 64-character RowKey.
+        // Short enough that its balance keys, with the ticks and "-received", fit a balance ID.
         if (body.TransferId is null || !TransferIdPattern().IsMatch(body.TransferId))
             return "transferId must be 1-50 letters, digits, '-' or '_'.";
         if (body.CardId is null || !IdPattern().IsMatch(body.CardId)) return "cardId is required.";
