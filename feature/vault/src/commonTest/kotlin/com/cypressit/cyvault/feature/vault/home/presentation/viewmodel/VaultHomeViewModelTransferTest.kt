@@ -6,6 +6,7 @@ import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningCance
 import com.cypressit.cyvault.feature.vault.device.domain.repository.SigningUnavailableException
 import com.cypressit.cyvault.feature.vault.device.domain.usecase.EnrollDeviceUseCase
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
+import com.cypressit.cyvault.feature.vault.fake.FakeBalanceCache
 import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeDeviceRepository
@@ -75,7 +76,7 @@ class VaultHomeViewModelTransferTest {
         cards: CardRepository = FakeCardRepository(cards = listOf(visa, mastercard)),
     ): VaultHomeViewModel {
         val authClient = FakeAuthClient()
-        val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient))
+        val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient), FakeBalanceCache())
         val photos = FakeProfilePhotoRepository()
         return VaultHomeViewModel(
             getCards = GetCardsUseCase(cards),

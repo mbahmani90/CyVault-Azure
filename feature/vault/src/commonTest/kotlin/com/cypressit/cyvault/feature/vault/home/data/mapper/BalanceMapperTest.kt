@@ -68,6 +68,30 @@ class BalanceMapperTest {
     }
 
     @Test
+    fun cached_keepsEveryField() {
+        val balance = Balance(
+            id = "b1",
+            name = "To Ana",
+            description = "Dinner",
+            amount = 20.5,
+            currency = "EUR",
+            date = "2026-10-28T09:00:00Z",
+            cardId = "card-1",
+            type = BalanceType.Transfer,
+            counterparty = "+351912345678",
+        )
+
+        assertEquals(balance, balance.toCached().toDomain())
+    }
+
+    @Test
+    fun cached_anUnknownTypeGoesByTheSign() {
+        val cached = Balance(id = "b1", name = "", amount = -5.0, currency = "EUR").toCached().copy(type = "New")
+
+        assertEquals(BalanceType.Purchase, cached.toDomain().type)
+    }
+
+    @Test
     fun signedAmount_isNegativeForMoneyGoingOut() {
         fun signed(type: BalanceType) =
             Balance(id = "b1", name = "", amount = 10.0, currency = "EUR", type = type).signedAmount

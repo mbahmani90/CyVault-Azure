@@ -2,6 +2,9 @@ package com.cypressit.cyvault.feature.vault.home.di
 
 import com.cypressit.cyvault.core.di.IO_DISPATCHER
 import com.cypressit.cyvault.feature.vault.di.UserSession
+import com.cypressit.cyvault.feature.vault.home.data.local.BalanceCache
+import com.cypressit.cyvault.feature.vault.home.data.local.BalanceCacheDao
+import com.cypressit.cyvault.feature.vault.home.data.local.BalanceCacheDatabase
 import com.cypressit.cyvault.feature.vault.home.data.remote.BalanceApiService
 import com.cypressit.cyvault.feature.vault.home.data.remote.CyVaultApiConfig
 import com.cypressit.cyvault.feature.vault.home.data.remote.ProfilePhotoApiService
@@ -40,9 +43,14 @@ internal val homeModule = module {
     single { BalanceApiService(get(), get(), apiConfig()) }
     single { SessionApiService(get(), get(), apiConfig()) }
 
+    // Local: the file is the device's, not one session's, so it outlives each user's session and
+    // sign-out empties it.
+    single<BalanceCacheDao> { get<BalanceCacheDatabase>().balanceCacheDao() }
+    single<BalanceCache> { get<BalanceCacheDao>() }
+
     // Repository (AuthClient comes from :auth's authClientModule). The account is the auth
     // client's, so it stays a singleton.
-    single<AccountRepository> { AccountRepositoryImpl(get(), get()) }
+    single<AccountRepository> { AccountRepositoryImpl(get(), get(), get()) }
 
     // Everything holding the user's data, and what's built on it, lives in their session.
     scope(UserSession.qualifier) {

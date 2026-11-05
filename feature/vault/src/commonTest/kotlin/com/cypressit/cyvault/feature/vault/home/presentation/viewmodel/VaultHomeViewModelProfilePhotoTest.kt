@@ -3,6 +3,7 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 import com.cypressit.cyvault.feature.vault.device.domain.usecase.EnrollDeviceUseCase
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient.Companion.USER_ID
+import com.cypressit.cyvault.feature.vault.fake.FakeBalanceCache
 import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeDeviceRepository
@@ -50,7 +51,7 @@ class VaultHomeViewModelProfilePhotoTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val authClient = FakeAuthClient()
-    private val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient))
+    private val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient), FakeBalanceCache())
     private val photos = FakeProfilePhotoRepository()
     private val cards = FakeCardRepository()
     private val balances = FakeBalanceRepository()
