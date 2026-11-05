@@ -3,6 +3,7 @@ using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Storage.Blobs;
+using CyVault.Api.Balance;
 using CyVault.Api.Card;
 using CyVault.Api.Device;
 using CyVault.Api.Push;
@@ -43,6 +44,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddSingleton(_ => CreateAvatarContainer(builder.Configuration.GetSection("AvatarStorage")));
 builder.Services.AddSingleton(_ => CreateBalanceTable(builder.Configuration.GetSection("BalanceStorage")));
+builder.Services.AddSingleton<BalanceWriter>();
 builder.Services.AddSingleton(_ => CreateCardTables(builder.Configuration.GetSection("CardStorage")));
 builder.Services.AddSingleton(_ => CreateCardEncryption(builder.Configuration.GetSection("CardEncryption")));
 builder.Services.AddSingleton(_ => CreateTransferTable(builder.Configuration.GetSection("TransferStorage")));

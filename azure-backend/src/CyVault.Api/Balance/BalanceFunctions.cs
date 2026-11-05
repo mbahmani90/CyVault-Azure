@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Azure;
 using Azure.Data.Tables;
 using CyVault.Api.Auth;
 using CyVault.Api.Card;
@@ -18,7 +17,7 @@ namespace CyVault.Api.Balance;
 /// or change their own rows.
 /// </summary>
 public sealed partial class BalanceFunctions(
-    TableClient balances, CardTables cardTables, ILogger<BalanceFunctions> logger)
+    TableClient balances, BalanceWriter writer, CardTables cardTables, ILogger<BalanceFunctions> logger)
 {
     private const int MaxNameLength = 100;
     private const int MaxDescriptionLength = 500;
@@ -51,7 +50,7 @@ public sealed partial class BalanceFunctions(
             // can't reach another user's rows.
             string? continuationToken = req.Query["continuationToken"];
             await foreach (var page in balances
-                .QueryAsync<BalanceEntity>(e => e.PartitionKey == caller.ObjectId, pageSize, cancellationToken: cancellationToken)
+                .QueryAsync<BalanceEntity>(BalanceWriter.RowsFilter(caller.ObjectId!), pageSize, cancellationToken: cancellationToken)
                 .AsPages(continuationToken, pageSize))
             {
                 return new OkObjectResult(new BalancePageResponse(
@@ -62,11 +61,29 @@ public sealed partial class BalanceFunctions(
 
         var result = new List<BalanceResponse>();
         await foreach (var entity in balances.QueryAsync<BalanceEntity>(
-            e => e.PartitionKey == caller.ObjectId, cancellationToken: cancellationToken))
+            BalanceWriter.RowsFilter(caller.ObjectId!), cancellationToken: cancellationToken))
         {
             result.Add(ToResponse(entity));
         }
         return new OkObjectResult(result);
+    }
+
+    /// <summary>The caller's totals and oldest balance date, kept up to date by every balance write.</summary>
+    [Function("GetBalanceTotals")]
+    public async Task<IActionResult> GetTotals(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "me/balance-totals")] HttpRequest req,
+        CancellationToken cancellationToken)
+    {
+        var caller = await CallerAuthentication.AuthenticateAsync(req.HttpContext, CallerAuthentication.BalanceScope);
+        if (caller.Failure is not null) return caller.Failure;
+
+        var totals = await writer.GetTotalsAsync(caller.ObjectId!, cancellationToken);
+        return new OkObjectResult(new BalanceTotalsResponse(
+            totals.OldestDate,
+            totals.Amounts
+                .OrderBy(t => t.Key, StringComparer.Ordinal)
+                .Select(t => new BalanceTotalResponse(t.Key, t.Value))
+                .ToList()));
     }
 
     [Function("GetBalance")]
@@ -109,7 +126,7 @@ public sealed partial class BalanceFunctions(
             return new ConflictObjectResult("A transfer or receive can't be edited.");
 
         var entity = ToEntity(caller.ObjectId!, rowKey, body, body.Date.Value);
-        await balances.UpsertEntityAsync(entity, TableUpdateMode.Replace, cancellationToken);
+        await writer.SaveAsync(entity, cancellationToken);
         logger.LogInformation("Stored balance {Id} for {ObjectId}", rowKey, caller.ObjectId);
         return await ReadBackAsync(entity, cancellationToken);
     }
@@ -144,21 +161,8 @@ public sealed partial class BalanceFunctions(
         var rowKey = BalanceKey.For(date, BalanceKey.UniqueIdOf(id));
         var entity = ToEntity(caller.ObjectId!, rowKey, body, date);
 
-        if (rowKey == id)
-        {
-            await balances.UpsertEntityAsync(entity, TableUpdateMode.Replace, cancellationToken);
-        }
-        else
-        {
-            // A RowKey can't change, so a new date is a new row. One batch, as the same partition
-            // allows, so a failure can't leave the balance in both places or neither.
-            await balances.SubmitTransactionAsync(
-                [
-                    new TableTransactionAction(TableTransactionActionType.Delete, existing.Value, ETag.All),
-                    new TableTransactionAction(TableTransactionActionType.UpsertReplace, entity),
-                ],
-                cancellationToken);
-        }
+        // A RowKey can't change, so a new date is a new row, replacing the old one in one batch.
+        await writer.SaveAsync(entity, cancellationToken, replacesRowKey: id);
         logger.LogInformation("Stored balance {Id} for {ObjectId}", rowKey, caller.ObjectId);
         return await ReadBackAsync(entity, cancellationToken);
     }
@@ -174,7 +178,7 @@ public sealed partial class BalanceFunctions(
         if (!IsValidId(id)) return InvalidId();
 
         // Deleting a row that isn't there is still a success: the result is the same.
-        await balances.DeleteEntityAsync(caller.ObjectId!, id, ETag.All, cancellationToken);
+        await writer.DeleteAsync(caller.ObjectId!, id, cancellationToken);
         return new NoContentResult();
     }
 
