@@ -12,7 +12,7 @@ import androidx.room.RoomDatabaseConstructor
 import androidx.room.Transaction
 import androidx.room.Upsert
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
-import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineDispatcher
 
 /** The cached balances' file: only ever a copy of the API's rows, so it can always be thrown away. */
 internal const val BALANCE_CACHE_FILE_NAME = "balance-cache.db"
@@ -133,9 +133,9 @@ expect object BalanceCacheDatabaseConstructor : RoomDatabaseConstructor<BalanceC
  * migrating them, since the API can always fill them again.
  */
 internal fun RoomDatabase.Builder<BalanceCacheDatabase>.buildBalanceCache(
-    queryContext: CoroutineContext,
+    queryDispatcher: CoroutineDispatcher,
 ): BalanceCacheDatabase = setDriver(BundledSQLiteDriver())
-    .setQueryCoroutineContext(queryContext)
+    .setQueryCoroutineContext(queryDispatcher)
     .fallbackToDestructiveMigration(dropAllTables = true)
     .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
     .build()
