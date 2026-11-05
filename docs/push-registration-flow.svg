@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 700" width="1060" height="700" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title>CyVault — Linking a phone's push token to an account</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0284C7"/>
+    </marker>
+    <style>
+      .t-title { font-size: 22px; font-weight: 700; fill: #0F172A; }
+      .t-sub { font-size: 12.5px; fill: #64748B; }
+      .t-actor { font-size: 14px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-actorsub { font-size: 10.5px; fill: #475569; text-anchor: middle; }
+      .t-msg { font-size: 12.5px; font-weight: 700; fill: #0F172A; }
+      .t-body { font-size: 11.5px; fill: #334155; font-family: Consolas, 'SFMono-Regular', Menlo, monospace; }
+      .t-small { font-size: 11px; fill: #475569; }
+      .t-panel { font-size: 13px; font-weight: 700; fill: #0F172A; }
+      .t-num { font-size: 11px; font-weight: 700; fill: #FFFFFF; text-anchor: middle; }
+      .t-phase { font-size: 11px; font-weight: 700; fill: #64748B; letter-spacing: 0.06em; }
+      .life { stroke: #94A3B8; stroke-width: 1.5; stroke-dasharray: 5 5; }
+      .req { stroke: #475569; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .res { stroke: #0284C7; stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; marker-end: url(#arrowBlue); }
+      .phase { stroke: #E2E8F0; stroke-width: 1; }
+      .panel { fill: #FFFFFF; stroke: #CBD5E1; stroke-width: 1.2; }
+    </style>
+  </defs>
+
+  <rect width="1060" height="700" fill="#F8FAFC"/>
+
+  <!-- Title -->
+  <text x="40" y="36" class="t-title">Push tokens: from phone to account</text>
+  <text x="40" y="58" class="t-sub">FCM knows app installs, not users. CyVault links each token to the signed-in account (oid) and pushes to every token of that account.</text>
+
+  <!-- Actors -->
+  <rect x="30" y="80" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#64748B" stroke-width="1.5"/>
+  <text x="120" y="101" class="t-actor">CyVault app</text>
+  <text x="120" y="118" class="t-actorsub">phone · via Play services</text>
+  <rect x="300" y="80" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="390" y="101" class="t-actor">FCM</text>
+  <text x="390" y="118" class="t-actorsub">Firebase · Google</text>
+  <rect x="570" y="80" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#D97706" stroke-width="1.5"/>
+  <text x="660" y="101" class="t-actor">CyVault API</text>
+  <text x="660" y="118" class="t-actorsub">Azure Function</text>
+  <rect x="840" y="80" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="930" y="101" class="t-actor">Push token table</text>
+  <text x="930" y="118" class="t-actorsub">Azure Table · PartitionKey = oid</text>
+
+  <!-- Lifelines -->
+  <line x1="120" y1="132" x2="120" y2="580" class="life"/>
+  <line x1="390" y1="132" x2="390" y2="580" class="life"/>
+  <line x1="660" y1="132" x2="660" y2="580" class="life"/>
+  <line x1="930" y1="132" x2="930" y2="580" class="life"/>
+
+  <!-- Phase: register -->
+  <text x="40" y="156" class="t-phase">AFTER SIGN-IN</text>
+  <line x1="140" y1="152" x2="1020" y2="152" class="phase"/>
+
+  <!-- 1: get token -->
+  <circle cx="22" cy="182" r="9" fill="#64748B"/><text x="22" y="186" class="t-num">1</text>
+  <path d="M122 190 H386" class="req"/>
+  <text x="134" y="182" class="t-msg">Get FCM token</text>
+  <path d="M388 220 H124" class="res"/>
+  <text x="255" y="212" class="t-body" text-anchor="middle">token (one per app install)</text>
+
+  <!-- 2: save token -->
+  <circle cx="22" cy="258" r="9" fill="#64748B"/><text x="22" y="262" class="t-num">2</text>
+  <path d="M122 266 H656" class="req"/>
+  <text x="134" y="258" class="t-msg">PUT /me/push-tokens</text>
+  <text x="134" y="284" class="t-body">{ token } · Bearer access token (gives the oid)</text>
+
+  <!-- 3: store -->
+  <circle cx="22" cy="318" r="9" fill="#D97706"/><text x="22" y="322" class="t-num">3</text>
+  <path d="M662 326 H926" class="req"/>
+  <text x="674" y="318" class="t-msg">Save (oid, token)</text>
+  <text x="674" y="344" class="t-small">removes the token from any other account first</text>
+
+  <!-- Phase: send -->
+  <text x="40" y="386" class="t-phase">MONEY ARRIVES</text>
+  <line x1="148" y1="382" x2="1020" y2="382" class="phase"/>
+
+  <!-- 4: lookup -->
+  <circle cx="22" cy="412" r="9" fill="#D97706"/><text x="22" y="416" class="t-num">4</text>
+  <path d="M662 420 H926" class="req"/>
+  <text x="674" y="412" class="t-msg">Tokens of receiver's oid</text>
+  <path d="M928 448 H664" class="res"/>
+  <text x="796" y="440" class="t-body" text-anchor="middle">every phone of that account</text>
+
+  <!-- 5: send -->
+  <circle cx="22" cy="488" r="9" fill="#D97706"/><text x="22" y="492" class="t-num">5</text>
+  <path d="M658 496 H394" class="req"/>
+  <text x="648" y="488" class="t-msg" text-anchor="end">messages:send (per token)</text>
+  <text x="648" y="514" class="t-body" text-anchor="end">{ token, data }</text>
+
+  <!-- 6: deliver -->
+  <circle cx="22" cy="548" r="9" fill="#16A34A"/><text x="22" y="552" class="t-num">6</text>
+  <path d="M388 556 H124" class="req"/>
+  <text x="378" y="548" class="t-msg" text-anchor="end">Deliver to that install</text>
+  <text x="134" y="574" class="t-small">app shows the notification</text>
+
+  <!-- Footer -->
+  <rect x="30" y="604" width="990" height="72" rx="8" class="panel"/>
+  <text x="48" y="628" class="t-panel">Keeping the table right</text>
+  <text x="48" y="648" class="t-small">Sign-out: DELETE /me/push-tokens removes this phone's row. Uninstalled app: FCM answers 404 and the API drops the token.</text>
+  <text x="48" y="664" class="t-small">The app sends its current token on every start, so a rotated token replaces the old one without extra code.</text>
+</svg>
