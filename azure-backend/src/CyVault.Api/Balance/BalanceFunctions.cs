@@ -68,7 +68,7 @@ public sealed partial class BalanceFunctions(
         return new OkObjectResult(result);
     }
 
-    /// <summary>The caller's total per currency, kept up to date by every balance write.</summary>
+    /// <summary>The caller's totals and oldest balance date, kept up to date by every balance write.</summary>
     [Function("GetBalanceTotals")]
     public async Task<IActionResult> GetTotals(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "me/balance-totals")] HttpRequest req,
@@ -78,10 +78,12 @@ public sealed partial class BalanceFunctions(
         if (caller.Failure is not null) return caller.Failure;
 
         var totals = await writer.GetTotalsAsync(caller.ObjectId!, cancellationToken);
-        return new OkObjectResult(totals
-            .OrderBy(t => t.Key, StringComparer.Ordinal)
-            .Select(t => new BalanceTotalResponse(t.Key, t.Value))
-            .ToList());
+        return new OkObjectResult(new BalanceTotalsResponse(
+            totals.OldestDate,
+            totals.Amounts
+                .OrderBy(t => t.Key, StringComparer.Ordinal)
+                .Select(t => new BalanceTotalResponse(t.Key, t.Value))
+                .ToList()));
     }
 
     [Function("GetBalance")]
