@@ -1,12 +1,15 @@
 package com.cypressit.cyvault.feature.vault.debug
 
+import androidx.paging.PagingData
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.repository.CardRepository
 import com.cypressit.cyvault.feature.vault.home.domain.debug.NoCardsForSamplesException
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
+import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceTotals
 import com.cypressit.cyvault.feature.vault.home.domain.model.TransferApproval
 import com.cypressit.cyvault.feature.vault.home.domain.model.TransferChallenge
 import com.cypressit.cyvault.feature.vault.home.domain.repository.BalanceRepository
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlin.math.round
@@ -25,7 +28,13 @@ class RandomSampleBalancesSeederTest {
         var failure: Exception? = null
         val saved = mutableListOf<Balance>()
 
-        override suspend fun getBalances(): Result<List<Balance>> = Result.success(saved)
+        override fun balances(): Flow<PagingData<Balance>> = error("Not used")
+
+        override fun loadedBalanceIds(): Flow<Set<String>> = error("Not used")
+
+        override fun totals(): Flow<BalanceTotals> = error("Not used")
+
+        override suspend fun refreshTotals(): Result<Unit> = error("Not used")
 
         override suspend fun createBalance(balance: Balance): Result<Balance> {
             failure?.let { return Result.failure(it) }

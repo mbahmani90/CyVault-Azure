@@ -5,6 +5,8 @@ object VaultHomeTags {
     const val TRANSFER_BUTTON = "vault_home_transfer_button"
     const val BALANCE_LIST = "vault_home_balance_list"
     const val BALANCES_EMPTY_TEXT = "vault_home_balances_empty_text"
+    const val BALANCES_LOAD_FAILED_TEXT = "vault_home_balances_load_failed_text"
+    const val BALANCES_RETRY_BUTTON = "vault_home_balances_retry_button"
 
     // Every balance row has the same tag; tests tell rows apart by their text.
     const val BALANCE_ROW = "vault_home_balance_row"

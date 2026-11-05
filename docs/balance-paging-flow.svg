@@ -32,7 +32,7 @@
 
   <!-- Title -->
   <text x="40" y="36" class="t-title">Balances: one page at a time, through the cache</text>
-  <text x="40" y="58" class="t-sub">Planned for PR 3. The list only ever reads from Room. The mediator is what fills Room from the API, 20 balances at a time.</text>
+  <text x="40" y="58" class="t-sub">The list only ever reads from Room. The mediator is what fills Room from the API, 20 balances at a time.</text>
 
   <!-- Actors -->
   <rect x="40" y="80" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#64748B" stroke-width="1.5"/>
@@ -132,9 +132,9 @@
   <text x="50" y="868" class="t-cell">saved and no more requests are made.</text>
   <text x="50" y="902" class="t-cellb">No network or API error</text>
   <text x="50" y="922" class="t-cell">Room isn't changed, so cached rows stay on</text>
-  <text x="50" y="940" class="t-cell">screen. Paging reports a load error, and PR 4</text>
-  <text x="50" y="958" class="t-cell">shows a retry row.</text>
-  <text x="50" y="992" class="t-small">The total and the screen itself change in PR 4.</text>
+  <text x="50" y="940" class="t-cell">screen. Paging reports a load error, and the</text>
+  <text x="50" y="958" class="t-cell">list shows a retry row.</text>
+  <text x="50" y="992" class="t-small">Totals are cached the same way, so they show offline.</text>
 
   <!-- Panel: writes -->
   <rect x="400" y="772" width="670" height="248" rx="10" class="panel"/>

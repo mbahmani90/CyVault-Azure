@@ -29,7 +29,10 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCas
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveLoadedBalanceIdsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.RefreshBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
@@ -88,6 +91,9 @@ class VaultHomeViewModelTransferTest {
             changeProfilePhoto = ChangeProfilePhotoUseCase(photos),
             clearProfilePhotoCache = ClearProfilePhotoCacheUseCase(photos),
             getBalances = GetBalancesUseCase(balances),
+            observeLoadedBalanceIds = ObserveLoadedBalanceIdsUseCase(balances),
+            observeBalanceTotals = ObserveBalanceTotalsUseCase(balances),
+            refreshBalanceTotals = RefreshBalanceTotalsUseCase(balances),
             saveBalance = SaveBalanceUseCase(balances),
             deleteBalance = DeleteBalanceUseCase(balances),
             deleteBalances = DeleteBalancesUseCase(balances),
@@ -213,7 +219,7 @@ class VaultHomeViewModelTransferTest {
         advanceUntilIdle()
 
         val state = viewModel.state.value
-        val sent = state.balances.single()
+        val sent = balances.balances.single()
         assertEquals(BalanceType.Transfer, sent.type)
         assertEquals(20.5, sent.amount)
         assertEquals("visa", sent.cardId)

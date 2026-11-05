@@ -1,8 +1,10 @@
 package com.cypressit.cyvault.feature.vault.home.data.remote
 
 import com.cypressit.cyvault.auth.AuthClient
+import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalancePageDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceRequestDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceResponseDto
+import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceTotalsDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.TransferChallengeDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.TransferRequestDto
 import com.cypressit.cyvault.feature.vault.home.domain.repository.InvalidTransferException
@@ -14,6 +16,7 @@ import io.ktor.client.call.body
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -35,14 +38,24 @@ class BalanceApiService(
 ) {
 
     private val balancesUrl = "${config.baseUrl}/me/balances"
+    private val totalsUrl = "${config.baseUrl}/me/balance-totals"
     private val transfersUrl = "${config.baseUrl}/me/transfers"
     private val challengeUrl = "${config.baseUrl}/me/transfers/challenge"
 
     /** The CyVault API app registration's balance scope in the environment's Entra tenant. */
     private val balanceScope = "${config.appIdUri}/Balance.ReadWrite"
 
-    suspend fun getBalances(): List<BalanceResponseDto> =
-        client.get(balancesUrl) { bearerAuth(accessToken()) }.requireSuccess().body()
+    /** One page, newest first. [continuationToken] is the previous page's, or null for the first. */
+    suspend fun getBalancesPage(pageSize: Int, continuationToken: String?): BalancePageDto =
+        client.get(balancesUrl) {
+            bearerAuth(accessToken())
+            parameter("pageSize", pageSize)
+            continuationToken?.let { parameter("continuationToken", it) }
+        }.requireSuccess().body()
+
+    /** What all the user's balances add up to per currency, and when the oldest one happened. */
+    suspend fun getTotals(): BalanceTotalsDto =
+        client.get(totalsUrl) { bearerAuth(accessToken()) }.requireSuccess().body()
 
     /**
      * Creates the balance, sent with its ID and date; returns it as stored, under the ID the API

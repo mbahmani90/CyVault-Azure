@@ -14,9 +14,16 @@ data class VaultHomeState(
     val profilePhoto: ByteArray? = null,
     val isUpdatingPhoto: Boolean = false,
     val isAddItemDialogVisible: Boolean = false,
-    val balances: List<Balance> = emptyList(),
-    /** True while the balances are being fetched, so the list doesn't claim there are none. */
-    val isLoadingBalances: Boolean = false,
+    /** The IDs of the balances loaded so far: what "select all" selects. The rows come from Paging. */
+    val loadedBalanceIds: Set<String> = emptySet(),
+    /** Per currency, over all the user's balances, loaded or not. */
+    val balanceTotals: List<Pair<String, Double>> = emptyList(),
+    /** ISO 8601: when the user's oldest balance happened; null when they have none. */
+    val oldestBalanceDate: String? = null,
+    /** True while the first page is being fetched, so the list doesn't claim there are none. */
+    val isLoadingBalances: Boolean = true,
+    /** True when the first page couldn't be fetched, so an empty list doesn't claim there are none. */
+    val hasBalancesLoadFailed: Boolean = false,
     /** True while a pull-to-refresh fetches the balances and cards again: the list shows its spinner. */
     val isRefreshing: Boolean = false,
     /** The balance being edited in the add-item dialog, or null when adding a new one. */
@@ -94,16 +101,7 @@ data class VaultHomeState(
     fun isBalanceSelected(id: String): Boolean = id in selectedBalanceIds
 
     val areAllBalancesSelected: Boolean
-        get() = balances.isNotEmpty() && balances.all { it.id in selectedBalanceIds }
-
-    /**
-     * The balances added up per currency, since euros and pounds can't be summed together.
-     * Each currency appears once, in the order it first appears in [balances].
-     */
-    val balanceTotals: List<Pair<String, Double>>
-        get() = balances
-            .groupBy { it.currency }
-            .map { (currency, items) -> currency to items.sumOf { it.signedAmount } }
+        get() = loadedBalanceIds.isNotEmpty() && selectedBalanceIds.containsAll(loadedBalanceIds)
 }
 
 /** Why sending money failed. */

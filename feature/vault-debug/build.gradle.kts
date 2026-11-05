@@ -28,6 +28,7 @@ kotlin {
         }
 
         commonTest.dependencies {
+            implementation(libs.androidx.paging.common)
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
         }
