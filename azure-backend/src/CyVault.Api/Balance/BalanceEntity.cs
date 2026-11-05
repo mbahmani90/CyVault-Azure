@@ -82,6 +82,14 @@ public static class BalanceTypes
     public static bool IsOutgoing(string type) => type is Purchase or Transfer;
 
     public static bool IsFromTransfer(string type) => type is Transfer or Receive;
+
+    /// <summary>What the row adds to a total. A row stored before the Type column is already signed.</summary>
+    public static decimal SignedAmount(BalanceEntity row)
+    {
+        var amount = decimal.Parse(row.Amount, CultureInfo.InvariantCulture);
+        if (row.Type.Length == 0) return amount;
+        return IsOutgoing(row.Type) ? -Math.Abs(amount) : Math.Abs(amount);
+    }
 }
 
 /// <summary>What the client sends to create or replace a balance.</summary>
@@ -111,6 +119,9 @@ public sealed record BalanceResponse(
     string Type,
     string Counterparty,
     string TransferId);
+
+/// <summary>What the user's balances add up to in one currency.</summary>
+public sealed record BalanceTotalResponse(string Currency, decimal Total);
 
 /// <summary>One page of balances, newest first; a null token means there are no more.</summary>
 public sealed record BalancePageResponse(List<BalanceResponse> Items, string? ContinuationToken);

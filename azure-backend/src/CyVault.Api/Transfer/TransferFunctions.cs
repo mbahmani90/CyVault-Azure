@@ -23,6 +23,7 @@ namespace CyVault.Api.Transfer;
 public sealed partial class TransferFunctions(
     TransferTable transfers,
     TableClient balances,
+    BalanceWriter balanceWriter,
     CardTables cardTables,
     TransferSigning signing,
     PushNotifications push,
@@ -102,9 +103,10 @@ public sealed partial class TransferFunctions(
         // Already finished: return what it wrote, without bringing back a row the user deleted.
         if (transfer.Status == TransferStatus.Completed) return new OkObjectResult(BalanceFunctions.ToResponse(sent));
 
-        // Upserts with fixed RowKeys, so finishing a Pending transfer again writes the same rows.
-        await balances.UpsertEntityAsync(sent, TableUpdateMode.Replace, cancellationToken);
-        await balances.UpsertEntityAsync(received, TableUpdateMode.Replace, cancellationToken);
+        // Fixed RowKeys, so finishing a Pending transfer again writes the same rows and leaves each
+        // user's total as it is.
+        await balanceWriter.SaveAsync(sent, cancellationToken);
+        await balanceWriter.SaveAsync(received, cancellationToken);
         transfer.Status = TransferStatus.Completed;
         await transfers.Client.UpdateEntityAsync(transfer, ETag.All, TableUpdateMode.Merge, cancellationToken);
 
