@@ -2,6 +2,8 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.cypressit.cyvault.core.presentation.MviViewModel
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.card.domain.model.CardInput
@@ -26,11 +28,13 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCas
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveLoadedBalanceIdsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.RefreshBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +44,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -53,7 +56,10 @@ class VaultHomeViewModel(
     private val getProfilePhoto: GetProfilePhotoUseCase,
     private val changeProfilePhoto: ChangeProfilePhotoUseCase,
     private val clearProfilePhotoCache: ClearProfilePhotoCacheUseCase,
-    private val getBalances: GetBalancesUseCase,
+    getBalances: GetBalancesUseCase,
+    private val observeLoadedBalanceIds: ObserveLoadedBalanceIdsUseCase,
+    private val observeBalanceTotals: ObserveBalanceTotalsUseCase,
+    private val refreshBalanceTotals: RefreshBalanceTotalsUseCase,
     private val saveBalance: SaveBalanceUseCase,
     private val deleteBalance: DeleteBalanceUseCase,
     private val deleteBalances: DeleteBalancesUseCase,
@@ -72,6 +78,9 @@ class VaultHomeViewModel(
     private val _effect = Channel<VaultHomeEffect>(Channel.BUFFERED)
     override val effect: Flow<VaultHomeEffect> = _effect.receiveAsFlow()
 
+    /** The list's balances, a page at a time. Paging keeps its own loading state, which the screen reports back. */
+    val balances: Flow<PagingData<Balance>> = getBalances().cachedIn(viewModelScope)
+
     // The signed-in user's Entra object ID: names their cached photo on the device.
     private var userId: String? = null
 
@@ -85,7 +94,8 @@ class VaultHomeViewModel(
 
     init {
         loadUser()
-        loadBalances()
+        collectBalanceCache()
+        updateTotals()
         collectCards()
         // Fetched once for the row names; the dialogs then use the shared list. Quietly leaves the
         // names out on failure: a dialog fetches again, and reports it, when it opens.
@@ -96,6 +106,7 @@ class VaultHomeViewModel(
         when (intent) {
             VaultHomeIntent.LoadCards -> loadCards()
             VaultHomeIntent.Refresh -> refresh()
+            is VaultHomeIntent.BalancesLoadChanged -> balancesLoadChanged(intent.isLoading, intent.hasFailed)
             is VaultHomeIntent.DeleteCard -> deleteExistingCard(intent.id)
             VaultHomeIntent.SignOut -> signOut()
             VaultHomeIntent.OpenDrawer -> viewModelScope.launch { _effect.send(VaultHomeEffect.OpenDrawer) }
@@ -151,48 +162,60 @@ class VaultHomeViewModel(
         }
     }
 
-    private fun loadBalances() {
-        viewModelScope.launch { fetchBalances() }
-    }
-
-    private suspend fun fetchBalances() {
-        _state.update { it.copy(isLoadingBalances = true) }
-        getBalances()
-            .onSuccess { balances ->
+    private fun collectBalanceCache() {
+        viewModelScope.launch {
+            observeLoadedBalanceIds().collect { ids ->
                 _state.update { state ->
-                    val ids = balances.mapTo(mutableSetOf()) { it.id }
                     state.copy(
-                        balances = balances.newestFirst(),
-                        isLoadingBalances = false,
+                        loadedBalanceIds = ids,
                         // A selected balance that's gone can't stay selected.
                         selectedBalanceIds = state.selectedBalanceIds intersect ids,
                     )
                 }
             }
-            .onFailure {
-                _state.update { it.copy(isLoadingBalances = false) }
-                _effect.send(VaultHomeEffect.BalanceRequestFailed)
+        }
+        viewModelScope.launch {
+            observeBalanceTotals().collect { totals ->
+                _state.update {
+                    it.copy(balanceTotals = totals.amounts, oldestBalanceDate = totals.oldestDate)
+                }
             }
+        }
     }
 
-    // Fetches the balances and the cards (for the rows' bank names) side by side; the spinner stays
-    // until both are back. A balance failure is reported like on start; a card failure is quiet,
-    // as the rows just keep the names they had. A pull while one is running is ignored.
+    // Quiet on failure: the card keeps the last totals, and the list reports being offline.
+    private fun updateTotals() {
+        viewModelScope.launch { refreshBalanceTotals() }
+    }
+
+    // Paging's own state for the list's first page, reported by the screen. A failure is told once,
+    // when it happens; the pull's spinner stops with the load it started.
+    private fun balancesLoadChanged(isLoading: Boolean, hasFailed: Boolean) {
+        _state.update {
+            it.copy(
+                isLoadingBalances = isLoading,
+                hasBalancesLoadFailed = hasFailed,
+                isRefreshing = it.isRefreshing && isLoading,
+            )
+        }
+        if (hasFailed) viewModelScope.launch { _effect.send(VaultHomeEffect.BalanceRequestFailed) }
+    }
+
+    // Refetches the balances, the totals and the cards (for the rows' bank names). A card or total
+    // failure is quiet, as they keep what they had. A pull while one is running is ignored.
     private fun refresh() {
         if (_state.value.isRefreshing) return
         _state.update { it.copy(isRefreshing = true) }
-        viewModelScope.launch {
-            val cards = async { getCards() }
-            fetchBalances()
-            cards.await()
-            _state.update { it.copy(isRefreshing = false) }
-        }
+        updateTotals()
+        viewModelScope.launch { getCards() }
+        viewModelScope.launch { _effect.send(VaultHomeEffect.RefreshBalances) }
     }
 
     @OptIn(ExperimentalUuidApi::class)
     private fun saveItem(title: String, description: String, value: Double, currency: String, date: String) {
         // Save is disabled until a card is chosen; the API rejects a balance without one.
         val cardId = _state.value.itemCard?.id ?: return
+        // A new date gives the balance a new ID, which the repository replaces in the cache.
         val editingId = _state.value.editingBalance?.id
         val id = editingId ?: pendingBalanceId ?: Uuid.random().toHexString().also { pendingBalanceId = it }
         // The dialog signs the value by its Purchase/Income choice; the balance keeps it above zero.
@@ -209,18 +232,12 @@ class VaultHomeViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isSavingBalance = true) }
             saveBalance(balance, isNew = editingId == null)
-                .onSuccess { saved ->
+                .onSuccess {
                     pendingBalanceId = null
-                    _state.update { state ->
-                        // A new date gives the balance a new ID, so the old row goes by its old one.
-                        val others = state.balances.filterNot { it.id == editingId || it.id == saved.id }
-                        state.copy(
-                            balances = (others + saved).newestFirst(),
-                            isSavingBalance = false,
-                            isAddItemDialogVisible = false,
-                            editingBalance = null,
-                        )
+                    _state.update {
+                        it.copy(isSavingBalance = false, isAddItemDialogVisible = false, editingBalance = null)
                     }
+                    updateTotals()
                     _effect.send(VaultHomeEffect.BalanceSaved)
                 }
                 .onFailure {
@@ -235,12 +252,8 @@ class VaultHomeViewModel(
         viewModelScope.launch {
             deleteBalance(id)
                 .onSuccess {
-                    _state.update { state ->
-                        state.copy(
-                            balances = state.balances.filterNot { it.id == id },
-                            selectedBalanceIds = state.selectedBalanceIds - id,
-                        )
-                    }
+                    _state.update { it.copy(selectedBalanceIds = it.selectedBalanceIds - id) }
+                    updateTotals()
                     _effect.send(VaultHomeEffect.BalanceDeleted)
                 }
                 .onFailure { _effect.send(VaultHomeEffect.BalanceRequestFailed) }
@@ -269,7 +282,8 @@ class VaultHomeViewModel(
     }
 
     private fun selectAllBalances() {
-        _state.update { state -> state.copy(selectedBalanceIds = state.balances.mapTo(mutableSetOf()) { it.id }) }
+        // Only what's loaded: the delete confirmation shows the count, so the rest aren't touched.
+        _state.update { it.copy(selectedBalanceIds = it.loadedBalanceIds) }
     }
 
     private fun deleteSelectedBalances() {
@@ -281,12 +295,9 @@ class VaultHomeViewModel(
             val deleted = deleteBalances(ids)
             // The ones that failed stay in the list and stay selected, so the user can retry.
             _state.update { state ->
-                state.copy(
-                    balances = state.balances.filterNot { it.id in deleted },
-                    selectedBalanceIds = state.selectedBalanceIds - deleted,
-                    isDeletingBalances = false,
-                )
+                state.copy(selectedBalanceIds = state.selectedBalanceIds - deleted, isDeletingBalances = false)
             }
+            if (deleted.isNotEmpty()) updateTotals()
             if (deleted.isNotEmpty()) _effect.send(VaultHomeEffect.BalancesDeleted(deleted.size))
             if (deleted.size < ids.size) _effect.send(VaultHomeEffect.BalanceRequestFailed)
         }
@@ -301,7 +312,8 @@ class VaultHomeViewModel(
             val result = seeder.addSampleBalances()
             _state.update { it.copy(isAddingSampleBalances = false) }
             // Reload either way: a failure part way through still saved some.
-            loadBalances()
+            updateTotals()
+            _effect.send(VaultHomeEffect.RefreshBalances)
             result
                 .onSuccess { _effect.send(VaultHomeEffect.SampleBalancesAdded(it)) }
                 .onFailure {
@@ -391,18 +403,17 @@ class VaultHomeViewModel(
                 phoneNumber = phoneNumber,
             )
             sendTransfer(id, transferId, cardId, phoneNumber, amount, current.transferCurrency, prompt)
-                .onSuccess { sent ->
+                .onSuccess {
                     pendingTransferId = null
-                    _state.update { state ->
-                        state.copy(
-                            // The sender's Transfer row; the receiver's appears in their own list.
-                            balances = (state.balances.filterNot { it.id == sent.id } + sent).newestFirst(),
+                    _state.update {
+                        it.copy(
                             isSendingTransfer = false,
                             isTransferDialogVisible = false,
                             transferPhoneNumber = "",
                             transferAmount = "",
                         )
                     }
+                    updateTotals()
                     _effect.send(
                         VaultHomeEffect.TransferSent(
                             amount = current.transferAmount.trim(),
@@ -530,12 +541,3 @@ class VaultHomeViewModel(
 /** This card ID if it's in [cards], else the first card's; null when there are no cards. */
 private fun String?.keptOrFirst(cards: List<Card>): String? =
     this?.takeIf { id -> cards.any { it.id == id } } ?: cards.firstOrNull()?.id
-
-/**
- * Newest date first, like the API returns them; balances without a readable date go last, and
- * the ID breaks ties so the order never jumps around.
- */
-internal fun List<Balance>.newestFirst(): List<Balance> = sortedWith(
-    compareByDescending<Balance> { balance -> balance.date?.let { runCatching { Instant.parse(it) }.getOrNull() } }
-        .thenBy { it.id },
-)

@@ -20,7 +20,10 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCas
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveLoadedBalanceIdsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.RefreshBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
@@ -74,6 +77,9 @@ class VaultHomeViewModelSelectionTest {
             changeProfilePhoto = ChangeProfilePhotoUseCase(photos),
             clearProfilePhotoCache = ClearProfilePhotoCacheUseCase(photos),
             getBalances = GetBalancesUseCase(balances),
+            observeLoadedBalanceIds = ObserveLoadedBalanceIdsUseCase(balances),
+            observeBalanceTotals = ObserveBalanceTotalsUseCase(balances),
+            refreshBalanceTotals = RefreshBalanceTotalsUseCase(balances),
             saveBalance = SaveBalanceUseCase(balances),
             deleteBalance = DeleteBalanceUseCase(balances),
             deleteBalances = DeleteBalancesUseCase(balances),
@@ -157,7 +163,7 @@ class VaultHomeViewModelSelectionTest {
         viewModel.onIntent(VaultHomeIntent.ClearBalanceSelection)
 
         assertFalse(viewModel.state.value.isSelectionMode)
-        assertEquals(listOf(main, savings, rent), viewModel.state.value.balances)
+        assertEquals(setOf("main", "savings", "rent"), viewModel.state.value.loadedBalanceIds)
     }
 
     @Test
@@ -208,7 +214,7 @@ class VaultHomeViewModelSelectionTest {
 
         assertEquals(setOf("main", "rent"), balances.deletedIds.toSet())
         val state = viewModel.state.value
-        assertEquals(listOf(savings), state.balances)
+        assertEquals(setOf("savings"), state.loadedBalanceIds)
         assertFalse(state.isSelectionMode)
         assertFalse(state.isDeleteSelectedConfirmVisible)
         assertFalse(state.isDeletingBalances)
@@ -227,7 +233,7 @@ class VaultHomeViewModelSelectionTest {
         advanceUntilIdle()
 
         val state = viewModel.state.value
-        assertEquals(listOf(savings, rent), state.balances)
+        assertEquals(setOf("savings", "rent"), state.loadedBalanceIds)
         assertEquals(setOf("rent"), state.selectedBalanceIds)
         assertEquals(
             listOf(VaultHomeEffect.BalancesDeleted(1), VaultHomeEffect.BalanceRequestFailed),

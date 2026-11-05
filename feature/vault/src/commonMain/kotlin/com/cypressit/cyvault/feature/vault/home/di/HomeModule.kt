@@ -24,7 +24,10 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCas
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveLoadedBalanceIdsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.RefreshBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
@@ -54,7 +57,10 @@ internal val homeModule = module {
 
     // Everything holding the user's data, and what's built on it, lives in their session.
     scope(UserSession.qualifier) {
-        scoped<BalanceRepository> { BalanceRepositoryImpl(get()) }
+        scoped<BalanceRepository> {
+            val accounts = get<AccountRepository>()
+            BalanceRepositoryImpl(get(), get(), currentUserId = { accounts.currentAccount()?.id })
+        }
         scoped<ProfilePhotoRepository> {
             ProfilePhotoRepositoryImpl(
                 apiService = get(),
@@ -74,6 +80,9 @@ internal val homeModule = module {
         factory { ChangeProfilePhotoUseCase(get()) }
         factory { ClearProfilePhotoCacheUseCase(get()) }
         factory { GetBalancesUseCase(get()) }
+        factory { ObserveLoadedBalanceIdsUseCase(get()) }
+        factory { ObserveBalanceTotalsUseCase(get()) }
+        factory { RefreshBalanceTotalsUseCase(get()) }
         factory { SaveBalanceUseCase(get()) }
         factory { DeleteBalanceUseCase(get()) }
         factory { DeleteBalancesUseCase(get()) }
@@ -93,6 +102,9 @@ internal val homeModule = module {
                 changeProfilePhoto = get(),
                 clearProfilePhotoCache = get(),
                 getBalances = get(),
+                observeLoadedBalanceIds = get(),
+                observeBalanceTotals = get(),
+                refreshBalanceTotals = get(),
                 saveBalance = get(),
                 deleteBalance = get(),
                 deleteBalances = get(),

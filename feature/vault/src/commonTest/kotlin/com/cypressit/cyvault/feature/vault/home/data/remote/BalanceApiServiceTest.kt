@@ -57,12 +57,15 @@ class BalanceApiServiceTest {
         """{"id":"main","name":"Main account","amount":1250.5,"currency":"EUR","date":"2026-10-27T09:30:00+00:00","updatedAt":"2026-10-28T15:00:00+00:00","cardId":"card-1"}"""
 
     @Test
-    fun getBalances_sendsABalanceScopeTokenAndParsesTheList() = runTest {
-        val balances = api { respondJson("[$mainJson]") }.getBalances()
+    fun getBalancesPage_sendsABalanceScopeTokenAndParsesThePage() = runTest {
+        val page = api { respondJson("""{"items":[$mainJson],"continuationToken":"next"}""") }
+            .getBalancesPage(pageSize = 20, continuationToken = null)
+        val balances = page.items
 
         val request = requests.single()
         assertEquals(HttpMethod.Get, request.method)
-        assertEquals("https://api.test/api/me/balances", request.url.toString())
+        assertEquals("https://api.test/api/me/balances?pageSize=20", request.url.toString())
+        assertEquals("next", page.continuationToken)
         assertEquals("Bearer test-token", request.headers[HttpHeaders.Authorization])
         assertEquals(listOf(listOf("api://test-api/Balance.ReadWrite")), authClient.requestedScopes)
         assertEquals("Main account", balances.single().name)
@@ -141,10 +144,36 @@ class BalanceApiServiceTest {
     }
 
     @Test
-    fun getBalances_serverError_throws() = runTest {
+    fun getBalancesPage_sendsTheContinuationToken() = runTest {
+        api { respondJson("""{"items":[]}""") }.getBalancesPage(pageSize = 20, continuationToken = "a b")
+
+        assertEquals("a b", requests.single().url.parameters["continuationToken"])
+    }
+
+    @Test
+    fun getBalancesPage_withoutAToken_isTheLastPage() = runTest {
+        val page = api { respondJson("""{"items":[],"continuationToken":null}""") }
+            .getBalancesPage(pageSize = 20, continuationToken = null)
+
+        assertNull(page.continuationToken)
+    }
+
+    @Test
+    fun getBalancesPage_serverError_throws() = runTest {
         assertFailsWith<Exception> {
-            api { respond("", HttpStatusCode.Unauthorized) }.getBalances()
+            api { respond("", HttpStatusCode.Unauthorized) }.getBalancesPage(20, null)
         }
+    }
+
+    @Test
+    fun getTotals_callsTheTotalsRouteAndParsesThem() = runTest {
+        val totals = api {
+            respondJson("""{"oldestDate":"2026-08-08T16:58:51Z","totals":[{"currency":"EUR","total":1250.5}]}""")
+        }.getTotals()
+
+        assertEquals("https://api.test/api/me/balance-totals", requests.single().url.toString())
+        assertEquals("2026-08-08T16:58:51Z", totals.oldestDate)
+        assertEquals(1250.5, totals.totals.single().total)
     }
 
     private val transfer = TransferRequestDto(

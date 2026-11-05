@@ -30,6 +30,9 @@
     <string name="vault_home_photo_update_failed">Couldn't update your photo. Please try again.</string>
     <string name="vault_home_total_since">From %1$s</string>
     <string name="vault_home_balances_empty">No balances yet. Tap + to add one.</string>
+    <string name="vault_home_balances_load_failed">Couldn't load your balances.</string>
+    <string name="vault_home_balances_load_more_failed">Couldn't load more balances.</string>
+    <string name="vault_home_balances_retry">Retry</string>
     <string name="vault_home_select_balance_description">Select balance</string>
     <string name="vault_home_balance_delete_title">Delete balance?</string>
     <string name="vault_home_balance_delete_message">%1$s will be removed.</string>

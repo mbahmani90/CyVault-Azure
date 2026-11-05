@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -57,6 +57,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -69,6 +70,10 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
 import com.cypressit.cyvault.feature.vault.home.presentation.viewmodel.VaultHomeIntent
@@ -94,6 +99,9 @@ import cyvault.vault.generated.resources.vault_home_balance_sent_to
 import cyvault.vault.generated.resources.vault_home_balances_delete_message
 import cyvault.vault.generated.resources.vault_home_balances_delete_title
 import cyvault.vault.generated.resources.vault_home_balances_empty
+import cyvault.vault.generated.resources.vault_home_balances_load_failed
+import cyvault.vault.generated.resources.vault_home_balances_load_more_failed
+import cyvault.vault.generated.resources.vault_home_balances_retry
 import cyvault.vault.generated.resources.vault_home_cards
 import cyvault.vault.generated.resources.vault_home_change_photo_description
 import cyvault.vault.generated.resources.vault_home_edit_item_title
@@ -170,8 +178,20 @@ internal fun VaultHomeScreen(
     viewModel: VaultHomeViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val balances = viewModel.balances.collectAsLazyPagingItems()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val snackBarHostState = remember { SnackbarHostState() }
+
+    // Only Paging knows how the list's first page is going: the ViewModel decides what that means.
+    val firstPageLoad = balances.loadState.refresh
+    LaunchedEffect(firstPageLoad) {
+        viewModel.onIntent(
+            VaultHomeIntent.BalancesLoadChanged(
+                isLoading = firstPageLoad is LoadState.Loading,
+                hasFailed = firstPageLoad is LoadState.Error,
+            ),
+        )
+    }
 
     VaultHomeScreenEffect(
         effects = viewModel.effect,
@@ -179,6 +199,7 @@ internal fun VaultHomeScreen(
         snackBarHostState = snackBarHostState,
         onSignedOut = onSignedOut,
         onAddCard = onAddCardClick,
+        onRefreshBalances = balances::refresh,
     )
 
     // Back leaves selection mode before it leaves the screen.
@@ -341,6 +362,7 @@ internal fun VaultHomeScreen(
         ) { paddingValues ->
             HomeContent(
                 state = state,
+                balances = balances,
                 onAddItem = { viewModel.onIntent(VaultHomeIntent.ShowAddItemDialog) },
                 onTransfer = { viewModel.onIntent(VaultHomeIntent.TransferClicked) },
                 onClickBalance = { viewModel.onIntent(VaultHomeIntent.ClickBalance(it)) },
@@ -524,6 +546,54 @@ private fun BalanceDivider() {
     )
 }
 
+/** Under the loaded rows: a progress bar while the next page loads, or a retry when it couldn't. */
+private fun LazyListScope.balancesNextPageRow(balances: LazyPagingItems<Balance>) {
+    when (balances.loadState.append) {
+        is LoadState.Loading -> item(key = "balances-loading-more") { BalancesLoadingRow() }
+        is LoadState.Error -> item(key = "balances-load-more-failed") {
+            BalancesRetryRow(
+                message = stringResource(Res.string.vault_home_balances_load_more_failed),
+                onRetry = balances::retry,
+            )
+        }
+        is LoadState.NotLoading -> Unit
+    }
+}
+
+@Composable
+private fun BalancesLoadingRow() {
+    LinearProgressIndicator(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        // Gray instead of the theme's accent: loading shouldn't draw the eye.
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+    )
+}
+
+@Composable
+private fun BalancesRetryRow(message: String, onRetry: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .weight(1f)
+                .testTag(VaultHomeTags.BALANCES_LOAD_FAILED_TEXT),
+        )
+        TextButton(onClick = onRetry, modifier = Modifier.testTag(VaultHomeTags.BALANCES_RETRY_BUTTON)) {
+            Text(stringResource(Res.string.vault_home_balances_retry))
+        }
+    }
+}
+
 /**
  * Total assets, then the user's balances and cards in one scrolling list. Pulling the list down
  * fetches them again.
@@ -532,6 +602,7 @@ private fun BalanceDivider() {
 @Composable
 private fun HomeContent(
     state: VaultHomeState,
+    balances: LazyPagingItems<Balance>,
     onAddItem: () -> Unit,
     onTransfer: () -> Unit,
     onClickBalance: (Balance) -> Unit,
@@ -568,14 +639,14 @@ private fun HomeContent(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        // One line per currency; € 0.00 until there are balances.
+                        // One line per currency, over all the balances; € 0.00 until there are any.
                         state.balanceTotals.ifEmpty { listOf("EUR" to 0.0) }.forEach { (currency, total) ->
                             Text(
                                 text = formatAmount(total, currency, symbolAfter = true),
                                 style = MaterialTheme.typography.headlineMedium,
                             )
                         }
-                        oldestBalanceDate(state.balances.map { it.date })?.let { since ->
+                        formatBalanceDate(state.oldestBalanceDate)?.let { since ->
                             Text(
                                 text = stringResource(Res.string.vault_home_total_since, since),
                                 style = MaterialTheme.typography.bodySmall,
@@ -613,18 +684,17 @@ private fun HomeContent(
             ) {
                 // Fills the box, so a short list can still be pulled from its empty space.
                 LazyColumn(modifier = Modifier.fillMaxSize().testTag(VaultHomeTags.BALANCE_LIST)) {
-                    if (state.isLoadingBalances && state.balances.isEmpty()) {
-                        item(key = "balances-loading") {
-                            LinearProgressIndicator(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                // Gray instead of the theme's accent: loading shouldn't draw the eye.
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    if (balances.itemCount == 0 && state.isLoadingBalances) {
+                        item(key = "balances-loading") { BalancesLoadingRow() }
+                    } else if (balances.itemCount == 0 && state.hasBalancesLoadFailed) {
+                        // Nothing cached and nothing fetched: this isn't the same as having no balances.
+                        item(key = "balances-load-failed") {
+                            BalancesRetryRow(
+                                message = stringResource(Res.string.vault_home_balances_load_failed),
+                                onRetry = balances::retry,
                             )
                         }
-                    } else if (state.balances.isEmpty()) {
+                    } else if (balances.itemCount == 0) {
                         item(key = "balances-empty") {
                             Text(
                                 text = stringResource(Res.string.vault_home_balances_empty),
@@ -637,7 +707,12 @@ private fun HomeContent(
                         }
                     }
                     // Prefixed keys: a balance ID must never collide with a card ID in this list.
-                    itemsIndexed(state.balances, key = { _, balance -> "balance-${balance.id}" }) { index, balance ->
+                    items(
+                        count = balances.itemCount,
+                        key = balances.itemKey { balance -> "balance-${balance.id}" },
+                    ) { index ->
+                        // Asking for the row is what tells Paging when to load the next page.
+                        val balance = balances[index] ?: return@items
                         // The same line between rows as after the last one.
                         if (index > 0) BalanceDivider()
                         // The amount shows without a sign; its colour tells money in from money out.
@@ -724,9 +799,10 @@ private fun HomeContent(
                         )
                     }
                     // Only closes a list of rows; under the progress bar or empty text it's just noise.
-                    if (state.balances.isNotEmpty()) {
+                    if (balances.itemCount > 0) {
                         item(key = "balances-divider") { BalanceDivider() }
                     }
+                    balancesNextPageRow(balances)
 
                     items(state.cards, key = { it.id }) { card ->
                         ListItem(

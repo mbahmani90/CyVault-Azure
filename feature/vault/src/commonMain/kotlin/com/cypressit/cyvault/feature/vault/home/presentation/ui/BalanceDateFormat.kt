@@ -30,12 +30,6 @@ private val balanceDateFormat = LocalDateTime.Format {
 internal fun formatBalanceDate(iso: String?, timeZone: TimeZone = TimeZone.currentSystemDefault()): String? =
     iso?.let { parseOrNull(it)?.let { instant -> format(instant, timeZone) } }
 
-/** The earliest of [isoDates], formatted like [formatBalanceDate]; null when none can be read. */
-internal fun oldestBalanceDate(
-    isoDates: List<String?>,
-    timeZone: TimeZone = TimeZone.currentSystemDefault(),
-): String? = isoDates.mapNotNull { it?.let(::parseOrNull) }.minOrNull()?.let { format(it, timeZone) }
-
 /** [instant] in the device's time zone, formatted like [formatBalanceDate]. */
 internal fun formatBalanceDate(instant: Instant, timeZone: TimeZone = TimeZone.currentSystemDefault()): String =
     format(instant, timeZone)

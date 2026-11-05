@@ -2,6 +2,7 @@ package com.cypressit.cyvault.feature.vault.home.data.local
 
 import androidx.paging.PagingSource
 import androidx.room.Room
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
@@ -138,6 +139,42 @@ class BalanceCacheDaoTest {
     }
 
     @Test
+    fun save_olderThanEverythingLoaded_isLeftOut() = runTest {
+        dao.savePage("user-1", listOf(row("1")), nextPageToken = "next")
+
+        dao.save(row("2"))
+
+        assertEquals(listOf("1"), cachedIds())
+    }
+
+    @Test
+    fun save_olderThanEverything_afterTheLastPage_isAdded() = runTest {
+        dao.savePage("user-1", listOf(row("1")), nextPageToken = null)
+
+        dao.save(row("2"))
+
+        assertEquals(listOf("1", "2"), cachedIds())
+    }
+
+    @Test
+    fun save_beforeAnyPage_isLeftOut() = runTest {
+        dao.prepareFor("user-1")
+
+        dao.save(row("1"))
+
+        assertEquals(emptyList(), cachedIds())
+    }
+
+    @Test
+    fun ids_followTheTable() = runTest {
+        dao.upsert(listOf(row("1"), row("2")))
+        assertEquals(listOf("1", "2"), dao.ids().first())
+
+        dao.delete("1")
+        assertEquals(listOf("2"), dao.ids().first())
+    }
+
+    @Test
     fun delete_removesOnlyThatRow() = runTest {
         dao.upsert(listOf(row("1"), row("2")))
 
@@ -149,10 +186,12 @@ class BalanceCacheDaoTest {
     @Test
     fun clear_removesBalancesAndState() = runTest {
         dao.savePage("user-1", listOf(row("1")), nextPageToken = "next")
+        dao.saveTotals(CachedBalanceTotals(amountsJson = "{}", oldestDate = null))
 
         dao.clear()
 
         assertEquals(emptyList(), cachedIds())
         assertNull(dao.state())
+        assertNull(dao.totals().first())
     }
 }

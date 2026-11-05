@@ -9,6 +9,9 @@ sealed interface VaultHomeEffect {
     data object BalanceDeleted : VaultHomeEffect
     data class BalancesDeleted(val count: Int) : VaultHomeEffect
     data object BalanceRequestFailed : VaultHomeEffect
+
+    /** Fetch the list again from its first page: only the screen's Paging handle can ask for that. */
+    data object RefreshBalances : VaultHomeEffect
     data object TransferCardsLoadFailed : VaultHomeEffect
 
     /** The money left: [amount] as the user typed it, in [currency], to [phoneNumber] (E.164). */
