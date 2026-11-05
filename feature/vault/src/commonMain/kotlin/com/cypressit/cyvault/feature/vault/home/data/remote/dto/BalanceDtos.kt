@@ -21,6 +21,26 @@ data class BalanceResponseDto(
     @SerialName("counterparty") val counterparty: String = "",
 )
 
+/** One page of balances, newest first; a null token means it's the last. */
+@Serializable
+data class BalancePageDto(
+    @SerialName("items") val items: List<BalanceResponseDto>,
+    @SerialName("continuationToken") val continuationToken: String? = null,
+)
+
+@Serializable
+data class BalanceTotalsDto(
+    /** ISO 8601: when the user's oldest balance happened; null when they have none. */
+    @SerialName("oldestDate") val oldestDate: String? = null,
+    @SerialName("totals") val totals: List<BalanceTotalDto> = emptyList(),
+)
+
+@Serializable
+data class BalanceTotalDto(
+    @SerialName("currency") val currency: String,
+    @SerialName("total") val total: Double,
+)
+
 @Serializable
 data class BalanceRequestDto(
     @SerialName("name") val name: String,

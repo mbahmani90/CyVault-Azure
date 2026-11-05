@@ -4,6 +4,9 @@ import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
 import com.cypressit.cyvault.feature.vault.home.domain.model.PickedPhoto
 
 sealed interface VaultHomeIntent {
+    /** Paging's state for the list's first page changed: the screen reports it, as only it can see it. */
+    data class BalancesLoadChanged(val isLoading: Boolean, val hasFailed: Boolean) : VaultHomeIntent
+
     data object LoadCards : VaultHomeIntent
 
     /** The user pulled the list down: fetch the balances and cards again. */

@@ -3,6 +3,7 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 import com.cypressit.cyvault.feature.vault.card.domain.model.Card
 import com.cypressit.cyvault.feature.vault.device.domain.usecase.EnrollDeviceUseCase
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
+import com.cypressit.cyvault.feature.vault.fake.FakeBalanceCache
 import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeDeviceRepository
@@ -13,6 +14,7 @@ import com.cypressit.cyvault.feature.vault.home.data.repository.AccountRepositor
 import com.cypressit.cyvault.feature.vault.home.domain.debug.NoCardsForSamplesException
 import com.cypressit.cyvault.feature.vault.home.domain.debug.SampleBalancesSeeder
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
+import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceTotals
 import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ChangeProfilePhotoUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ClearProfilePhotoCacheUseCase
@@ -23,20 +25,22 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCas
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveLoadedBalanceIdsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.RefreshBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -66,7 +70,7 @@ class VaultHomeViewModelBalanceTest {
 
     private fun viewModel(sampleBalancesSeeder: SampleBalancesSeeder? = null): VaultHomeViewModel {
         val authClient = FakeAuthClient()
-        val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient))
+        val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient), FakeBalanceCache())
         return VaultHomeViewModel(
             getCards = GetCardsUseCase(cards),
             observeCards = ObserveCardsUseCase(cards),
@@ -77,6 +81,9 @@ class VaultHomeViewModelBalanceTest {
             changeProfilePhoto = ChangeProfilePhotoUseCase(photos),
             clearProfilePhotoCache = ClearProfilePhotoCacheUseCase(photos),
             getBalances = GetBalancesUseCase(balances),
+            observeLoadedBalanceIds = ObserveLoadedBalanceIdsUseCase(balances),
+            observeBalanceTotals = ObserveBalanceTotalsUseCase(balances),
+            refreshBalanceTotals = RefreshBalanceTotalsUseCase(balances),
             saveBalance = SaveBalanceUseCase(balances),
             deleteBalance = DeleteBalanceUseCase(balances),
             deleteBalances = DeleteBalancesUseCase(balances),
@@ -94,105 +101,136 @@ class VaultHomeViewModelBalanceTest {
         val viewModel = viewModel()
         advanceUntilIdle()
 
-        assertEquals(listOf(main, savings), viewModel.state.value.balances)
-        assertFalse(viewModel.state.value.isLoadingBalances)
+        assertEquals(setOf("main", "savings"), viewModel.state.value.loadedBalanceIds)
     }
 
     @Test
-    fun init_showsLoadingUntilTheBalancesArrive() = runTest(dispatcher) {
-        val response = CompletableDeferred<Unit>()
-        balances.gate = response
-        balances.balances = listOf(main)
-
+    fun init_isLoadingUntilThePagingReportsOtherwise() = runTest(dispatcher) {
         val viewModel = viewModel()
-        runCurrent()
+        advanceUntilIdle()
         assertTrue(viewModel.state.value.isLoadingBalances)
 
-        response.complete(Unit)
-        advanceUntilIdle()
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = false, hasFailed = false))
+
         assertFalse(viewModel.state.value.isLoadingBalances)
-        assertEquals(listOf(main), viewModel.state.value.balances)
+        assertFalse(viewModel.state.value.hasBalancesLoadFailed)
     }
 
     @Test
-    fun balanceTotals_addUpEachCurrencySeparately() {
-        val state = VaultHomeState(
-            balances = listOf(
-                main.copy(amount = 25.69, type = BalanceType.Purchase),
-                savings.copy(amount = 100.0),
-                Balance(id = "uk", name = "Tesco", amount = 12.5, currency = "GBP", type = BalanceType.Purchase),
-            ),
-        )
+    fun init_fetchesTheTotals() = runTest(dispatcher) {
+        viewModel()
+        advanceUntilIdle()
 
-        assertEquals(
-            listOf("EUR" to 74.31, "GBP" to -12.5),
-            state.balanceTotals.map { (c, t) ->
-                c to
-                    (kotlin.math.round(t * 100) / 100)
-            },
-        )
+        assertEquals(1, balances.totalsRefreshCount)
     }
 
     @Test
-    fun init_whenLoadingFails_reportsIt() = runTest(dispatcher) {
+    fun totals_showWhatTheRepositoryHolds() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        balances.totals.value = BalanceTotals(listOf("EUR" to 74.31, "GBP" to -12.5), "2026-08-08T16:58:51Z")
+        advanceUntilIdle()
+
+        assertEquals(listOf("EUR" to 74.31, "GBP" to -12.5), viewModel.state.value.balanceTotals)
+        assertEquals("2026-08-08T16:58:51Z", viewModel.state.value.oldestBalanceDate)
+    }
+
+    @Test
+    fun totals_whenFetchingFails_isQuiet() = runTest(dispatcher) {
         balances.failure = Exception("offline")
 
         val viewModel = viewModel()
         advanceUntilIdle()
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = false, hasFailed = true))
 
+        // The list's failure is the only thing reported.
+        assertEquals(VaultHomeEffect.BalanceRequestFailed, viewModel.effect.first())
+        assertNull(withTimeoutOrNull(1) { viewModel.effect.first() })
+    }
+
+    @Test
+    fun firstPageFailing_reportsIt() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = false, hasFailed = true))
+
+        assertTrue(viewModel.state.value.hasBalancesLoadFailed)
+        assertFalse(viewModel.state.value.isLoadingBalances)
         assertEquals(VaultHomeEffect.BalanceRequestFailed, viewModel.effect.first())
     }
 
     @Test
-    fun refresh_fetchesTheBalancesAndCardsAgain() = runTest(dispatcher) {
-        balances.balances = listOf(savings)
+    fun firstPageRetrying_clearsTheFailure() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = false, hasFailed = true))
+
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = true, hasFailed = false))
+
+        assertFalse(viewModel.state.value.hasBalancesLoadFailed)
+        assertTrue(viewModel.state.value.isLoadingBalances)
+    }
+
+    @Test
+    fun refresh_asksTheListToReloadAndFetchesTotalsAndCards() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()
         val cardFetches = cards.getCardsCalls
+        val totalFetches = balances.totalsRefreshCount
 
-        balances.balances = listOf(main, savings)
         viewModel.onIntent(VaultHomeIntent.Refresh)
+        advanceUntilIdle()
 
         assertTrue(viewModel.state.value.isRefreshing)
-        advanceUntilIdle()
-        assertFalse(viewModel.state.value.isRefreshing)
-        assertEquals(listOf(main, savings), viewModel.state.value.balances)
+        assertEquals(VaultHomeEffect.RefreshBalances, viewModel.effect.first())
         assertEquals(cardFetches + 1, cards.getCardsCalls)
+        assertEquals(totalFetches + 1, balances.totalsRefreshCount)
+    }
+
+    @Test
+    fun refresh_spinsUntilTheLoadItStartedIsDone() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(VaultHomeIntent.Refresh)
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = true, hasFailed = false))
+        assertTrue(viewModel.state.value.isRefreshing)
+
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = false, hasFailed = false))
+        assertFalse(viewModel.state.value.isRefreshing)
     }
 
     @Test
     fun refresh_whileRefreshing_isIgnored() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()
-        val response = CompletableDeferred<Unit>()
-        balances.gate = response
         val cardFetches = cards.getCardsCalls
 
         viewModel.onIntent(VaultHomeIntent.Refresh)
         viewModel.onIntent(VaultHomeIntent.Refresh)
-        runCurrent()
-        response.complete(Unit)
         advanceUntilIdle()
 
         assertEquals(cardFetches + 1, cards.getCardsCalls)
-        assertFalse(viewModel.state.value.isRefreshing)
     }
 
     @Test
     fun refresh_whenLoadingFails_reportsItAndStopsSpinning() = runTest(dispatcher) {
         val viewModel = viewModel()
         advanceUntilIdle()
-        balances.failure = Exception("offline")
 
         viewModel.onIntent(VaultHomeIntent.Refresh)
         advanceUntilIdle()
+        assertEquals(VaultHomeEffect.RefreshBalances, viewModel.effect.first())
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = false, hasFailed = true))
 
         assertFalse(viewModel.state.value.isRefreshing)
         assertEquals(VaultHomeEffect.BalanceRequestFailed, viewModel.effect.first())
     }
 
     @Test
-    fun saveBalance_new_getsAnIdAndIsAddedNewestFirst() = runTest(dispatcher) {
+    fun saveBalance_new_getsAnIdIsCachedAndUpdatesTheTotals() = runTest(dispatcher) {
         balances.balances = listOf(savings)
         val viewModel = viewModel()
         advanceUntilIdle()
@@ -210,7 +248,8 @@ class VaultHomeViewModelBalanceTest {
         assertEquals("Daily spending", saved.description)
         assertEquals("2026-10-28T09:00:00Z", saved.date)
         val state = viewModel.state.value
-        assertEquals(listOf("Main account", "Savings"), state.balances.map { it.name })
+        assertEquals(setOf("savings", saved.id), state.loadedBalanceIds)
+        assertEquals(2, balances.totalsRefreshCount)
         assertFalse(state.isAddItemDialogVisible)
         assertFalse(state.isSavingBalance)
         assertEquals(VaultHomeEffect.BalanceSaved, viewModel.effect.first())
@@ -228,7 +267,8 @@ class VaultHomeViewModelBalanceTest {
         advanceUntilIdle()
 
         assertEquals("main", balances.saved.single().id)
-        assertEquals(listOf(main.copy(amount = 99.0, cardId = "visa")), viewModel.state.value.balances)
+        assertEquals(setOf("main"), viewModel.state.value.loadedBalanceIds)
+        assertEquals(99.0, balances.balances.single().amount)
         assertNull(viewModel.state.value.editingBalance)
     }
 
@@ -245,7 +285,7 @@ class VaultHomeViewModelBalanceTest {
         advanceUntilIdle()
 
         assertEquals("main", balances.attemptedIds.single())
-        assertEquals(listOf("moved"), viewModel.state.value.balances.map { it.id })
+        assertEquals(setOf("moved"), viewModel.state.value.loadedBalanceIds)
     }
 
     @Test
@@ -445,7 +485,8 @@ class VaultHomeViewModelBalanceTest {
         advanceUntilIdle()
 
         assertEquals(listOf("main"), balances.deletedIds)
-        assertEquals(listOf(savings), viewModel.state.value.balances)
+        assertEquals(setOf("savings"), viewModel.state.value.loadedBalanceIds)
+        assertEquals(2, balances.totalsRefreshCount)
         assertNull(viewModel.state.value.pendingDeleteBalance)
         assertEquals(VaultHomeEffect.BalanceDeleted, viewModel.effect.first())
     }
@@ -463,7 +504,7 @@ class VaultHomeViewModelBalanceTest {
 
         assertNull(viewModel.state.value.pendingDeleteBalance)
         assertEquals(emptyList(), balances.deletedIds)
-        assertEquals(listOf(main), viewModel.state.value.balances)
+        assertEquals(setOf("main"), viewModel.state.value.loadedBalanceIds)
     }
 
     @Test
@@ -483,9 +524,10 @@ class VaultHomeViewModelBalanceTest {
         advanceUntilIdle()
 
         assertEquals(1, seeded)
-        assertEquals(listOf(main), viewModel.state.value.balances)
+        assertEquals(setOf("main"), viewModel.state.value.loadedBalanceIds)
         assertFalse(viewModel.state.value.isAddingSampleBalances)
         assertEquals(VaultHomeEffect.CloseDrawer, viewModel.effect.first())
+        assertEquals(VaultHomeEffect.RefreshBalances, viewModel.effect.first())
         assertEquals(VaultHomeEffect.SampleBalancesAdded(50), viewModel.effect.first())
     }
 
@@ -498,6 +540,7 @@ class VaultHomeViewModelBalanceTest {
         advanceUntilIdle()
 
         assertEquals(VaultHomeEffect.CloseDrawer, viewModel.effect.first())
+        assertEquals(VaultHomeEffect.RefreshBalances, viewModel.effect.first())
         assertEquals(VaultHomeEffect.SampleBalancesNeedACard, viewModel.effect.first())
     }
 
@@ -510,6 +553,7 @@ class VaultHomeViewModelBalanceTest {
         advanceUntilIdle()
 
         assertEquals(VaultHomeEffect.CloseDrawer, viewModel.effect.first())
+        assertEquals(VaultHomeEffect.RefreshBalances, viewModel.effect.first())
         assertEquals(VaultHomeEffect.BalanceRequestFailed, viewModel.effect.first())
     }
 
@@ -523,23 +567,6 @@ class VaultHomeViewModelBalanceTest {
 
         assertFalse(viewModel.state.value.canAddSampleBalances)
         assertFalse(viewModel.state.value.isAddingSampleBalances)
-    }
-
-    @Test
-    fun balanceTotals_subtractPurchasesAndTransfersAndAddIncomeAndReceives() {
-        fun balance(type: BalanceType, amount: Double) =
-            Balance(id = type.name, name = "", amount = amount, currency = "EUR", type = type)
-
-        val state = VaultHomeState(
-            balances = listOf(
-                balance(BalanceType.Income, 100.0),
-                balance(BalanceType.Purchase, 30.0),
-                balance(BalanceType.Transfer, 20.0),
-                balance(BalanceType.Receive, 5.0),
-            ),
-        )
-
-        assertEquals(listOf("EUR" to 55.0), state.balanceTotals)
     }
 
     @Test

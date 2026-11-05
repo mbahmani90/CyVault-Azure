@@ -2,6 +2,7 @@ package com.cypressit.cyvault.feature.vault.home.data.repository
 
 import com.cypressit.cyvault.auth.AuthClient
 import com.cypressit.cyvault.core.coroutines.runSuspendCatching
+import com.cypressit.cyvault.feature.vault.home.data.local.BalanceCache
 import com.cypressit.cyvault.feature.vault.home.data.remote.SessionApiService
 import com.cypressit.cyvault.feature.vault.home.domain.model.Account
 import com.cypressit.cyvault.feature.vault.home.domain.repository.AccountRepository
@@ -9,6 +10,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.repository.AccountReposit
 class AccountRepositoryImpl(
     private val authClient: AuthClient,
     private val sessionApi: SessionApiService,
+    private val balanceCache: BalanceCache,
 ) : AccountRepository {
 
     override suspend fun currentAccount(): Account? =
@@ -19,5 +21,8 @@ class AccountRepositoryImpl(
         // signs out on this device. The local sign-out clears the tokens either way.
         runSuspendCatching { sessionApi.revokeSessions() }
         authClient.signOut()
+        // Their money shouldn't stay on the device. Best effort too: the user is already signed
+        // out, and if this fails the cache still drops these rows before showing them to anyone else.
+        runSuspendCatching { balanceCache.clear() }
     }
 }

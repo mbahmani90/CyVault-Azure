@@ -6,9 +6,13 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinx.serialization)
+    alias(libs.plugins.ksp)
 }
 
 kotlin {
+    // Room generates the actual of the database's expect object.
+    compilerOptions { freeCompilerArgs.add("-Xexpect-actual-classes") }
+
     // Linked into the app's iOS framework; only :app builds a framework.
     iosArm64()
     iosSimulatorArm64()
@@ -70,6 +74,13 @@ kotlin {
 
             // The device ID the API gave this device's key
             implementation(libs.androidx.datastore.preferences.core)
+
+            // The balance cache
+            implementation(libs.androidx.paging.common)
+            implementation(libs.androidx.paging.compose)
+            implementation(libs.androidx.room.runtime)
+            implementation(libs.androidx.room.paging)
+            implementation(libs.androidx.sqlite.bundled)
         }
 
         androidMain.dependencies {
@@ -97,6 +108,13 @@ kotlin {
             implementation(libs.junit)
         }
     }
+}
+
+dependencies {
+    // Room generates the database's code separately for each platform.
+    add("kspAndroid", libs.androidx.room.compiler)
+    add("kspIosArm64", libs.androidx.room.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
 }
 
 compose.resources {

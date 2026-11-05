@@ -2,6 +2,7 @@ package com.cypressit.cyvault.feature.vault.home.presentation.viewmodel
 
 import com.cypressit.cyvault.feature.vault.device.domain.usecase.EnrollDeviceUseCase
 import com.cypressit.cyvault.feature.vault.fake.FakeAuthClient
+import com.cypressit.cyvault.feature.vault.fake.FakeBalanceCache
 import com.cypressit.cyvault.feature.vault.fake.FakeBalanceRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeCardRepository
 import com.cypressit.cyvault.feature.vault.fake.FakeDeviceRepository
@@ -18,7 +19,10 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetBalancesUseCas
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCardsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetCurrentAccountUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.GetProfilePhotoUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveCardsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.ObserveLoadedBalanceIdsUseCase
+import com.cypressit.cyvault.feature.vault.home.domain.usecase.RefreshBalanceTotalsUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
@@ -49,7 +53,7 @@ class VaultHomeViewModelAddCardTest {
 
     private fun viewModel(): VaultHomeViewModel {
         val authClient = FakeAuthClient()
-        val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient))
+        val accounts = AccountRepositoryImpl(authClient, succeedingSessionApi(authClient), FakeBalanceCache())
         return VaultHomeViewModel(
             getCards = GetCardsUseCase(cards),
             observeCards = ObserveCardsUseCase(cards),
@@ -60,6 +64,9 @@ class VaultHomeViewModelAddCardTest {
             changeProfilePhoto = ChangeProfilePhotoUseCase(photos),
             clearProfilePhotoCache = ClearProfilePhotoCacheUseCase(photos),
             getBalances = GetBalancesUseCase(balances),
+            observeLoadedBalanceIds = ObserveLoadedBalanceIdsUseCase(balances),
+            observeBalanceTotals = ObserveBalanceTotalsUseCase(balances),
+            refreshBalanceTotals = RefreshBalanceTotalsUseCase(balances),
             saveBalance = SaveBalanceUseCase(balances),
             deleteBalance = DeleteBalanceUseCase(balances),
             deleteBalances = DeleteBalancesUseCase(balances),

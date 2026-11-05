@@ -1,11 +1,24 @@
 package com.cypressit.cyvault.feature.vault.home.domain.repository
 
+import androidx.paging.PagingData
 import com.cypressit.cyvault.feature.vault.home.domain.model.Balance
+import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceTotals
 import com.cypressit.cyvault.feature.vault.home.domain.model.TransferApproval
 import com.cypressit.cyvault.feature.vault.home.domain.model.TransferChallenge
+import kotlinx.coroutines.flow.Flow
 
 interface BalanceRepository {
-    suspend fun getBalances(): Result<List<Balance>>
+    /** The balances, newest first: what's on the device, with more fetched as the user scrolls. */
+    fun balances(): Flow<PagingData<Balance>>
+
+    /** The IDs of the balances on the device so far. */
+    fun loadedBalanceIds(): Flow<Set<String>>
+
+    /** The last totals fetched, which also show offline. */
+    fun totals(): Flow<BalanceTotals>
+
+    /** Fetches the totals, which update [totals]. */
+    suspend fun refreshTotals(): Result<Unit>
 
     /**
      * Creates the balance, which needs a date; returns it as the server stored it, under the ID the

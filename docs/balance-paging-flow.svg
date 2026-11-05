@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 1040" width="1100" height="1040" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title>CyVault — Loading balances a page at a time through the Room cache</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0284C7"/>
+    </marker>
+    <style>
+      .t-title { font-size: 22px; font-weight: 700; fill: #0F172A; }
+      .t-sub { font-size: 12.5px; fill: #64748B; }
+      .t-actor { font-size: 14px; font-weight: 700; fill: #0F172A; text-anchor: middle; }
+      .t-actorsub { font-size: 10.5px; fill: #475569; text-anchor: middle; }
+      .t-msg { font-size: 12.5px; font-weight: 700; fill: #0F172A; }
+      .t-body { font-size: 11.5px; fill: #334155; font-family: Consolas, 'SFMono-Regular', Menlo, monospace; }
+      .t-small { font-size: 11.5px; fill: #475569; }
+      .t-cell { font-size: 12px; fill: #334155; }
+      .t-cellb { font-size: 12px; font-weight: 700; fill: #0F172A; }
+      .t-panel { font-size: 13px; font-weight: 700; fill: #0F172A; }
+      .t-num { font-size: 11px; font-weight: 700; fill: #FFFFFF; text-anchor: middle; }
+      .t-phase { font-size: 11px; font-weight: 700; fill: #64748B; letter-spacing: 0.06em; }
+      .life { stroke: #94A3B8; stroke-width: 1.5; stroke-dasharray: 5 5; }
+      .req { stroke: #475569; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .res { stroke: #0284C7; stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; marker-end: url(#arrowBlue); }
+      .phase { stroke: #E2E8F0; stroke-width: 1; }
+      .panel { fill: #FFFFFF; stroke: #CBD5E1; stroke-width: 1.2; }
+    </style>
+  </defs>
+
+  <rect width="1100" height="1040" fill="#F8FAFC"/>
+
+  <!-- Title -->
+  <text x="40" y="36" class="t-title">Balances: one page at a time, through the cache</text>
+  <text x="40" y="58" class="t-sub">The list only ever reads from Room. The mediator is what fills Room from the API, 20 balances at a time.</text>
+
+  <!-- Actors -->
+  <rect x="40" y="80" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#64748B" stroke-width="1.5"/>
+  <text x="130" y="101" class="t-actor">Pager</text>
+  <text x="130" y="118" class="t-actorsub">Paging 3 · feeds the list</text>
+  <rect x="320" y="80" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#16A34A" stroke-width="1.5"/>
+  <text x="410" y="101" class="t-actor">BalanceRemoteMediator</text>
+  <text x="410" y="118" class="t-actorsub">decides when to fetch</text>
+  <rect x="600" y="80" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#2563EB" stroke-width="1.5"/>
+  <text x="690" y="101" class="t-actor">Room cache</text>
+  <text x="690" y="118" class="t-actorsub">on the phone · ORDER BY id</text>
+  <rect x="880" y="80" width="180" height="50" rx="8" fill="#FFFFFF" stroke="#D97706" stroke-width="1.5"/>
+  <text x="970" y="101" class="t-actor">CyVault API</text>
+  <text x="970" y="118" class="t-actorsub">Azure Function</text>
+
+  <!-- Lifelines -->
+  <line x1="130" y1="132" x2="130" y2="752" class="life"/>
+  <line x1="410" y1="132" x2="410" y2="752" class="life"/>
+  <line x1="690" y1="132" x2="690" y2="752" class="life"/>
+  <line x1="970" y1="132" x2="970" y2="752" class="life"/>
+
+  <!-- Phase: open -->
+  <rect x="36" y="144" width="118" height="16" fill="#F8FAFC"/>
+  <text x="40" y="156" class="t-phase">OPENING THE LIST</text>
+  <line x1="170" y1="152" x2="1060" y2="152" class="phase"/>
+
+  <!-- 1: read the cache -->
+  <circle cx="22" cy="182" r="9" fill="#64748B"/><text x="22" y="186" class="t-num">1</text>
+  <path d="M132 190 H686" class="req"/>
+  <text x="144" y="182" class="t-msg">Read cached rows</text>
+  <path d="M688 220 H134" class="res"/>
+  <text x="144" y="212" class="t-body">rows so far, shown at once</text>
+
+  <!-- 2: refresh -->
+  <circle cx="22" cy="252" r="9" fill="#64748B"/><text x="22" y="256" class="t-num">2</text>
+  <path d="M132 260 H406" class="req"/>
+  <text x="144" y="252" class="t-msg">load(REFRESH)</text>
+
+  <!-- 3: prepare -->
+  <circle cx="22" cy="294" r="9" fill="#64748B"/><text x="22" y="298" class="t-num">3</text>
+  <path d="M412 302 H686" class="req"/>
+  <text x="424" y="294" class="t-msg">prepareFor(userId)</text>
+  <text x="424" y="320" class="t-small">Another user's rows are dropped first</text>
+
+  <!-- 4: first page -->
+  <circle cx="22" cy="352" r="9" fill="#64748B"/><text x="22" y="356" class="t-num">4</text>
+  <path d="M412 360 H966" class="req"/>
+  <text x="424" y="352" class="t-msg">GET /me/balances?pageSize=20</text>
+  <path d="M968 390 H414" class="res"/>
+  <text x="424" y="382" class="t-body">{ items, continuationToken }</text>
+
+  <!-- 5: save first page -->
+  <circle cx="22" cy="422" r="9" fill="#64748B"/><text x="22" y="426" class="t-num">5</text>
+  <path d="M412 430 H686" class="req"/>
+  <text x="424" y="422" class="t-msg">saveFirstPage(rows, token)</text>
+  <path d="M688 460 H134" class="res"/>
+  <text x="144" y="452" class="t-body">rows changed: list updates</text>
+
+  <!-- Phase: scroll -->
+  <rect x="36" y="480" width="116" height="16" fill="#F8FAFC"/>
+  <text x="40" y="492" class="t-phase">SCROLLING DOWN</text>
+  <line x1="160" y1="488" x2="1060" y2="488" class="phase"/>
+
+  <!-- 6: append -->
+  <circle cx="22" cy="518" r="9" fill="#64748B"/><text x="22" y="522" class="t-num">6</text>
+  <path d="M132 526 H406" class="req"/>
+  <text x="144" y="518" class="t-msg">load(APPEND)</text>
+  <text x="144" y="544" class="t-small">Near the end of the loaded rows</text>
+
+  <!-- 7: read the token -->
+  <circle cx="22" cy="568" r="9" fill="#64748B"/><text x="22" y="572" class="t-num">7</text>
+  <path d="M412 576 H686" class="req"/>
+  <text x="424" y="568" class="t-msg">Read cache_state</text>
+  <path d="M688 606 H414" class="res"/>
+  <text x="424" y="598" class="t-body">nextPageToken, isEndReached</text>
+
+  <!-- 8: next page -->
+  <circle cx="22" cy="638" r="9" fill="#64748B"/><text x="22" y="642" class="t-num">8</text>
+  <path d="M412 646 H966" class="req"/>
+  <text x="424" y="638" class="t-msg">GET /me/balances?pageSize=20</text>
+  <text x="702" y="638" class="t-body">&amp;continuationToken=…</text>
+  <path d="M968 676 H414" class="res"/>
+  <text x="424" y="668" class="t-body">{ items, continuationToken }</text>
+
+  <!-- 9: save next page -->
+  <circle cx="22" cy="708" r="9" fill="#64748B"/><text x="22" y="712" class="t-num">9</text>
+  <path d="M412 716 H686" class="req"/>
+  <text x="424" y="708" class="t-msg">savePage(rows, token)</text>
+  <path d="M688 742 H134" class="res"/>
+  <text x="144" y="734" class="t-body">rows changed: more rows appear</text>
+
+  <!-- Panel: when loading stops -->
+  <rect x="30" y="772" width="350" height="248" rx="10" class="panel"/>
+  <text x="50" y="800" class="t-panel">When loading stops</text>
+  <text x="50" y="830" class="t-cellb">Last page</text>
+  <text x="50" y="850" class="t-cell">The API's token is null, so isEndReached is</text>
+  <text x="50" y="868" class="t-cell">saved and no more requests are made.</text>
+  <text x="50" y="902" class="t-cellb">No network or API error</text>
+  <text x="50" y="922" class="t-cell">Room isn't changed, so cached rows stay on</text>
+  <text x="50" y="940" class="t-cell">screen. Paging reports a load error, and the</text>
+  <text x="50" y="958" class="t-cell">list shows a retry row.</text>
+  <text x="50" y="992" class="t-small">Totals are cached the same way, so they show offline.</text>
+
+  <!-- Panel: writes -->
+  <rect x="400" y="772" width="670" height="248" rx="10" class="panel"/>
+  <text x="420" y="800" class="t-panel">Keeping the cache right after a write</text>
+  <text x="420" y="820" class="t-small">The repository calls the API first, and updates Room only if that succeeds.</text>
+  <line x1="420" y1="834" x2="1050" y2="834" class="phase"/>
+  <text x="420" y="856" class="t-cellb">Create</text>
+  <text x="560" y="856" class="t-cell">Insert only if it falls inside the loaded range</text>
+  <text x="420" y="884" class="t-cellb">Edit, same date</text>
+  <text x="560" y="884" class="t-cell">Update the row</text>
+  <text x="420" y="912" class="t-cellb">Edit, new date</text>
+  <text x="560" y="912" class="t-cell">Delete the old ID, then insert the new row if it's in range</text>
+  <text x="420" y="940" class="t-cellb">Delete</text>
+  <text x="560" y="940" class="t-cell">Remove the row</text>
+  <text x="420" y="968" class="t-cellb">Transfer sent</text>
+  <text x="560" y="968" class="t-cell">Insert the sent row if it's in range</text>
+  <text x="420" y="1002" class="t-small">Older than everything loaded? It isn't inserted, and normal paging reaches it later, with no gap in the list.</text>
+</svg>

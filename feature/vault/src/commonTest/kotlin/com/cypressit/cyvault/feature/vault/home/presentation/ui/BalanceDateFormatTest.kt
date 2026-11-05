@@ -26,24 +26,6 @@ class BalanceDateFormatTest {
     }
 
     @Test
-    fun oldestBalanceDate_comparesInstantsNotText() {
-        // As text "2026-10-28T08…+02:00" sorts after "2026-10-28T07…Z", but it's earlier.
-        assertEquals(
-            "28 Oct 2026, 06:00",
-            oldestBalanceDate(
-                listOf("2026-10-28T07:00:00Z", null, "2026-10-28T08:00:00+02:00", "not a date"),
-                TimeZone.UTC,
-            ),
-        )
-    }
-
-    @Test
-    fun oldestBalanceDate_withoutDates_isNull() {
-        assertNull(oldestBalanceDate(emptyList()))
-        assertNull(oldestBalanceDate(listOf(null)))
-    }
-
-    @Test
     fun datePickerMillis_isTheUtcMidnightOfTheLocalDay() {
         // 23:30 UTC on 27 Jul is already 28 Jul in Lisbon (UTC+1), so the picker shows the 28th.
         val instant = Instant.parse("2026-07-27T23:30:00Z")

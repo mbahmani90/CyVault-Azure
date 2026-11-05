@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.kotlinx.serialization) apply false
     alias(libs.plugins.android.lint) apply false
     alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.ksp) apply false
     alias(libs.plugins.googleServices) apply false
     // Applied here too so the root project can merge every module's coverage into one report
     alias(libs.plugins.kover)
