@@ -115,6 +115,7 @@ import cyvault.vault.generated.resources.vault_home_selection_select_all_descrip
 import cyvault.vault.generated.resources.vault_home_sign_out
 import cyvault.vault.generated.resources.vault_home_sign_out_description
 import cyvault.vault.generated.resources.vault_home_title
+import cyvault.vault.generated.resources.vault_home_total_label
 import cyvault.vault.generated.resources.vault_home_total_since
 import cyvault.vault.generated.resources.vault_home_transfer_description
 import org.jetbrains.compose.resources.decodeToImageBitmap
@@ -572,6 +573,38 @@ private fun BalancesLoadingRow() {
     )
 }
 
+// One line per currency, over all the balances; € 0.00 until there are any.
+@Composable
+private fun TotalAmounts(state: VaultHomeState) {
+    state.balanceTotals.ifEmpty { listOf("EUR" to 0.0) }.forEach { (currency, total) ->
+        Text(
+            text = formatAmount(total, currency, symbolAfter = true),
+            style = MaterialTheme.typography.headlineMedium,
+        )
+    }
+    formatBalanceDate(state.oldestBalanceDate)?.let { since ->
+        Text(
+            text = stringResource(Res.string.vault_home_total_since, since),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+// Where the total goes while it loads, about as tall as one amount line so the card doesn't jump.
+@Composable
+private fun TotalLoadingRow() {
+    LinearProgressIndicator(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp)
+            .testTag(VaultHomeTags.TOTAL_LOADING),
+        // Gray, like the list's loading row.
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+    )
+}
+
 @Composable
 private fun BalancesRetryRow(message: String, onRetry: () -> Unit) {
     Row(
@@ -635,23 +668,14 @@ private fun HomeContent(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(
-                            text = "Total Balance",
+                            text = stringResource(Res.string.vault_home_total_label),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        // One line per currency, over all the balances; € 0.00 until there are any.
-                        state.balanceTotals.ifEmpty { listOf("EUR" to 0.0) }.forEach { (currency, total) ->
-                            Text(
-                                text = formatAmount(total, currency, symbolAfter = true),
-                                style = MaterialTheme.typography.headlineMedium,
-                            )
-                        }
-                        formatBalanceDate(state.oldestBalanceDate)?.let { since ->
-                            Text(
-                                text = stringResource(Res.string.vault_home_total_since, since),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        if (state.isTotalLoading) {
+                            TotalLoadingRow()
+                        } else {
+                            TotalAmounts(state)
                         }
                     }
                     SmallFloatingActionButton(

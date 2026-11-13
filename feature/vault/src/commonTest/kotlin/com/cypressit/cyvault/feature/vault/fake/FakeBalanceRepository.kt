@@ -7,6 +7,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.model.BalanceType
 import com.cypressit.cyvault.feature.vault.home.domain.model.TransferApproval
 import com.cypressit.cyvault.feature.vault.home.domain.model.TransferChallenge
 import com.cypressit.cyvault.feature.vault.home.domain.repository.BalanceRepository
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -26,6 +27,9 @@ class FakeBalanceRepository(balances: List<Balance> = emptyList()) : BalanceRepo
 
     val totals = MutableStateFlow(BalanceTotals())
     var totalsRefreshCount = 0
+
+    /** When set, [refreshTotals] waits for it, so a test can look while the totals load. */
+    var totalsGate: CompletableDeferred<Unit>? = null
 
     companion object {
         const val NOW = "2026-10-28T12:00:00Z"
@@ -78,6 +82,7 @@ class FakeBalanceRepository(balances: List<Balance> = emptyList()) : BalanceRepo
 
     override suspend fun refreshTotals(): Result<Unit> {
         totalsRefreshCount++
+        totalsGate?.await()
         return failure?.let { Result.failure(it) } ?: Result.success(Unit)
     }
 
@@ -102,6 +107,21 @@ class FakeBalanceRepository(balances: List<Balance> = emptyList()) : BalanceRepo
             ),
         )
     }
+
+    override suspend fun deleteBalances(ids: List<String>): Result<Unit> {
+        deleteRequests += listOf(ids)
+        failure?.let { return Result.failure(it) }
+        // Like the API: one failing ID fails the whole request.
+        if (ids.any { it in failingDeleteIds }) return Result.failure(Exception("delete failed"))
+        deletedIds += ids
+        balances = balances.filterNot { it.id in ids }
+        return Result.success(Unit)
+    }
+
+    override var maxDeletesPerRequest = 99
+
+    /** Each [deleteBalances] call's IDs, failed ones included. */
+    val deleteRequests = mutableListOf<List<String>>()
 
     override suspend fun deleteBalance(id: String): Result<Unit> {
         failure?.let { return Result.failure(it) }

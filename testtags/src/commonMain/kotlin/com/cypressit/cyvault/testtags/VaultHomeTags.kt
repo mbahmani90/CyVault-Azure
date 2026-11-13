@@ -3,6 +3,7 @@ package com.cypressit.cyvault.testtags
 object VaultHomeTags {
     const val ADD_ITEM_BUTTON = "vault_home_add_item_button"
     const val TRANSFER_BUTTON = "vault_home_transfer_button"
+    const val TOTAL_LOADING = "vault_home_total_loading"
     const val BALANCE_LIST = "vault_home_balance_list"
     const val BALANCES_EMPTY_TEXT = "vault_home_balances_empty_text"
     const val BALANCES_LOAD_FAILED_TEXT = "vault_home_balances_load_failed_text"

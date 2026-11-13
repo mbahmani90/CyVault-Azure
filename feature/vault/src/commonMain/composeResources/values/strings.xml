@@ -28,6 +28,7 @@
     <string name="vault_home_add_item_cancel">Cancel</string>
     <string name="vault_home_add_item_save">Save</string>
     <string name="vault_home_photo_update_failed">Couldn't update your photo. Please try again.</string>
+    <string name="vault_home_total_label">Total Balance</string>
     <string name="vault_home_total_since">From %1$s</string>
     <string name="vault_home_balances_empty">No balances yet. Tap + to add one.</string>
     <string name="vault_home_balances_load_failed">Couldn't load your balances.</string>

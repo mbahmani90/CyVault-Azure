@@ -32,6 +32,12 @@ interface BalanceRepository {
 
     suspend fun deleteBalance(id: String): Result<Unit>
 
+    /** Deletes the balances in one request: all of them or none. */
+    suspend fun deleteBalances(ids: List<String>): Result<Unit>
+
+    /** The most [deleteBalances] takes at once. */
+    val maxDeletesPerRequest: Int
+
     /**
      * The one-time challenge that approves sending [amount] from the user's card [cardId] to the
      * card linked to [phoneNumber]. The API checks the transfer first, so it fails like
