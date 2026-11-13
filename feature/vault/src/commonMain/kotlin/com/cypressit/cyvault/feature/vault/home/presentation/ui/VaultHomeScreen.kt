@@ -573,6 +573,61 @@ private fun BalancesLoadingRow() {
     )
 }
 
+/** Total assets per currency, with the transfer and add buttons; a loading bar while it loads. */
+@Composable
+internal fun TotalBalanceCard(
+    state: VaultHomeState,
+    onTransfer: () -> Unit,
+    onAddItem: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stringResource(Res.string.vault_home_total_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (state.isTotalLoading) {
+                    TotalLoadingRow()
+                } else {
+                    TotalAmounts(state)
+                }
+            }
+            SmallFloatingActionButton(
+                onClick = onTransfer,
+                modifier = Modifier.testTag(VaultHomeTags.TRANSFER_BUTTON),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SwapHoriz,
+                    contentDescription = stringResource(Res.string.vault_home_transfer_description),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            SmallFloatingActionButton(
+                onClick = onAddItem,
+                modifier = Modifier.testTag(VaultHomeTags.ADD_ITEM_BUTTON),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(Res.string.vault_home_add_item_description_fab),
+                )
+            }
+        }
+    }
+}
+
 // One line per currency, over all the balances; € 0.00 until there are any.
 @Composable
 private fun TotalAmounts(state: VaultHomeState) {
@@ -654,51 +709,7 @@ private fun HomeContent(
         else -> Column(
             modifier = modifier.fillMaxSize(),
         ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.vault_home_total_label),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        if (state.isTotalLoading) {
-                            TotalLoadingRow()
-                        } else {
-                            TotalAmounts(state)
-                        }
-                    }
-                    SmallFloatingActionButton(
-                        onClick = onTransfer,
-                        modifier = Modifier.testTag(VaultHomeTags.TRANSFER_BUTTON),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SwapHoriz,
-                            contentDescription = stringResource(Res.string.vault_home_transfer_description),
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    SmallFloatingActionButton(
-                        onClick = onAddItem,
-                        modifier = Modifier.testTag(VaultHomeTags.ADD_ITEM_BUTTON),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = stringResource(Res.string.vault_home_add_item_description_fab),
-                        )
-                    }
-                }
-            }
+            TotalBalanceCard(state = state, onTransfer = onTransfer, onAddItem = onAddItem)
 
             // Only the list pulls: the total card above stays where it is.
             PullToRefreshBox(
