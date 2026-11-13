@@ -46,6 +46,10 @@ class RandomSampleBalancesSeederTest {
 
         override suspend fun deleteBalance(id: String): Result<Unit> = Result.success(Unit)
 
+        override suspend fun deleteBalances(ids: List<String>): Result<Unit> = Result.success(Unit)
+
+        override val maxDeletesPerRequest = 99
+
         override suspend fun requestTransferChallenge(
             transferId: String,
             cardId: String,

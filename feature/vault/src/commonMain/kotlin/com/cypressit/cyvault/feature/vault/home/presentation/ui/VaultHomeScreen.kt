@@ -115,6 +115,7 @@ import cyvault.vault.generated.resources.vault_home_selection_select_all_descrip
 import cyvault.vault.generated.resources.vault_home_sign_out
 import cyvault.vault.generated.resources.vault_home_sign_out_description
 import cyvault.vault.generated.resources.vault_home_title
+import cyvault.vault.generated.resources.vault_home_total_label
 import cyvault.vault.generated.resources.vault_home_total_since
 import cyvault.vault.generated.resources.vault_home_transfer_description
 import org.jetbrains.compose.resources.decodeToImageBitmap
@@ -572,6 +573,93 @@ private fun BalancesLoadingRow() {
     )
 }
 
+/** Total assets per currency, with the transfer and add buttons; a loading bar while it loads. */
+@Composable
+internal fun TotalBalanceCard(
+    state: VaultHomeState,
+    onTransfer: () -> Unit,
+    onAddItem: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stringResource(Res.string.vault_home_total_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (state.isTotalLoading) {
+                    TotalLoadingRow()
+                } else {
+                    TotalAmounts(state)
+                }
+            }
+            SmallFloatingActionButton(
+                onClick = onTransfer,
+                modifier = Modifier.testTag(VaultHomeTags.TRANSFER_BUTTON),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SwapHoriz,
+                    contentDescription = stringResource(Res.string.vault_home_transfer_description),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            SmallFloatingActionButton(
+                onClick = onAddItem,
+                modifier = Modifier.testTag(VaultHomeTags.ADD_ITEM_BUTTON),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(Res.string.vault_home_add_item_description_fab),
+                )
+            }
+        }
+    }
+}
+
+// One line per currency, over all the balances; € 0.00 until there are any.
+@Composable
+private fun TotalAmounts(state: VaultHomeState) {
+    state.balanceTotals.ifEmpty { listOf("EUR" to 0.0) }.forEach { (currency, total) ->
+        Text(
+            text = formatAmount(total, currency, symbolAfter = true),
+            style = MaterialTheme.typography.headlineMedium,
+        )
+    }
+    formatBalanceDate(state.oldestBalanceDate)?.let { since ->
+        Text(
+            text = stringResource(Res.string.vault_home_total_since, since),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+// Where the total goes while it loads, about as tall as one amount line so the card doesn't jump.
+@Composable
+private fun TotalLoadingRow() {
+    LinearProgressIndicator(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp)
+            .testTag(VaultHomeTags.TOTAL_LOADING),
+        // Gray, like the list's loading row.
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+    )
+}
+
 @Composable
 private fun BalancesRetryRow(message: String, onRetry: () -> Unit) {
     Row(
@@ -621,60 +709,7 @@ private fun HomeContent(
         else -> Column(
             modifier = modifier.fillMaxSize(),
         ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(
-                            text = "Total Balance",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        // One line per currency, over all the balances; € 0.00 until there are any.
-                        state.balanceTotals.ifEmpty { listOf("EUR" to 0.0) }.forEach { (currency, total) ->
-                            Text(
-                                text = formatAmount(total, currency, symbolAfter = true),
-                                style = MaterialTheme.typography.headlineMedium,
-                            )
-                        }
-                        formatBalanceDate(state.oldestBalanceDate)?.let { since ->
-                            Text(
-                                text = stringResource(Res.string.vault_home_total_since, since),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    SmallFloatingActionButton(
-                        onClick = onTransfer,
-                        modifier = Modifier.testTag(VaultHomeTags.TRANSFER_BUTTON),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SwapHoriz,
-                            contentDescription = stringResource(Res.string.vault_home_transfer_description),
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    SmallFloatingActionButton(
-                        onClick = onAddItem,
-                        modifier = Modifier.testTag(VaultHomeTags.ADD_ITEM_BUTTON),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = stringResource(Res.string.vault_home_add_item_description_fab),
-                        )
-                    }
-                }
-            }
+            TotalBalanceCard(state = state, onTransfer = onTransfer, onAddItem = onAddItem)
 
             // Only the list pulls: the total card above stays where it is.
             PullToRefreshBox(

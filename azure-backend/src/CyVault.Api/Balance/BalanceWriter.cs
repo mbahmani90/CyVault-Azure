@@ -25,6 +25,14 @@ public sealed class BalanceTotalsEntity : ITableEntity
 
     /// <summary>When the user's oldest balance happened; null when they have none.</summary>
     public DateTimeOffset? OldestDate { get; set; }
+
+    /// <summary>
+    /// How these totals were made. One older than <see cref="CurrentVersion"/> was started before
+    /// the balances already stored were counted, so it's rebuilt from them.
+    /// </summary>
+    public int Version { get; set; }
+
+    public const int CurrentVersion = 1;
 }
 
 /// <summary>What a user's balances add up to per currency, and when the oldest one happened.</summary>
@@ -40,6 +48,9 @@ public sealed class BalanceWriter(TableClient balances)
     // Enough for the sample balances, which save 10 at a time for one user.
     private const int MaxAttempts = 15;
 
+    /// <summary>A batch holds 100 rows: these and the totals.</summary>
+    public const int MaxDeletesPerBatch = 99;
+
     /// <summary>Everything in the partition except the totals row, as the table orders it.</summary>
     public static string RowsFilter(string oid) =>
         TableClient.CreateQueryFilter($"PartitionKey eq {oid} and RowKey lt {"~"}");
@@ -49,21 +60,43 @@ public sealed class BalanceWriter(TableClient balances)
         var stored = await balances.GetEntityIfExistsAsync<BalanceTotalsEntity>(
             oid, BalanceTotalsEntity.Key, cancellationToken: cancellationToken);
         var row = stored.HasValue ? stored.Value : null;
-        return new BalanceTotals(Parse(row), row?.OldestDate);
+        if (row?.Version >= BalanceTotalsEntity.CurrentVersion) return new BalanceTotals(Parse(row), row.OldestDate);
+
+        var rebuilt = await RebuildAsync(oid, cancellationToken);
+        try
+        {
+            await StoreAsync(oid, rebuilt, row, cancellationToken);
+        }
+        // A write got in first and stored totals of its own; the next read finds them.
+        catch (RequestFailedException e) when (e.Status is 409 or 412)
+        {
+        }
+        return rebuilt;
     }
 
     /// <summary>Stores the balance, removing the row <paramref name="replacesRowKey"/> when it moved.</summary>
     public Task SaveAsync(BalanceEntity entity, CancellationToken cancellationToken, string? replacesRowKey = null) =>
-        WriteAsync(entity.PartitionKey, entity, replacesRowKey, cancellationToken);
+        WriteAsync(entity.PartitionKey, entity, replacesRowKey is null ? [] : [replacesRowKey], cancellationToken);
 
     /// <summary>Deleting a row that isn't there does nothing.</summary>
     public Task DeleteAsync(string oid, string rowKey, CancellationToken cancellationToken) =>
-        WriteAsync(oid, null, rowKey, cancellationToken);
+        WriteAsync(oid, null, [rowKey], cancellationToken);
+
+    /// <summary>
+    /// Deletes up to <see cref="MaxDeletesPerBatch"/> rows in one batch with the totals: all of them
+    /// or none. Rows that aren't there are skipped.
+    /// </summary>
+    public Task DeleteManyAsync(string oid, IReadOnlyCollection<string> rowKeys, CancellationToken cancellationToken)
+    {
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(rowKeys.Count, MaxDeletesPerBatch);
+        return WriteAsync(oid, null, rowKeys, cancellationToken);
+    }
 
     private async Task WriteAsync(
-        string oid, BalanceEntity? saved, string? removedRowKey, CancellationToken cancellationToken)
+        string oid, BalanceEntity? saved, IReadOnlyCollection<string> removedRowKeys, CancellationToken cancellationToken)
     {
-        if (removedRowKey == saved?.RowKey) removedRowKey = null;
+        // A batch can't name a row twice, and the saved row isn't removed.
+        var removedKeys = removedRowKeys.Where(key => key != saved?.RowKey).Distinct().ToList();
 
         for (var attempt = 1; ; attempt++)
         {
@@ -72,13 +105,18 @@ public sealed class BalanceWriter(TableClient balances)
             var stored = await balances.GetEntityIfExistsAsync<BalanceTotalsEntity>(
                 oid, BalanceTotalsEntity.Key, cancellationToken: cancellationToken);
             var storedRow = stored.HasValue ? stored.Value : null;
-            var amounts = new Dictionary<string, decimal>(Parse(storedRow));
+            // Totals missing or made before every balance was counted start from the rows instead.
+            // The batch still checks the stored row, so a write landing during the scan is caught.
+            var current = storedRow?.Version >= BalanceTotalsEntity.CurrentVersion
+                ? new BalanceTotals(Parse(storedRow), storedRow.OldestDate)
+                : await RebuildAsync(oid, cancellationToken);
+            var amounts = new Dictionary<string, decimal>(current.Amounts);
             var actions = new List<TableTransactionAction>();
             var replacedRows = new List<BalanceEntity>();
 
-            if (removedRowKey is not null)
+            foreach (var removedKey in removedKeys)
             {
-                var removed = await ReadRowAsync(oid, removedRowKey, cancellationToken);
+                var removed = await ReadRowAsync(oid, removedKey, cancellationToken);
                 if (removed is not null)
                 {
                     Add(amounts, removed, -1);
@@ -99,16 +137,8 @@ public sealed class BalanceWriter(TableClient balances)
             }
             if (actions.Count == 0) return;
 
-            var totalsRow = new BalanceTotalsEntity
-            {
-                PartitionKey = oid,
-                Totals = JsonSerializer.Serialize(amounts.ToDictionary(
-                    t => t.Key, t => t.Value.ToString(CultureInfo.InvariantCulture))),
-                OldestDate = await OldestDateAfterAsync(oid, storedRow?.OldestDate, saved, replacedRows, cancellationToken),
-            };
-            actions.Add(storedRow is not null
-                ? new TableTransactionAction(TableTransactionActionType.UpdateReplace, totalsRow, storedRow.ETag)
-                : new TableTransactionAction(TableTransactionActionType.Add, totalsRow));
+            var oldest = await OldestDateAfterAsync(oid, current.OldestDate, saved, replacedRows, cancellationToken);
+            actions.Add(TotalsAction(ToEntity(oid, new BalanceTotals(amounts, oldest)), storedRow));
 
             try
             {
@@ -147,6 +177,38 @@ public sealed class BalanceWriter(TableClient balances)
         }
         return nextOldest;
     }
+
+    /// <summary>The totals worked out from every balance row the user has.</summary>
+    private async Task<BalanceTotals> RebuildAsync(string oid, CancellationToken cancellationToken)
+    {
+        var amounts = new Dictionary<string, decimal>();
+        DateTimeOffset? oldest = null;
+        await foreach (var row in balances.QueryAsync<BalanceEntity>(RowsFilter(oid), cancellationToken: cancellationToken))
+        {
+            Add(amounts, row, 1);
+            if (row.Date is { } date && (oldest is null || date < oldest)) oldest = date;
+        }
+        return new BalanceTotals(amounts, oldest);
+    }
+
+    private Task StoreAsync(
+        string oid, BalanceTotals totals, BalanceTotalsEntity? storedRow, CancellationToken cancellationToken) =>
+        balances.SubmitTransactionAsync([TotalsAction(ToEntity(oid, totals), storedRow)], cancellationToken);
+
+    private static BalanceTotalsEntity ToEntity(string oid, BalanceTotals totals) => new()
+    {
+        PartitionKey = oid,
+        Totals = JsonSerializer.Serialize(totals.Amounts.ToDictionary(
+            t => t.Key, t => t.Value.ToString(CultureInfo.InvariantCulture))),
+        OldestDate = totals.OldestDate,
+        Version = BalanceTotalsEntity.CurrentVersion,
+    };
+
+    // Replaces only the row that was read, or adds one only if none was there.
+    private static TableTransactionAction TotalsAction(BalanceTotalsEntity totals, BalanceTotalsEntity? storedRow) =>
+        storedRow is not null
+            ? new TableTransactionAction(TableTransactionActionType.UpdateReplace, totals, storedRow.ETag)
+            : new TableTransactionAction(TableTransactionActionType.Add, totals);
 
     private async Task<BalanceEntity?> ReadRowAsync(string oid, string rowKey, CancellationToken cancellationToken)
     {

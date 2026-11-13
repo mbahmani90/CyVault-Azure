@@ -1,8 +1,10 @@
 package com.cypressit.cyvault.feature.authentication.presentation.viewmodel
 
 import com.cypressit.cyvault.auth.AuthClient
+import com.cypressit.cyvault.feature.authentication.data.repository.AuthRepositoryImpl
 import com.cypressit.cyvault.feature.authentication.di.authModule
 import com.cypressit.cyvault.feature.authentication.domain.debug.ForgotPasswordPreview
+import com.cypressit.cyvault.feature.authentication.domain.repository.AuthRepository
 import com.cypressit.cyvault.feature.authentication.fake.FakeAuthClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -33,6 +35,8 @@ class AuthViewModelForgotPasswordTest {
             authModule,
             module {
                 single<AuthClient> { FakeAuthClient() }
+                // Koin 4.2 keeps authModule's singles across apps; this keeps another test's out.
+                single<AuthRepository> { AuthRepositoryImpl(get()) }
                 if (debugBuild) single { ForgotPasswordPreview }
             },
         )

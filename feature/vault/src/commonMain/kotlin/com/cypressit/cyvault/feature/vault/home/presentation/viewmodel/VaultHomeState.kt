@@ -22,6 +22,8 @@ data class VaultHomeState(
     val oldestBalanceDate: String? = null,
     /** True while the first page is being fetched, so the list doesn't claim there are none. */
     val isLoadingBalances: Boolean = true,
+    /** True while the totals are fetched on opening or on a pull, so a stale total isn't shown. */
+    val isLoadingTotals: Boolean = true,
     /** True when the first page couldn't be fetched, so an empty list doesn't claim there are none. */
     val hasBalancesLoadFailed: Boolean = false,
     /** True while a pull-to-refresh fetches the balances and cards again: the list shows its spinner. */
@@ -61,6 +63,9 @@ data class VaultHomeState(
     /** Why the last Send failed, shown in the dialog; null when it didn't, or the input changed since. */
     val transferError: TransferError? = null,
 ) {
+    /** The total waits for the balances' first page and the fresh totals, so they show together. */
+    val isTotalLoading: Boolean get() = isLoadingBalances || isLoadingTotals
+
     val itemCard: Card?
         get() = itemCards.firstOrNull { it.id == itemCardId }
 

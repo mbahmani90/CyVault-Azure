@@ -125,6 +125,24 @@ class BalanceRepositoryImplTest {
     }
 
     @Test
+    fun deleteMany_removesThoseRows() = runTest {
+        dao.savePage("user-1", listOf(cachedBalance("1"), cachedBalance("2"), cachedBalance("3")), nextPageToken = null)
+
+        repository { respond("", HttpStatusCode.NoContent) }.deleteBalances(listOf("1", "3")).getOrThrow()
+
+        assertEquals(listOf("2"), dao.cachedIds())
+    }
+
+    @Test
+    fun deleteMany_whenTheApiFails_keepsTheRows() = runTest {
+        dao.savePage("user-1", listOf(cachedBalance("1"), cachedBalance("2")), nextPageToken = null)
+
+        assertTrue(failing().deleteBalances(listOf("1", "2")).isFailure)
+
+        assertEquals(listOf("1", "2"), dao.cachedIds())
+    }
+
+    @Test
     fun delete_whenTheApiFails_keepsTheRow() = runTest {
         dao.savePage("user-1", listOf(cachedBalance("1")), nextPageToken = null)
 

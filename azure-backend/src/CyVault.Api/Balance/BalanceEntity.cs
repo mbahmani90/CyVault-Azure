@@ -126,5 +126,8 @@ public sealed record BalanceTotalResponse(string Currency, decimal Total);
 /// <summary>The user's totals per currency, and when their oldest balance happened; null with none.</summary>
 public sealed record BalanceTotalsResponse(DateTimeOffset? OldestDate, List<BalanceTotalResponse> Totals);
 
+/// <summary>The balances to delete in one request.</summary>
+public sealed record DeleteBalancesRequest(List<string>? Ids);
+
 /// <summary>One page of balances, newest first; a null token means there are no more.</summary>
 public sealed record BalancePageResponse(List<BalanceResponse> Items, string? ContinuationToken);

@@ -212,6 +212,7 @@ jobs:
           path: |
             e2e/build/test-results/e2eTest/
             e2e/build/reports/tests/e2eTest/
+            e2e/build/reports/e2e-failures/
             ${{ runner.temp }}/appium.log
           retention-days: 7
 
