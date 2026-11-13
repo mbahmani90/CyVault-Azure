@@ -2,7 +2,9 @@ package com.cypressit.cyvault.feature.authentication.presentation.viewmodel
 
 import com.cypressit.cyvault.auth.AuthClient
 import com.cypressit.cyvault.auth.SignInStep
+import com.cypressit.cyvault.feature.authentication.data.repository.AuthRepositoryImpl
 import com.cypressit.cyvault.feature.authentication.di.authModule
+import com.cypressit.cyvault.feature.authentication.domain.repository.AuthRepository
 import com.cypressit.cyvault.feature.authentication.fake.FakeAuthClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,10 +30,17 @@ class AuthViewModelMfaTest {
     private val dispatcher = StandardTestDispatcher()
     private val authClient = FakeAuthClient()
 
-    // authModule is one shared object and Koin keeps its singles in it, so each test closes its
-    // app; otherwise the next test would get this test's repository, holding this test's fake.
+    // authModule is one shared object and Koin 4.2 keeps its singles in it even after the app
+    // closes, so the next test would get an earlier test's repository, holding that test's fake.
+    // Each test declares its own repository, which overrides the shared one.
     private val koinApp = koinApplication {
-        modules(authModule, module { single<AuthClient> { authClient } })
+        modules(
+            authModule,
+            module {
+                single<AuthClient> { authClient }
+                single<AuthRepository> { AuthRepositoryImpl(get()) }
+            },
+        )
     }
 
     @BeforeTest fun setUp() = Dispatchers.setMain(dispatcher)
