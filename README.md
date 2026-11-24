@@ -298,8 +298,11 @@ To set it up:
      no new bugs or vulnerabilities, all new security hotspots reviewed, ≥ 80% coverage and ≤ 3% duplication.
      The failing conditions are on the project's page in SonarQube Cloud.
 
-To run the E2E tests locally, start an emulator or connect a phone, start `appium` (with `ANDROID_HOME`
-and `JAVA_HOME` set), put the test account in the git-ignored `e2e/.env`, then run `./e2e/run-e2e.sh`.
+To run the E2E tests locally, start an emulator or connect a phone, start
+`appium --log-filters e2e/appium-log-filters.json` (with `ANDROID_HOME` and `JAVA_HOME` set), put the
+test account in the git-ignored `e2e/.env`, then run `./e2e/run-e2e.sh`. The filters replace the text the
+tests type, such as the test account's password, with `**SECURE**` in Appium's log; CI uses them too,
+because it uploads that log with the reports.
 
 ## Continuous delivery
 
