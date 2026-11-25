@@ -1,3 +1,4 @@
 # Shell scripts must keep LF endings, or bash fails on Windows checkouts with core.autocrlf=true
 # ("set: pipefail\r: invalid option name").
 *.sh text eol=lf
+gradlew text eol=lf
