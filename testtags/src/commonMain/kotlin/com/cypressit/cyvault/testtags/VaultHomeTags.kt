@@ -1,6 +1,8 @@
 package com.cypressit.cyvault.testtags
 
 object VaultHomeTags {
+    const val MENU_BUTTON = "vault_home_menu_button"
+    const val DRAWER_CARDS_ITEM = "vault_home_drawer_cards_item"
     const val ADD_ITEM_BUTTON = "vault_home_add_item_button"
     const val TRANSFER_BUTTON = "vault_home_transfer_button"
     const val TOTAL_LOADING = "vault_home_total_loading"

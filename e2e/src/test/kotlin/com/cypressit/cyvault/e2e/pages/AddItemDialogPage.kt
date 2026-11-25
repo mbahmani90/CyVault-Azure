@@ -15,7 +15,9 @@ class AddItemDialogPage(driver: AppiumDriver) : BasePage(driver) {
 
     fun enterValue(value: String) = apply { find(AddItemDialogTags.VALUE_FIELD).sendKeys(value) }
 
+    /** Save is enabled once there's a title, a card and a value; the cards load from the backend. */
     fun tapSave(): VaultHomePage {
+        check(waitUntil { find(AddItemDialogTags.SAVE_BUTTON).isEnabled }) { "Save stayed disabled" }
         find(AddItemDialogTags.SAVE_BUTTON).click()
         return VaultHomePage(driver)
     }

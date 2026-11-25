@@ -281,7 +281,7 @@ internal fun VaultHomeScreen(
                     label = { Text(stringResource(Res.string.vault_home_cards)) },
                     selected = false,
                     onClick = { viewModel.onIntent(VaultHomeIntent.AddCardFromDrawer) },
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp).testTag(VaultHomeTags.DRAWER_CARDS_ITEM),
                 )
                 if (state.canAddSampleBalances) {
                     NavigationDrawerItem(
@@ -343,7 +343,10 @@ internal fun VaultHomeScreen(
                         actionIconContentColor = CyTheme.brandColors.onTopBar,
                     ),
                     navigationIcon = {
-                        IconButton(onClick = { viewModel.onIntent(VaultHomeIntent.OpenDrawer) }) {
+                        IconButton(
+                            onClick = { viewModel.onIntent(VaultHomeIntent.OpenDrawer) },
+                            modifier = Modifier.testTag(VaultHomeTags.MENU_BUTTON),
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Menu,
                                 contentDescription = stringResource(Res.string.vault_home_open_menu_description),

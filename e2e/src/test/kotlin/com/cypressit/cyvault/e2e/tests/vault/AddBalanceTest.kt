@@ -1,7 +1,7 @@
 package com.cypressit.cyvault.e2e.tests.vault
 
 import com.cypressit.cyvault.e2e.fixtures.AppiumSession
-import com.cypressit.cyvault.e2e.fixtures.signedIn
+import com.cypressit.cyvault.e2e.fixtures.signedInWithCard
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertTrue
@@ -15,7 +15,8 @@ class AddBalanceTest {
         // Unique per run, so an item left over from an earlier run can't make this pass.
         val title = "E2E ${System.currentTimeMillis()}"
 
-        val home = session.signedIn()
+        // A balance needs a card, so the fixture adds one first.
+        val home = session.signedInWithCard()
         assertTrue(home.isShown(), "Home screen did not appear after sign-in")
 
         val dialog = home.tapAddItem()

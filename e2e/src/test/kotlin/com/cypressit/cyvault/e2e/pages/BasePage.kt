@@ -5,6 +5,7 @@ import com.cypressit.cyvault.e2e.config.Platform
 import io.appium.java_client.AppiumBy
 import io.appium.java_client.AppiumDriver
 import org.openqa.selenium.By
+import org.openqa.selenium.StaleElementReferenceException
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.remote.RemoteWebElement
 import org.openqa.selenium.support.ui.ExpectedConditions
@@ -13,7 +14,10 @@ import java.time.Duration
 
 abstract class BasePage(protected val driver: AppiumDriver) {
     // Sign-in and saving go over the network to Azure, so allow for a slow backend.
+    // An element can vanish between being found and being checked (a dialog closing): that throws
+    // StaleElementReferenceException, which must mean "check again", not "condition failed".
     private val wait = WebDriverWait(driver, Duration.ofSeconds(20))
+        .ignoring(StaleElementReferenceException::class.java)
 
     /** A Modifier.testTag: a resource ID on Android, an accessibility ID on iOS. */
     protected fun byTag(tag: String): By = when (E2eConfig.platform) {
