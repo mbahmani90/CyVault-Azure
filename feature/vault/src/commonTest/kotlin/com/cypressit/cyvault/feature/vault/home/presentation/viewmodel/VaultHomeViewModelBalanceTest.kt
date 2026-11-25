@@ -32,6 +32,7 @@ import com.cypressit.cyvault.feature.vault.home.domain.usecase.RefreshBalanceTot
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SaveBalanceUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SendTransferUseCase
 import com.cypressit.cyvault.feature.vault.home.domain.usecase.SignOutUseCase
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -92,6 +93,77 @@ class VaultHomeViewModelBalanceTest {
             transferPromptTexts = fixedTransferPromptTexts,
             sampleBalancesSeeder = sampleBalancesSeeder,
         )
+    }
+
+    @Test
+    fun total_waitsForTheFirstPageAndTheTotals() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        balances.totalsGate = gate
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.isTotalLoading)
+
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = false, hasFailed = false))
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.isTotalLoading, "the totals are still loading")
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertFalse(viewModel.state.value.isTotalLoading)
+    }
+
+    @Test
+    fun total_waitsForTheFirstPageWhenTheTotalsCameFirst() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = true, hasFailed = false))
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.isTotalLoading)
+
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = false, hasFailed = false))
+        assertFalse(viewModel.state.value.isTotalLoading)
+    }
+
+    @Test
+    fun total_showsWhenTheTotalsFail() = runTest(dispatcher) {
+        balances.failure = Exception("offline")
+        val viewModel = viewModel()
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = false, hasFailed = true))
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.isTotalLoading)
+    }
+
+    @Test
+    fun total_hidesAgainDuringAPull() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = false, hasFailed = false))
+        advanceUntilIdle()
+        val gate = CompletableDeferred<Unit>()
+        balances.totalsGate = gate
+
+        viewModel.onIntent(VaultHomeIntent.Refresh)
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.isTotalLoading)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertFalse(viewModel.state.value.isTotalLoading)
+    }
+
+    @Test
+    fun total_staysShownWhileADeleteRefreshesIt() = runTest(dispatcher) {
+        balances.balances = listOf(main)
+        val viewModel = viewModel()
+        viewModel.onIntent(VaultHomeIntent.BalancesLoadChanged(isLoading = false, hasFailed = false))
+        advanceUntilIdle()
+        balances.totalsGate = CompletableDeferred()
+
+        viewModel.onIntent(VaultHomeIntent.LongClickBalance(main))
+        viewModel.onIntent(VaultHomeIntent.RequestDeleteSelectedBalances)
+        viewModel.onIntent(VaultHomeIntent.ConfirmDeleteSelectedBalances)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.isTotalLoading)
     }
 
     @Test

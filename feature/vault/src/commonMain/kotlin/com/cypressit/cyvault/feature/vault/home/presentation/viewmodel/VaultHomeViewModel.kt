@@ -95,7 +95,7 @@ class VaultHomeViewModel(
     init {
         loadUser()
         collectBalanceCache()
-        updateTotals()
+        updateTotals(hideUntilDone = true)
         collectCards()
         // Fetched once for the row names; the dialogs then use the shared list. Quietly leaves the
         // names out on failure: a dialog fetches again, and reports it, when it opens.
@@ -183,9 +183,15 @@ class VaultHomeViewModel(
         }
     }
 
-    // Quiet on failure: the card keeps the last totals, and the list reports being offline.
-    private fun updateTotals() {
-        viewModelScope.launch { refreshBalanceTotals() }
+    // Quiet on failure: the card keeps the last totals, and the list reports being offline. On
+    // opening and on a pull the card hides them until the fetch ends, as the cached ones may be old;
+    // after a save or delete it doesn't, so the total doesn't blink.
+    private fun updateTotals(hideUntilDone: Boolean = false) {
+        if (hideUntilDone) _state.update { it.copy(isLoadingTotals = true) }
+        viewModelScope.launch {
+            refreshBalanceTotals()
+            if (hideUntilDone) _state.update { it.copy(isLoadingTotals = false) }
+        }
     }
 
     // Paging's own state for the list's first page, reported by the screen. A failure is told once,
@@ -206,7 +212,7 @@ class VaultHomeViewModel(
     private fun refresh() {
         if (_state.value.isRefreshing) return
         _state.update { it.copy(isRefreshing = true) }
-        updateTotals()
+        updateTotals(hideUntilDone = true)
         viewModelScope.launch { getCards() }
         viewModelScope.launch { _effect.send(VaultHomeEffect.RefreshBalances) }
     }

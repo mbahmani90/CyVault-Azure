@@ -10,28 +10,46 @@ class DeleteBalancesUseCaseTest {
     private val repository = FakeBalanceRepository()
 
     @Test
-    fun deletesEveryBalance() = runTest {
+    fun deletesEveryBalanceInOneRequest() = runTest {
         val deleted = DeleteBalancesUseCase(repository)(listOf("a", "b", "c"))
 
         assertEquals(setOf("a", "b", "c"), deleted)
-        assertEquals(listOf("a", "b", "c"), repository.deletedIds)
+        assertEquals(listOf(listOf("a", "b", "c")), repository.deleteRequests)
     }
 
     @Test
-    fun whenOneFails_stillDeletesTheRestAndLeavesItOut() = runTest {
-        repository.failingDeleteIds = setOf("b")
+    fun splitsIntoRequestsTheApiTakes() = runTest {
+        repository.maxDeletesPerRequest = 2
 
-        val deleted = DeleteBalancesUseCase(repository)(listOf("a", "b", "c"))
+        val deleted = DeleteBalancesUseCase(repository)(listOf("a", "b", "c", "d", "e"))
 
-        assertEquals(setOf("a", "c"), deleted)
-        assertEquals(listOf("a", "c"), repository.deletedIds)
+        assertEquals(setOf("a", "b", "c", "d", "e"), deleted)
+        assertEquals(listOf(listOf("a", "b"), listOf("c", "d"), listOf("e")), repository.deleteRequests)
     }
 
     @Test
-    fun withNoIds_deletesNothing() = runTest {
+    fun whenARequestFails_stillSendsTheRestAndLeavesItsIdsOut() = runTest {
+        repository.maxDeletesPerRequest = 2
+        repository.failingDeleteIds = setOf("c")
+
+        val deleted = DeleteBalancesUseCase(repository)(listOf("a", "b", "c", "d", "e"))
+
+        assertEquals(setOf("a", "b", "e"), deleted)
+        assertEquals(listOf("a", "b", "e"), repository.deletedIds)
+    }
+
+    @Test
+    fun sendsEachIdOnce() = runTest {
+        DeleteBalancesUseCase(repository)(listOf("a", "a", "b"))
+
+        assertEquals(listOf(listOf("a", "b")), repository.deleteRequests)
+    }
+
+    @Test
+    fun withNoIds_sendsNothing() = runTest {
         val deleted = DeleteBalancesUseCase(repository)(emptyList())
 
         assertEquals(emptySet(), deleted)
-        assertEquals(emptyList(), repository.deletedIds)
+        assertEquals(emptyList(), repository.deleteRequests)
     }
 }

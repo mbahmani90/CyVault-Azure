@@ -7,6 +7,13 @@ import org.openqa.selenium.WebElement
 class VaultHomePage(driver: AppiumDriver) : BasePage(driver) {
     fun isShown(): Boolean = waitUntil { isShown(VaultHomeTags.ADD_ITEM_BUTTON) }
 
+    /** Opens the side menu and goes to Cards. */
+    fun openCards(): CardsPage {
+        find(VaultHomeTags.MENU_BUTTON).click()
+        find(VaultHomeTags.DRAWER_CARDS_ITEM).click()
+        return CardsPage(driver)
+    }
+
     fun tapAddItem(): AddItemDialogPage {
         find(VaultHomeTags.ADD_ITEM_BUTTON).click()
         return AddItemDialogPage(driver)

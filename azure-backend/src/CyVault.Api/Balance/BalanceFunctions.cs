@@ -182,6 +182,38 @@ public sealed partial class BalanceFunctions(
         return new NoContentResult();
     }
 
+    /// <summary>
+    /// Deletes the balances in <c>{ "ids": [...] }</c>, up to 99, together with the totals: all of
+    /// them or none. IDs that aren't there are skipped, so sending the same request again succeeds.
+    /// </summary>
+    [Function("DeleteBalances")]
+    public async Task<IActionResult> DeleteMany(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "me/balance-deletions")] HttpRequest req,
+        CancellationToken cancellationToken)
+    {
+        var caller = await CallerAuthentication.AuthenticateAsync(req.HttpContext, CallerAuthentication.BalanceScope);
+        if (caller.Failure is not null) return caller.Failure;
+
+        DeleteBalancesRequest? body;
+        try
+        {
+            body = await JsonSerializer.DeserializeAsync<DeleteBalancesRequest>(
+                req.Body, JsonSerializerOptions.Web, cancellationToken);
+        }
+        catch (JsonException)
+        {
+            body = null;
+        }
+        if (body?.Ids is not { Count: > 0 and <= BalanceWriter.MaxDeletesPerBatch } ids)
+            return new BadRequestObjectResult(
+                $"The body must be JSON: {{ \"ids\": [...] }} with 1-{BalanceWriter.MaxDeletesPerBatch} IDs.");
+        if (!ids.All(id => id is not null && IsValidId(id))) return InvalidId();
+
+        await writer.DeleteManyAsync(caller.ObjectId!, ids, cancellationToken);
+        logger.LogInformation("Deleted {Count} balances for {ObjectId}", ids.Count, caller.ObjectId);
+        return new NoContentResult();
+    }
+
     // The body once checked, with a card of the caller's own; otherwise the response to send.
     private async Task<(BalanceRequest? Body, IActionResult? Error)> ReadAsync(
         HttpRequest req, string oid, CancellationToken cancellationToken)

@@ -5,6 +5,7 @@ import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalancePageDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceRequestDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceResponseDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.BalanceTotalsDto
+import com.cypressit.cyvault.feature.vault.home.data.remote.dto.DeleteBalancesRequestDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.TransferChallengeDto
 import com.cypressit.cyvault.feature.vault.home.data.remote.dto.TransferRequestDto
 import com.cypressit.cyvault.feature.vault.home.domain.repository.InvalidTransferException
@@ -39,6 +40,7 @@ class BalanceApiService(
 
     private val balancesUrl = "${config.baseUrl}/me/balances"
     private val totalsUrl = "${config.baseUrl}/me/balance-totals"
+    private val deletionsUrl = "${config.baseUrl}/me/balance-deletions"
     private val transfersUrl = "${config.baseUrl}/me/transfers"
     private val challengeUrl = "${config.baseUrl}/me/transfers/challenge"
 
@@ -81,6 +83,18 @@ class BalanceApiService(
     }
 
     /**
+     * Deletes up to [MAX_DELETES_PER_REQUEST] balances in one request: all of them or none. IDs
+     * that are already gone are skipped, so a retry succeeds.
+     */
+    suspend fun deleteBalances(ids: List<String>) {
+        client.post(deletionsUrl) {
+            bearerAuth(accessToken())
+            contentType(ContentType.Application.Json)
+            setBody(DeleteBalancesRequestDto(ids))
+        }.requireSuccess()
+    }
+
+    /**
      * Asks for the one-time challenge that approves this transfer, sent without the signing fields.
      * The API checks the transfer first, so it fails like [postTransfer] does.
      */
@@ -120,5 +134,10 @@ class BalanceApiService(
     private fun HttpResponse.requireSuccess(): HttpResponse {
         if (!status.isSuccess()) throw Exception("Balance request failed (${status.value})")
         return this
+    }
+
+    companion object {
+        /** The API deletes these in one batch with the user's totals, which Table Storage caps at 100 rows. */
+        const val MAX_DELETES_PER_REQUEST = 99
     }
 }

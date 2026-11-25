@@ -57,6 +57,12 @@ data class BalanceRequestDto(
     @SerialName("id") val id: String? = null,
 )
 
+/** The balances to delete in one request: all of them or none. */
+@Serializable
+data class DeleteBalancesRequestDto(
+    @SerialName("ids") val ids: List<String>,
+)
+
 /** Sends money from one of the user's cards to the card linked to [phoneNumber]. */
 @Serializable
 data class TransferRequestDto(

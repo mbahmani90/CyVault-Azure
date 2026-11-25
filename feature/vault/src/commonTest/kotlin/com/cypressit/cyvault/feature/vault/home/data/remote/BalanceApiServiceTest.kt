@@ -137,6 +137,24 @@ class BalanceApiServiceTest {
     }
 
     @Test
+    fun deleteBalances_postsTheIdsToTheDeletionsUrl() = runTest {
+        api { respond("", HttpStatusCode.NoContent) }.deleteBalances(listOf("a", "b"))
+
+        val request = requests.single()
+        assertEquals(HttpMethod.Post, request.method)
+        assertEquals("https://api.test/api/me/balance-deletions", request.url.toString())
+        assertEquals("Bearer test-token", request.headers[HttpHeaders.Authorization])
+        assertEquals("""{"ids":["a","b"]}""", (request.body as TextContent).text)
+    }
+
+    @Test
+    fun deleteBalances_whenTheApiFails_throws() = runTest {
+        assertFailsWith<Exception> {
+            api { respond("", HttpStatusCode.BadRequest) }.deleteBalances(listOf("a"))
+        }
+    }
+
+    @Test
     fun deleteBalance_encodesTheIdInThePath() = runTest {
         api { respond("", HttpStatusCode.NoContent) }.deleteBalance("a b")
 

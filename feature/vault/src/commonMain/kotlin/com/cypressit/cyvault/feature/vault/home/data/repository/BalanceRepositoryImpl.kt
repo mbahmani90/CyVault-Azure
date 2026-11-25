@@ -89,6 +89,13 @@ class BalanceRepositoryImpl(
         dao.delete(id)
     }
 
+    override suspend fun deleteBalances(ids: List<String>): Result<Unit> = runSuspendCatching {
+        apiService.deleteBalances(ids)
+        dao.deleteAll(ids)
+    }
+
+    override val maxDeletesPerRequest = BalanceApiService.MAX_DELETES_PER_REQUEST
+
     override suspend fun requestTransferChallenge(
         transferId: String,
         cardId: String,

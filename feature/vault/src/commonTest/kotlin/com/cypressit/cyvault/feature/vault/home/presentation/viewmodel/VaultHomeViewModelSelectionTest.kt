@@ -224,6 +224,8 @@ class VaultHomeViewModelSelectionTest {
     @Test
     fun confirmDeleteSelected_whenOneFails_keepsItSelectedAndReportsBoth() = runTest(dispatcher) {
         val viewModel = loaded()
+        // One per request, so main's request succeeds while rent's fails.
+        balances.maxDeletesPerRequest = 1
         balances.failingDeleteIds = setOf("rent")
 
         viewModel.onIntent(VaultHomeIntent.LongClickBalance(main))

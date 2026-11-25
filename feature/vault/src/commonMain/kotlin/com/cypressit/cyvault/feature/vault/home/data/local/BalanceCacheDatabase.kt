@@ -130,6 +130,9 @@ interface BalanceCacheDao : BalanceCache {
     @Query("DELETE FROM balances WHERE id = :id")
     suspend fun delete(id: String)
 
+    @Query("DELETE FROM balances WHERE id IN (:ids)")
+    suspend fun deleteAll(ids: List<String>)
+
     @Transaction
     override suspend fun clear() {
         deleteBalances()
