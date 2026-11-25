@@ -11,9 +11,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthEffect
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthViewModel
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.MfaStep
+import com.cypressit.cyvault.testtags.LoginTags
 import cyvault.authentication.generated.resources.Res
 import cyvault.authentication.generated.resources.mfa_failed
 import org.jetbrains.compose.resources.getString
@@ -41,7 +43,7 @@ fun AuthScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SnackbarHost(snackbarHostState, modifier = Modifier.testTag(LoginTags.SNACKBAR)) },
         containerColor = MaterialTheme.colorScheme.background,
     ) { _ ->
         when {
