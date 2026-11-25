@@ -3,6 +3,7 @@ package com.cypressit.cyvault.feature.authentication.presentation.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -18,6 +19,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -26,13 +28,29 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthIntent
-import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthNavEvent
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.RegisterIntent
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.RegisterState
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.RegisterViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun RegisterScreen(
-    state: AuthState,
-    onIntent: (AuthIntent) -> Unit,
+    onNavigate: (AuthNavEvent) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: RegisterViewModel = koinViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    AuthScaffold(effects = viewModel.effect, onNavigate = onNavigate) {
+        RegisterScreen(state = state, onIntent = viewModel::onIntent, modifier = modifier.fillMaxSize())
+    }
+}
+
+@Composable
+internal fun RegisterScreen(
+    state: RegisterState,
+    onIntent: (RegisterIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val focusManager = LocalFocusManager.current
@@ -56,7 +74,7 @@ fun RegisterScreen(
 
         OutlinedTextField(
             value = state.name,
-            onValueChange = { onIntent(AuthIntent.NameChanged(it)) },
+            onValueChange = { onIntent(RegisterIntent.NameChanged(it)) },
             label = { Text("Full Name") },
             isError = state.nameError != null,
             supportingText = state.nameError?.let { { Text(it) } },
@@ -70,7 +88,7 @@ fun RegisterScreen(
 
         OutlinedTextField(
             value = state.email,
-            onValueChange = { onIntent(AuthIntent.EmailChanged(it)) },
+            onValueChange = { onIntent(RegisterIntent.EmailChanged(it)) },
             label = { Text("Email") },
             isError = state.emailError != null,
             supportingText = state.emailError?.let { { Text(it) } },
@@ -84,7 +102,7 @@ fun RegisterScreen(
 
         OutlinedTextField(
             value = state.password,
-            onValueChange = { onIntent(AuthIntent.PasswordChanged(it)) },
+            onValueChange = { onIntent(RegisterIntent.PasswordChanged(it)) },
             label = { Text("Password") },
             isError = state.passwordError != null,
             supportingText = state.passwordError?.let { { Text(it) } },
@@ -99,7 +117,7 @@ fun RegisterScreen(
 
         OutlinedTextField(
             value = state.confirmPassword,
-            onValueChange = { onIntent(AuthIntent.ConfirmPasswordChanged(it)) },
+            onValueChange = { onIntent(RegisterIntent.ConfirmPasswordChanged(it)) },
             label = { Text("Confirm Password") },
             isError = state.confirmPasswordError != null,
             supportingText = state.confirmPasswordError?.let { { Text(it) } },
@@ -107,7 +125,7 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = {
                 focusManager.clearFocus()
-                onIntent(AuthIntent.SubmitRegister)
+                onIntent(RegisterIntent.SubmitRegister)
             }),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -118,14 +136,14 @@ fun RegisterScreen(
         if (state.isLoading) {
             CircularProgressIndicator()
         } else {
-            Button(onClick = { onIntent(AuthIntent.SubmitRegister) }, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { onIntent(RegisterIntent.SubmitRegister) }, modifier = Modifier.fillMaxWidth()) {
                 Text("Create Account")
             }
         }
 
         Spacer(Modifier.height(16.dp))
 
-        TextButton(onClick = { onIntent(AuthIntent.ToggleMode) }) {
+        TextButton(onClick = { onIntent(RegisterIntent.BackToLogin) }) {
             Text("Already have an account? Sign in")
         }
     }

@@ -8,57 +8,81 @@ import com.cypressit.cyvault.feature.authentication.domain.repository.AuthReposi
 import com.cypressit.cyvault.feature.authentication.fake.FakeAuthClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeoutOrNull
+import org.koin.core.parameter.parametersOf
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-@OptIn(ExperimentalCoroutinesApi::class) // setMain, resetMain
-class AuthViewModelForgotPasswordTest {
+@OptIn(ExperimentalCoroutinesApi::class) // setMain, resetMain, advanceUntilIdle
+class LoginViewModelForgotPasswordTest {
 
     private val dispatcher = StandardTestDispatcher()
+    private val authClient = FakeAuthClient()
 
     @BeforeTest fun setUp() = Dispatchers.setMain(dispatcher)
 
     @AfterTest fun tearDown() = Dispatchers.resetMain()
 
     /** Built through authModule, as the app does; debug builds also provide ForgotPasswordPreview. */
-    private fun viewModel(debugBuild: Boolean): AuthViewModel = koinApplication {
+    private fun koin(debugBuild: Boolean) = koinApplication {
         modules(
             authModule,
             module {
-                single<AuthClient> { FakeAuthClient() }
+                single<AuthClient> { authClient }
                 // Koin 4.2 keeps authModule's singles across apps; this keeps another test's out.
                 single<AuthRepository> { AuthRepositoryImpl(get()) }
                 if (debugBuild) single { ForgotPasswordPreview }
             },
         )
-    }.koin.get()
+    }.koin
 
     @Test
     fun releaseBuild_hidesForgotPasswordAndIgnoresTheIntent() = runTest(dispatcher) {
-        val viewModel = viewModel(debugBuild = false)
+        val viewModel: LoginViewModel = koin(debugBuild = false).get()
         assertFalse(viewModel.state.value.canResetPassword)
 
-        viewModel.onIntent(AuthIntent.ShowForgotPassword)
+        viewModel.onIntent(LoginIntent.OpenForgotPassword)
+        advanceUntilIdle()
 
-        assertFalse(viewModel.state.value.isForgotPasswordMode)
+        assertNull(withTimeoutOrNull(1) { viewModel.effect.first() })
     }
 
     @Test
-    fun debugBuild_showsForgotPassword() = runTest(dispatcher) {
-        val viewModel = viewModel(debugBuild = true)
+    fun debugBuild_opensForgotPasswordWithTheTypedEmail() = runTest(dispatcher) {
+        val viewModel: LoginViewModel = koin(debugBuild = true).get()
         assertTrue(viewModel.state.value.canResetPassword)
 
-        viewModel.onIntent(AuthIntent.ShowForgotPassword)
+        viewModel.onIntent(LoginIntent.EmailChanged(" ada@example.com "))
+        viewModel.onIntent(LoginIntent.OpenForgotPassword)
+        advanceUntilIdle()
 
-        assertTrue(viewModel.state.value.isForgotPasswordMode)
+        assertEquals(AuthEffect.Navigate(AuthNavEvent.ForgotPassword("ada@example.com")), viewModel.effect.first())
+    }
+
+    @Test
+    fun resetEmailSent_goesBackToSignInSayingSo() = runTest(dispatcher) {
+        val viewModel: ForgotPasswordViewModel = koin(debugBuild = true).get { parametersOf("ada@example.com") }
+
+        viewModel.onIntent(ForgotPasswordIntent.SubmitForgotPassword)
+        advanceUntilIdle()
+
+        assertEquals(listOf("ada@example.com"), authClient.resetPasswordEmails)
+        assertEquals(
+            AuthEffect.Navigate(AuthNavEvent.BackToLogin(resetEmailSent = true)),
+            viewModel.effect.first(),
+        )
     }
 }

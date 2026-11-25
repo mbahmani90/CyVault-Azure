@@ -3,6 +3,7 @@ package com.cypressit.cyvault.feature.authentication.presentation.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -18,6 +19,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -26,9 +28,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthIntent
-import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthNavEvent
 import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.MfaInputError
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.MfaPhoneNumberIntent
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.MfaPhoneNumberState
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.MfaPhoneNumberViewModel
 import com.cypressit.cyvault.testtags.MfaTags
 import cyvault.authentication.generated.resources.Res
 import cyvault.authentication.generated.resources.mfa_back_to_sign_in
@@ -39,12 +44,25 @@ import cyvault.authentication.generated.resources.mfa_phone_send_code
 import cyvault.authentication.generated.resources.mfa_phone_subtitle
 import cyvault.authentication.generated.resources.mfa_phone_title
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
+
+@Composable
+fun MfaPhoneNumberScreen(
+    onNavigate: (AuthNavEvent) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: MfaPhoneNumberViewModel = koinViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    AuthScaffold(effects = viewModel.effect, onNavigate = onNavigate) {
+        MfaPhoneNumberScreen(state = state, onIntent = viewModel::onIntent, modifier = modifier.fillMaxSize())
+    }
+}
 
 /** The account's first MFA sign-in: the phone number SMS codes will go to. */
 @Composable
-fun MfaPhoneNumberScreen(
-    state: AuthState,
-    onIntent: (AuthIntent) -> Unit,
+internal fun MfaPhoneNumberScreen(
+    state: MfaPhoneNumberState,
+    onIntent: (MfaPhoneNumberIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val focusManager = LocalFocusManager.current
@@ -71,12 +89,12 @@ fun MfaPhoneNumberScreen(
         Spacer(Modifier.height(32.dp))
 
         OutlinedTextField(
-            value = state.mfaPhoneNumber,
-            onValueChange = { onIntent(AuthIntent.MfaPhoneNumberChanged(it)) },
+            value = state.phoneNumber,
+            onValueChange = { onIntent(MfaPhoneNumberIntent.PhoneNumberChanged(it)) },
             label = { Text(stringResource(Res.string.mfa_phone_label)) },
             placeholder = { Text(stringResource(Res.string.mfa_phone_placeholder)) },
-            isError = state.mfaPhoneNumberError != null,
-            supportingText = if (state.mfaPhoneNumberError == MfaInputError.InvalidPhoneNumber) {
+            isError = state.phoneNumberError != null,
+            supportingText = if (state.phoneNumberError == MfaInputError.InvalidPhoneNumber) {
                 { Text(stringResource(Res.string.mfa_phone_invalid)) }
             } else {
                 null
@@ -84,7 +102,7 @@ fun MfaPhoneNumberScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = {
                 focusManager.clearFocus()
-                onIntent(AuthIntent.SubmitMfaPhoneNumber)
+                onIntent(MfaPhoneNumberIntent.SubmitPhoneNumber)
             }),
             singleLine = true,
             modifier = Modifier.fillMaxWidth().testTag(MfaTags.PHONE_NUMBER_FIELD),
@@ -96,7 +114,7 @@ fun MfaPhoneNumberScreen(
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { onIntent(AuthIntent.SubmitMfaPhoneNumber) },
+                onClick = { onIntent(MfaPhoneNumberIntent.SubmitPhoneNumber) },
                 modifier = Modifier.fillMaxWidth().testTag(MfaTags.SEND_CODE_BUTTON),
             ) {
                 Text(stringResource(Res.string.mfa_phone_send_code))
@@ -105,7 +123,7 @@ fun MfaPhoneNumberScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        TextButton(onClick = { onIntent(AuthIntent.BackToLogin) }) {
+        TextButton(onClick = { onIntent(MfaPhoneNumberIntent.BackToLogin) }) {
             Text(stringResource(Res.string.mfa_back_to_sign_in))
         }
     }
