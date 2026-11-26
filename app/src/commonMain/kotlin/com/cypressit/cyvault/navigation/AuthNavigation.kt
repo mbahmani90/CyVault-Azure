@@ -60,7 +60,7 @@ internal fun NavGraphBuilder.authGraph(navController: NavController) {
     }
 }
 
-private fun NavController.navigateAuth(event: AuthNavEvent) {
+internal fun NavController.navigateAuth(event: AuthNavEvent) {
     when (event) {
         AuthNavEvent.Home -> navigateClearingBackStack(VaultHomeRoute)
         AuthNavEvent.Register -> navigate(RegisterRoute) { launchSingleTop = true }
