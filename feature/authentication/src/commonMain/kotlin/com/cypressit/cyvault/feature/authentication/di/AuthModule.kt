@@ -11,7 +11,12 @@ import com.cypressit.cyvault.feature.authentication.domain.usecase.SignInWithGoo
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SignOutUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SubmitMfaCodeUseCase
 import com.cypressit.cyvault.feature.authentication.domain.usecase.SubmitMfaPhoneNumberUseCase
-import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.AuthViewModel
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.ForgotPasswordViewModel
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.LoginViewModel
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.MfaCodeViewModel
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.MfaPhoneNumberViewModel
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.RegisterViewModel
+import com.cypressit.cyvault.feature.authentication.presentation.viewmodel.VerificationViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -30,20 +35,21 @@ val authModule = module {
     factory { SubmitMfaPhoneNumberUseCase(get()) }
     factory { SubmitMfaCodeUseCase(get()) }
 
-    // ViewModel
+    // ViewModels, one per auth screen
     // Written out because ForgotPasswordPreview is optional: only debug builds provide it.
     viewModel {
-        AuthViewModel(
+        LoginViewModel(
             loginUseCase = get(),
-            registerUseCase = get(),
-            confirmSignUpUseCase = get(),
-            forgotPasswordUseCase = get(),
-            signOutUseCase = get(),
             getCurrentUserUseCase = get(),
             signInWithGoogleUseCase = get(),
-            submitMfaPhoneNumberUseCase = get(),
-            submitMfaCodeUseCase = get(),
             forgotPasswordPreview = getOrNull(),
         )
+    }
+    viewModel { RegisterViewModel(registerUseCase = get()) }
+    viewModel { (email: String) -> VerificationViewModel(email = email, confirmSignUpUseCase = get()) }
+    viewModel { (email: String) -> ForgotPasswordViewModel(email = email, forgotPasswordUseCase = get()) }
+    viewModel { MfaPhoneNumberViewModel(submitMfaPhoneNumberUseCase = get()) }
+    viewModel { (sentTo: String, codeLength: Int) ->
+        MfaCodeViewModel(sentTo = sentTo, codeLength = codeLength, submitMfaCodeUseCase = get())
     }
 }

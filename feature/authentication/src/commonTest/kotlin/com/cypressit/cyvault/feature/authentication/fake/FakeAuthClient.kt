@@ -4,7 +4,7 @@ import com.cypressit.cyvault.auth.AuthClient
 import com.cypressit.cyvault.auth.AuthUser
 import com.cypressit.cyvault.auth.SignInStep
 
-/** Nobody is signed in; the flows the tests don't use aren't faked. */
+/** Nobody is signed in until a test says so; the flows the tests don't use aren't faked. */
 class FakeAuthClient : AuthClient {
 
     val resetPasswordEmails = mutableListOf<String>()
@@ -21,7 +21,18 @@ class FakeAuthClient : AuthClient {
     val submittedPhoneNumbers = mutableListOf<String>()
     val submittedMfaCodes = mutableListOf<String>()
 
-    override suspend fun currentUser(): AuthUser? = null
+    /** What currentUser() returns: someone signed in earlier, or null. */
+    var signedInUser: AuthUser? = null
+
+    /** When set, sign-up, its confirmation and Google sign-in fail with this message. */
+    var failure: String? = null
+
+    /** The code confirmSignUp() accepts. */
+    var validSignUpCode = "246810"
+
+    val signUps = mutableListOf<Triple<String, String, String>>()
+
+    override suspend fun currentUser(): AuthUser? = signedInUser
 
     override suspend fun resetPassword(email: String) {
         resetPasswordEmails += email
@@ -40,11 +51,20 @@ class FakeAuthClient : AuthClient {
         return USER
     }
 
-    override suspend fun signUp(name: String, email: String, password: String) = throw NotImplementedError()
+    override suspend fun signUp(name: String, email: String, password: String) {
+        failure?.let { throw Exception(it) }
+        signUps += Triple(name, email, password)
+    }
 
-    override suspend fun confirmSignUp(email: String, code: String) = throw NotImplementedError()
+    override suspend fun confirmSignUp(email: String, code: String) {
+        failure?.let { throw Exception(it) }
+        if (code != validSignUpCode) throw Exception(WRONG_CODE_MESSAGE)
+    }
 
-    override suspend fun signInWithGoogle(): AuthUser = throw NotImplementedError()
+    override suspend fun signInWithGoogle(): AuthUser {
+        failure?.let { throw Exception(it) }
+        return USER
+    }
 
     override suspend fun accessToken(scopes: List<String>): String = throw NotImplementedError()
 

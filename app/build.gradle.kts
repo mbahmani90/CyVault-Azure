@@ -30,6 +30,9 @@ kotlin {
         compilerOptions {
             jvmTarget = JvmTarget.JVM_11
         }
+
+        // Android resources on the classpath: Robolectric runs the navigation tests against them.
+        withHostTest { isIncludeAndroidResources = true }
     }
 
     sourceSets {
@@ -67,6 +70,14 @@ kotlin {
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+
+        // Navigation tests: the real nav graph on the JVM under Robolectric, so Kover measures them.
+        getByName("androidHostTest").dependencies {
+            implementation(libs.compose.uiTest)
+            implementation(libs.androidx.compose.uiTestManifest)
+            implementation(libs.robolectric)
+            implementation(libs.junit)
         }
     }
 }
